@@ -1,0 +1,26 @@
+/node_modules/
+.next/
+out/
+
+.env
+.env.local
+.env.*.local
+dist/.env
+dist/standalone/.env
+
+# Certificados de firma de codigo autofirmados: solo tienen valor en la
+# maquina que los genero, no aportan nada al clonar el repo.
+*.cer
+*.pfx
+
+build*.log
+build-result.txt
+curl-output.txt
+search-trace-output.txt
+borrar.txt
+*.tsbuildinfo
+dist/*.log
+dev-run.log
+.msys*
+.DS_Store
+Thumbs.db
