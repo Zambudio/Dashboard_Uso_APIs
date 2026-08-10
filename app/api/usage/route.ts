@@ -6,6 +6,7 @@ import { fetchDeepSeekUsage } from '@/lib/usage/deepseek.server';
 import { fetchOpenAIUsage } from '@/lib/usage/openai.server';
 import { fetchAnthropicUsage } from '@/lib/usage/anthropic.server';
 import { fetchClaudeProUsage } from '@/lib/usage/claude-pro.server';
+import { fetchGeminiUsage } from '@/lib/usage/gemini.server';
 
 export const dynamic = 'force-dynamic';
 
@@ -47,6 +48,9 @@ export async function POST(request: NextRequest) {
         break;
       case 'claude-pro':
         snapshot = await fetchClaudeProUsage(secret);
+        break;
+      case 'gemini':
+        snapshot = await fetchGeminiUsage(secret);
         break;
       default:
         return NextResponse.json({ error: `Proveedor no soportado: ${provider}` }, { status: 400 });

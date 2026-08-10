@@ -1,4 +1,5 @@
 import { ApiUsageSnapshot } from '@/types/api';
+import { fetchClaudeProUsage } from './claude-pro.server';
 
 interface AnthropicUsageResult {
   uncached_input_tokens?: number;
@@ -47,6 +48,16 @@ async function anthropicGet<T>(url: string, adminKey: string): Promise<T> {
 
   if (!res.ok) {
     const text = await res.text().catch(() => '');
+    if (res.status === 401 || res.status === 403) {
+      if (adminKey.startsWith('sk-ant-api')) {
+        throw new Error(
+          'Clave sin permisos de administración (401/403): La clave introducida es una API Key estándar (sk-ant-api...). Para consultar métricas de uso y costes de Anthropic se requiere una Admin API Key (sk-ant-admin01-...) desde console.anthropic.com/settings/admin-keys, o usar "Iniciar sesión web".'
+        );
+      }
+      throw new Error(
+        'Error de autenticación en Anthropic (401/403): La API de informes requiere una Admin API Key válida (sk-ant-admin01-...) desde console.anthropic.com/settings/admin-keys.'
+      );
+    }
     throw new Error(`Anthropic API ${res.status}: ${text.slice(0, 300) || res.statusText}`);
   }
 
@@ -54,12 +65,34 @@ async function anthropicGet<T>(url: string, adminKey: string): Promise<T> {
 }
 
 export async function fetchAnthropicUsage(adminKey: string): Promise<ApiUsageSnapshot> {
+  const cleanKey = adminKey.trim();
+
+  // If the secret is actually a Claude.ai web session cookie (starts with sk-ant-sid)
+  if (cleanKey.startsWith('sk-ant-sid')) {
+    return await fetchClaudeProUsage(cleanKey);
+  }
+
+  // If JSON session from browser login
+  if (cleanKey.startsWith('{')) {
+    try {
+      const parsed = JSON.parse(cleanKey);
+      if (parsed.sessionKey && typeof parsed.sessionKey === 'string' && parsed.sessionKey.startsWith('sk-ant-sid')) {
+        return await fetchClaudeProUsage(parsed.sessionKey);
+      }
+      if (parsed.apiKey && typeof parsed.apiKey === 'string') {
+        return await fetchAnthropicUsage(parsed.apiKey);
+      }
+    } catch {
+      // continue
+    }
+  }
+
   const fetchedAt = new Date().toISOString();
   const startingAt = new Date(Date.now() - SEVEN_DAYS_MS).toISOString();
 
   const usage = await anthropicGet<AnthropicUsagePage>(
     `https://api.anthropic.com/v1/organizations/usage_report/messages?starting_at=${encodeURIComponent(startingAt)}&bucket_width=1d&limit=7`,
-    adminKey
+    cleanKey
   );
 
   let tokensUsed = 0;
@@ -77,23 +110,23 @@ export async function fetchAnthropicUsage(adminKey: string): Promise<ApiUsageSna
   const snapshot: ApiUsageSnapshot = {
     fetchedAt,
     tokensUsed,
-    // El reporte de uso de Anthropic no incluye nº de peticiones ni saldo.
+    planType: 'Anthropic API (Admin)',
     unavailable: ['balance', 'requestCount'],
   };
 
   try {
     const costs = await anthropicGet<AnthropicCostPage>(
       `https://api.anthropic.com/v1/organizations/cost_report?starting_at=${encodeURIComponent(startingAt)}&bucket_width=1d&limit=7`,
-      adminKey
+      cleanKey
     );
-    let accumulatedCostCents = 0;
+    let accumulatedCost = 0;
     for (const bucket of costs.data ?? []) {
       for (const result of bucket.results ?? []) {
-        accumulatedCostCents += Number(result.amount ?? 0);
+        accumulatedCost += Number(result.amount ?? 0);
       }
     }
-    // El importe viene en centesimas de la moneda (centavos), como string decimal.
-    snapshot.accumulatedCost = accumulatedCostCents / 100;
+    // El importe viene como string decimal en la divisa (p.ej. "0.84" = $0.84), no en centavos.
+    snapshot.accumulatedCost = accumulatedCost;
     snapshot.currency = 'USD';
   } catch {
     snapshot.unavailable = [...(snapshot.unavailable ?? []), 'accumulatedCost'];

@@ -13,8 +13,10 @@ export async function GET() {
 export async function PUT(request: NextRequest) {
   try {
     const body = (await request.json()) as { data?: Record<string, string> };
-    const data = body && typeof body.data === 'object' ? body.data : {};
-    writeEnvKeys(data);
+    const incoming = body && typeof body.data === 'object' ? body.data : {};
+    const existing = readEnvKeys();
+    const merged = { ...existing, ...incoming };
+    writeEnvKeys(merged);
     return NextResponse.json({ ok: true });
   } catch {
     return NextResponse.json({ ok: false, error: 'invalid payload' }, { status: 400 });

@@ -24,3 +24,6 @@ dev-run.log
 .msys*
 .DS_Store
 Thumbs.db
+
+# Scripts de prueba sueltos, no forman parte de la app.
+/scratch/

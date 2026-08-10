@@ -7,6 +7,26 @@ const PREFS_KEY = 'ai-api-dashboard-preferences';
 const KEYS_ENDPOINT = '/api/keys';
 const USAGE_ENDPOINT = '/api/usage';
 
+/**
+ * btoa()/atob() solo soportan Latin1: revientan con InvalidCharacterError ante
+ * cualquier carácter fuera de ese rango (tildes con code point >255, rayas "—",
+ * texto capturado de páginas de proveedores, etc.). Codificamos a UTF-8 primero.
+ */
+function toBase64(value: string): string {
+  const bytes = new TextEncoder().encode(value);
+  let binary = '';
+  bytes.forEach((byte) => {
+    binary += String.fromCharCode(byte);
+  });
+  return btoa(binary);
+}
+
+function fromBase64(value: string): string {
+  const binary = atob(value);
+  const bytes = Uint8Array.from(binary, (char) => char.charCodeAt(0));
+  return new TextDecoder().decode(bytes);
+}
+
 export async function fetchProviderUsage(id: string, provider: ProviderKey): Promise<ApiUsageSnapshot> {
   try {
     const res = await fetch(USAGE_ENDPOINT, {
@@ -62,7 +82,7 @@ export function saveProviders(providers: ApiProviderConfig[]) {
     return { ...provider, apiKey: '' };
   });
 
-  window.localStorage.setItem(STORAGE_KEY, btoa(JSON.stringify(sanitized)));
+  window.localStorage.setItem(STORAGE_KEY, toBase64(JSON.stringify(sanitized)));
   void saveEnvKeys(keys);
 }
 
@@ -71,7 +91,7 @@ export function loadProviders(): ApiProviderConfig[] {
   const raw = window.localStorage.getItem(STORAGE_KEY);
   if (!raw) return [];
   try {
-    return JSON.parse(atob(raw)) as ApiProviderConfig[];
+    return JSON.parse(fromBase64(raw)) as ApiProviderConfig[];
   } catch {
     return [];
   }
@@ -79,7 +99,7 @@ export function loadProviders(): ApiProviderConfig[] {
 
 export function savePreferences(preferences: DashboardPreferences) {
   if (typeof window === 'undefined') return;
-  window.localStorage.setItem(PREFS_KEY, btoa(JSON.stringify(preferences)));
+  window.localStorage.setItem(PREFS_KEY, toBase64(JSON.stringify(preferences)));
 }
 
 export function loadPreferences(): DashboardPreferences | null {
@@ -87,7 +107,7 @@ export function loadPreferences(): DashboardPreferences | null {
   const raw = window.localStorage.getItem(PREFS_KEY);
   if (!raw) return null;
   try {
-    return JSON.parse(atob(raw)) as DashboardPreferences;
+    return JSON.parse(fromBase64(raw)) as DashboardPreferences;
   } catch {
     return null;
   }

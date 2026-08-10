@@ -10,60 +10,72 @@ export interface ProviderDefinition {
   helpUrl?: string;
   /** Si false, /api/usage no intenta consultar datos reales todavía para este proveedor. */
   usageImplemented: boolean;
+  /** Si true, permite iniciar sesión abriendo una ventana de navegador interactiva */
+  browserLoginSupported?: boolean;
+  browserLoginUrl?: string;
 }
 
 export const PROVIDER_DEFINITIONS: Record<ProviderKey, ProviderDefinition> = {
   openai: {
     key: 'openai',
-    label: 'OpenAI (API)',
+    label: 'OpenAI / ChatGPT',
     kind: 'api',
-    secretLabel: 'Admin API Key',
+    secretLabel: 'Admin API Key (sk-admin-...) o Sesión Web',
     secretPlaceholder: 'sk-admin-...',
-    helpText: 'La consulta de uso necesita una Admin API key de la organización (no la key normal de proyecto). Se crea en Organization Settings.',
+    helpText: 'Para ver el consumo de tokens y costes necesitas una Admin API Key de la organización (platform.openai.com/settings/organization/admin-keys) o pulsar "Iniciar sesión web". Las claves de proyecto (sk-proj-...) no tienen permisos de lectura de costes.',
     helpUrl: 'https://platform.openai.com/settings/organization/admin-keys',
     usageImplemented: true,
+    browserLoginSupported: true,
+    browserLoginUrl: 'https://platform.openai.com/login',
   },
   anthropic: {
     key: 'anthropic',
     label: 'Anthropic Claude (API)',
     kind: 'api',
-    secretLabel: 'Admin API Key',
+    secretLabel: 'Admin API Key (sk-ant-admin01-...) o Sesión Web',
     secretPlaceholder: 'sk-ant-admin01-...',
-    helpText: 'La consulta de uso necesita una Admin API key (Claude Console > Settings > Admin keys), no la key normal de la API.',
+    helpText: 'La API de métricas de Anthropic requiere una Admin API Key de la organización (console.anthropic.com/settings/admin-keys). Si usas Claude Pro/Code, pulsa "Iniciar sesión web".',
     helpUrl: 'https://console.anthropic.com/settings/admin-keys',
     usageImplemented: true,
+    browserLoginSupported: true,
+    browserLoginUrl: 'https://claude.ai/login',
   },
   deepseek: {
     key: 'deepseek',
     label: 'DeepSeek',
     kind: 'api',
-    secretLabel: 'API Key',
-    secretPlaceholder: 'sk-...',
-    helpText: 'La API pública de DeepSeek solo expone el saldo disponible. Coste, tokens y nº de peticiones no están disponibles vía API (solo en su web).',
-    helpUrl: 'https://platform.deepseek.com/api_keys',
+    secretLabel: 'API Key o Sesión Web',
+    secretPlaceholder: 'sk-... o Sesión Web',
+    helpText: 'Introduce tu API Key (saldo) o pulsa "Iniciar sesión web" para capturar también tu coste acumulado, tokens consumidos y número de peticiones desde la consola de DeepSeek.',
+    helpUrl: 'https://platform.deepseek.com/usage',
     usageImplemented: true,
+    browserLoginSupported: true,
+    browserLoginUrl: 'https://platform.deepseek.com/usage',
   },
   gemini: {
     key: 'gemini',
     label: 'Google Gemini',
-    kind: 'api',
-    secretLabel: 'API Key',
-    secretPlaceholder: 'AIza...',
-    helpText: 'Consulta automática de uso todavía no implementada para Gemini.',
-    usageImplemented: false,
+    kind: 'subscription',
+    secretLabel: 'API Key o Sesión Web',
+    secretPlaceholder: 'AIza... o Sesión Web',
+    helpText: 'Inicia sesión con tu cuenta de Google en Gemini para sincronizar tus límites de uso (Pro/Advanced) o introduce tu API Key de AI Studio.',
+    helpUrl: 'https://gemini.google.com',
+    usageImplemented: true,
+    browserLoginSupported: true,
+    browserLoginUrl: 'https://gemini.google.com',
   },
   'claude-pro': {
     key: 'claude-pro',
-    label: 'Claude Pro (suscripción)',
+    label: 'Claude Pro / Code (suscripción)',
     kind: 'subscription',
     secretLabel: 'Cookie de sesión (sessionKey)',
     secretPlaceholder: 'sk-ant-sid01-...',
     helpText:
-      'No es una API key: inicia sesión en claude.ai, abre las DevTools del navegador (F12) → Application/Almacenamiento → Cookies → claude.ai, copia el valor de la cookie "sessionKey". ' +
-      'Esta cookie da acceso completo a tu cuenta; guárdala solo si confías en este equipo. Se usa un Chromium en segundo plano (no hay API pública de suscripción) para leer los endpoints internos de claude.ai — pueden cambiar sin aviso. ' +
-      'La primera vez que pulses "Actualizar" se descargará Chromium (~300MB, necesita internet); puede tardar varios minutos.',
+      'Inicia sesión directamente con tu cuenta en claude.ai con el botón de "Iniciar sesión con navegador", o pega manualmente la cookie sessionKey.',
     helpUrl: 'https://claude.ai',
     usageImplemented: true,
+    browserLoginSupported: true,
+    browserLoginUrl: 'https://claude.ai/login',
   },
   custom: {
     key: 'custom',
@@ -79,3 +91,4 @@ export const PROVIDER_DEFINITIONS: Record<ProviderKey, ProviderDefinition> = {
 export function getProviderDefinition(provider: ProviderKey): ProviderDefinition {
   return PROVIDER_DEFINITIONS[provider] ?? PROVIDER_DEFINITIONS.custom;
 }
+
