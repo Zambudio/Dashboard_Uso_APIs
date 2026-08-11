@@ -8,11 +8,10 @@ import { ApiUsageSnapshot } from '@/types/api';
 // sola vez, bajo demanda, al cache estandar de Playwright en este equipo
 // (necesita internet la primera vez que se usa la tarjeta de Claude Pro).
 function installChromium(): void {
-  // 'playwright/cli.js' is not in the package's exports map, so it can't be
-  // require.resolve()'d directly (and Next's webpack build would fail trying
-  // to statically analyze it). Resolve the package root via its main entry
-  // instead and join the sibling cli.js file at runtime.
-  const cliPath = path.join(path.dirname(require.resolve('playwright')), 'cli.js');
+  // Next rewrites require.resolve('playwright') to a numeric webpack module id.
+  // The full package is copied next to the standalone server, and this path
+  // also exists at the repository root during development.
+  const cliPath = path.join(process.cwd(), 'node_modules', 'playwright', 'cli.js');
   const result = spawnSync(process.execPath, [cliPath, 'install', 'chromium'], {
     stdio: 'inherit',
     env: {

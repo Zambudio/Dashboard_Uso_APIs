@@ -1,4 +1,4 @@
-# Firma dist\dashboard.exe con un certificado de firma de codigo autofirmado.
+# Firma los ejecutables de dist\ con un certificado de codigo autofirmado.
 #
 # Esto NO libera Smart App Control (SAC solo confia en firmantes con
 # reputacion en la nube de Microsoft; un certificado autofirmado nunca la
@@ -15,12 +15,17 @@
 
 $ErrorActionPreference = 'Stop'
 $root = Split-Path -Parent $PSScriptRoot
-$exePath = Join-Path $root 'dist\dashboard.exe'
+$exePaths = @(
+  (Join-Path $root 'dist\dashboard.exe'),
+  (Join-Path $root 'dist\DashboardTray.exe')
+)
 $certPath = Join-Path $root 'dist\dashboard-uso-apis-dev.cer'
 $subject = 'CN=Dashboard Uso APIs (local dev)'
 
-if (-not (Test-Path $exePath)) {
-  Write-Error "No existe $exePath. Ejecuta antes: npm run exe"
+foreach ($exePath in $exePaths) {
+  if (-not (Test-Path $exePath)) {
+    Write-Error "No existe $exePath. Ejecuta antes: npm run exe"
+  }
 }
 
 $cert = Get-ChildItem Cert:\CurrentUser\My -CodeSigningCert |
@@ -38,9 +43,11 @@ if (-not $cert) {
     -NotAfter (Get-Date).AddYears(5)
 }
 
-Write-Host "Firmando $exePath con el certificado $($cert.Thumbprint)..."
-$sig = Set-AuthenticodeSignature -FilePath $exePath -Certificate $cert
-Write-Host "Estado de la firma: $($sig.Status) - $($sig.StatusMessage)"
+foreach ($exePath in $exePaths) {
+  Write-Host "Firmando $exePath con el certificado $($cert.Thumbprint)..."
+  $sig = Set-AuthenticodeSignature -FilePath $exePath -Certificate $cert
+  Write-Host "Estado de la firma: $($sig.Status) - $($sig.StatusMessage)"
+}
 
 Export-Certificate -Cert $cert -FilePath $certPath | Out-Null
 Write-Host ""

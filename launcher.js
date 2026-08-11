@@ -7,6 +7,7 @@ const { spawn } = require('child_process');
 
 const PORT = Number(process.env.DASHBOARD_PORT) || 3000;
 const HOST = process.env.DASHBOARD_HOST || '127.0.0.1';
+const AUTO_OPEN_BROWSER = process.env.DASHBOARD_NO_BROWSER !== '1';
 
 // When packaged with pkg, `process.pkg` exists and process.execPath is the
 // .exe itself, so the app directory is wherever the user placed the exe.
@@ -35,18 +36,24 @@ console.log('[dashboard] Archivo de claves: ' + envFile);
 
 // One probe attempt; resolves `callback(true)` if something answered.
 function probePort(callback) {
+  let settled = false;
+  const done = (up) => {
+    if (settled) return;
+    settled = true;
+    callback(up);
+  };
   const req = http.get(
     { host: HOST, port: PORT, path: '/', timeout: 800 },
     (res) => {
       res.resume();
-      callback(true);
+      done(true);
     }
   );
   req.on('timeout', () => {
     req.destroy();
-    callback(false);
+    done(false);
   });
-  req.on('error', () => callback(false));
+  req.on('error', () => done(false));
 }
 
 // Retry the probe a few times so we don't mistake a server that's still
@@ -63,6 +70,8 @@ function openBrowser() {
   const url = 'http://' + HOST + ':' + PORT;
   console.log('[dashboard] Panel listo en ' + url);
 
+  if (!AUTO_OPEN_BROWSER) return;
+
   if (process.platform === 'win32') {
     spawn('cmd', ['/c', 'start', '', url], { detached: true, stdio: 'ignore' }).unref();
   } else if (process.platform === 'darwin') {
@@ -73,15 +82,10 @@ function openBrowser() {
 }
 
 function waitForServer(attempt, callback) {
-  const req = http.get({ host: HOST, port: PORT, path: '/', timeout: 1000 }, (res) => {
-    res.resume();
-    callback();
+  probePort((up) => {
+    if (up) callback();
+    else retry(attempt, callback);
   });
-  req.on('timeout', () => {
-    req.destroy();
-    retry(attempt, callback);
-  });
-  req.on('error', () => retry(attempt, callback));
 }
 
 function retry(attempt, callback) {

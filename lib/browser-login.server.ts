@@ -38,7 +38,9 @@ const activeSessions: Map<string, BrowserLoginSession> =
   globalThis.__browserLoginSessions ?? (globalThis.__browserLoginSessions = new Map<string, BrowserLoginSession>());
 
 function installChromium(): void {
-  const cliPath = path.join(path.dirname(require.resolve('playwright')), 'cli.js');
+  // Next rewrites require.resolve('playwright') to a numeric webpack module id;
+  // the full package lives under node_modules of the standalone server.
+  const cliPath = path.join(process.cwd(), 'node_modules', 'playwright', 'cli.js');
   const result = spawnSync(process.execPath, [cliPath, 'install', 'chromium'], {
     stdio: 'inherit',
     env: {

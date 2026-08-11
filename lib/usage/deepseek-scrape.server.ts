@@ -3,9 +3,9 @@ import { spawnSync } from 'child_process';
 import path from 'path';
 
 function installChromium(): void {
-  // Ver el comentario equivalente en claude-pro.server.ts: cli.js no está en el
-  // exports map del paquete, así que hay que resolverlo vía el entry point.
-  const cliPath = path.join(path.dirname(require.resolve('playwright')), 'cli.js');
+  // Ver el comentario equivalente en claude-pro.server.ts: evitamos
+  // require.resolve(), que Next convertiría en un id numérico del bundle.
+  const cliPath = path.join(process.cwd(), 'node_modules', 'playwright', 'cli.js');
   const result = spawnSync(process.execPath, [cliPath, 'install', 'chromium'], {
     stdio: 'inherit',
     env: {

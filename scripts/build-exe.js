@@ -70,8 +70,40 @@ if (result.status !== 0) {
   process.exit(result.status || 1);
 }
 
+const windowsDir = process.env.WINDIR || 'C:\\Windows';
+const cscCandidates = [
+  path.join(windowsDir, 'Microsoft.NET', 'Framework64', 'v4.0.30319', 'csc.exe'),
+  path.join(windowsDir, 'Microsoft.NET', 'Framework', 'v4.0.30319', 'csc.exe'),
+];
+const csc = cscCandidates.find((candidate) => fs.existsSync(candidate));
+if (!csc) {
+  console.error('No se encontró el compilador C# de .NET Framework para crear DashboardTray.exe.');
+  process.exit(1);
+}
+
+const trayResult = spawnSync(
+  csc,
+  [
+    '/nologo',
+    '/target:winexe',
+    '/platform:anycpu',
+    '/optimize+',
+    `/out:${path.join(dist, 'DashboardTray.exe')}`,
+    '/reference:System.dll',
+    '/reference:System.Drawing.dll',
+    '/reference:System.Windows.Forms.dll',
+    path.join(root, 'scripts', 'tray-launcher.cs'),
+  ],
+  { stdio: 'inherit', cwd: root }
+);
+
+if (trayResult.status !== 0) {
+  process.exit(trayResult.status || 1);
+}
+
 console.log('');
 console.log('[pack] Listo. Contenido de dist/:');
+console.log('  dist/DashboardTray.exe <- lanzador recomendado (icono de bandeja, sin consola)');
 console.log('  dist/dashboard.exe   <- ejecutable');
 console.log('  dist/standalone/     <- build de Next.js (debe ir siempre junto al exe)');
 console.log('  dist/.env_example    <- plantilla de claves');

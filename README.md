@@ -1,84 +1,107 @@
-# Dashboard_Uso_APIs
+# Dashboard de uso de APIs de IA
 
-Dashboard (Next.js 14) para trackear uso/coste real de proveedores de API de IA (OpenAI, Anthropic, DeepSeek) y del % de uso de suscripciones Pro (Claude Pro). Todos los datos vienen de la API real de cada proveedor — nada es simulado.
+Aplicación local para Windows que centraliza el uso, los costes y los límites reales de OpenAI/ChatGPT, Anthropic/Claude, Google Gemini y DeepSeek. La interfaz está en español y no utiliza datos simulados.
 
-## Uso rápido (usuario final)
+## Inicio rápido en cualquier PC Windows
 
-1. Descarga/clona el repo.
-2. Entra en la carpeta `dist/`.
-3. Ejecuta `dashboard.exe`. Se abrirá `http://127.0.0.1:3000` en tu navegador.
-4. Introduce tus claves desde la web (botón "Conectar" o "Configurar" en cada tarjeta). Se guardan automáticamente en un archivo `.env` que se crea **junto a `dashboard.exe`** (no en el repo, no se sube a git). Pulsa "Actualizar" en la tarjeta para consultar los datos reales.
+La forma recomendada de usar la aplicación es el lanzador de bandeja:
 
-Importante: `dashboard.exe` necesita `standalone/`, `server-entry.js` e `inspector-shim.js` a su lado (todo dentro de `dist/`). Si copias el exe a otro sitio, copia la carpeta `dist/` entera.
+1. Copia la carpeta `dist/` completa al PC de destino. No copies solamente los ejecutables.
+2. Ejecuta [`dist/DashboardTray.exe`](./dist/DashboardTray.exe).
+3. Espera a que el icono pase de naranja a verde. El navegador abrirá `http://127.0.0.1:3000` una sola vez.
+4. Configura las conexiones desde cada tarjeta o usa **Iniciar sesión web**.
 
-## Proveedores soportados y métodos de conexión
+No es necesario instalar Node.js, npm ni PowerShell en el PC de destino. `DashboardTray.exe` es una aplicación WinForms sin consola y `dashboard.exe` incluye el runtime del servidor.
 
-| Proveedor | Tipo | Método de conexión | Métricas que obtiene |
-|---|---|---|---|
-| **Anthropic Claude** | Suscripción Pro / API | **Inicio de sesión web** (o cookie `sessionKey` / Admin API key) | % de uso de la sesión de 5h y del límite semanal, y cuenta regresiva de reset. |
-| **OpenAI / ChatGPT** | ChatGPT Plus / API | **Inicio de sesión web** (o Admin API key) | % de uso semanal de ChatGPT Plus (`/backend-api/wham/usage`), reset, o consumo de tokens/coste si es API. |
-| **Google Gemini** | Suscripción Pro / Advanced | **Inicio de sesión web** | % de uso actual (reseteo diario) y % de límite semanal (reseteo semanal). |
-| **DeepSeek** | Consola Web / API | **Inicio de sesión web** (o API key tradicional) | Saldo total recargado, coste acumulado real ($), tokens consumidos y número de peticiones. |
+### Icono de bandeja
 
----
+| Estado | Significado |
+|---|---|
+| Naranja | El servidor está arrancando. |
+| Verde | El dashboard responde correctamente. |
+| Rojo | El servidor no responde o se cerró. |
 
-## Sistema de Inicio de Sesión Web Automático (Browser Login)
+- Doble clic: abre el dashboard.
+- Clic derecho → **Abrir dashboard**: abre una nueva pestaña.
+- Clic derecho → **Reiniciar servidor**: reinicia el proceso controlado por el icono.
+- Clic derecho → **Salir**: cierra el icono y todo el árbol de procesos del servidor.
 
-Para evitar que el usuario tenga que buscar cookies en las herramientas de desarrollador o generar claves complejas, el dashboard incluye un sistema de **Inicio de sesión web interactivo**:
+> `dashboard.exe` se conserva como lanzador directo de respaldo. El usuario final debe preferir `DashboardTray.exe`.
 
-1. **Apertura de Chromium seguro**: Al pulsar **"Iniciar sesión web"** en cualquier tarjeta, el servidor lanza una instancia interactiva de Chromium (vía Playwright) con scripts de enmascaramiento anti-detección (`navigator.webdriver` deshabilitado, soporte de ventanas emergentes para Google OAuth).
-2. **Identificación por el usuario**: El usuario inicia sesión cómodamente en la web del proveedor (por ejemplo con Google, email o contraseña).
-3. **Extracción y persistencia automática**:
-   - Para **Claude Pro**: Captura la cookie de sesión y consulta el endpoint interno de uso.
-   - Para **OpenAI / ChatGPT Plus**: Captura las cookies y consulta `chatgpt.com/backend-api/wham/usage`.
-   - Para **Google Gemini**: Lee los límites de uso actual y semanal directamente de la interfaz de Gemini.
-   - Para **DeepSeek**: Analiza la consola `platform.deepseek.com/usage` para extraer el saldo, coste total, tokens y número de peticiones.
-4. **Cierre automático y actualización**: Una vez detectadas las métricas, la ventana de Chromium se cierra sola y la tarjeta del dashboard se actualiza en tiempo real.
+## Contenido obligatorio de `dist/`
 
----
+```text
+dist/
+├── DashboardTray.exe     # lanzador recomendado y propietario del icono
+├── dashboard.exe         # servidor empaquetado
+├── server-entry.js       # entrada del servidor standalone
+├── inspector-shim.js     # compatibilidad del runtime empaquetado
+├── standalone/           # aplicación Next.js y dependencias de ejecución
+├── .env_example          # ejemplo sin secretos
+└── .env                  # se crea/actualiza localmente; contiene credenciales
+```
 
-## Cómo se guardan las claves y credenciales
+Toda la carpeta debe permanecer unida. Para moverla a otro PC, comprímela o cópiala completa.
 
-- El dashboard **no** usa `localStorage` para las credenciales sensibles.
-- Al guardar o iniciar sesión web, el servidor almacena las claves/cookies en un archivo local `.env` como `DASHBOARD_PROVIDER_KEYS=<JSON id→secreto codificado en base64>`.
-- Las llamadas subsiguientes leen los datos desde `.env` y mantienen los valores sincronizados.
-- **Seguridad**: El archivo `.env` nunca se sube al repositorio de control de versiones (está ignorado en `.gitignore`).
+## Requisitos
 
----
+- Windows 10/11 de 64 bits.
+- Puerto local `3000` disponible.
+- Navegador predeterminado configurado.
+- Internet para consultar proveedores y para la primera descarga de Chromium de Playwright (~300 MB).
+- Permisos de escritura sobre `dist/` para guardar `dist/.env`.
+
+Consulta la guía detallada: [Instalación en Windows](./Docs/INSTALLATION_WINDOWS.md).
+
+## Credenciales y migración
+
+Las claves, cookies y sesiones se guardan en `dist/.env` cuando se usa el paquete o en `.env` cuando se ejecuta desde el código fuente. El valor está codificado en Base64 para su transporte, pero **no está cifrado**.
+
+Para trasladar conexiones existentes:
+
+1. Cierra el dashboard desde el icono.
+2. Copia `dist/.env` al mismo lugar de la nueva instalación por un canal privado.
+3. Arranca `DashboardTray.exe` en el nuevo PC.
+4. Reconecta las sesiones que hayan expirado o estén vinculadas al equipo anterior.
+
+Nunca subas `.env` a Git, correo, chat o almacenamiento público. Más información: [Seguridad](./Docs/SECURITY.md).
 
 ## Desarrollo
 
-```bash
-npm install
-npm run dev      # http://localhost:3000, usa .env en la raíz del repo
-npm run build    # build de producción (next build, output standalone)
-npm run start    # sirve el build (sin empaquetar)
-npm run lint     # verificación de tipado y ESLint
+```powershell
+npm ci
+npm run dev      # http://localhost:3000
+npm run lint
+npm run build
+npm run exe      # genera dashboard.exe y DashboardTray.exe
 ```
 
-## Configurar en un PC nuevo con las sesiones ya conectadas
+Para desarrollar o compilar, usa una ruta NTFS local. `next dev` puede bloquearse o devolver errores `Watchpack`, `EPERM` o `Access denied` cuando el repositorio está en una unidad SMB/NAS.
 
-El repositorio de git **nunca** contiene el archivo `.env` (está en `.gitignore` a propósito: contiene cookies de sesión reales — para DeepSeek incluye literalmente las cookies de tu cuenta de Google). Por eso, clonar el repo por sí solo **no** trae tus sesiones conectadas.
+## Documentación
 
-Para tener las 5 tarjetas ya logueadas en un equipo nuevo sin repetir el login web en cada una:
+- [Índice de documentación](./Docs/README.md)
+- [Instalación en Windows](./Docs/INSTALLATION_WINDOWS.md)
+- [Arquitectura y flujos](./Docs/ARCHITECTURE.md)
+- [Proveedores y métricas](./Docs/PROVIDERS.md)
+- [Referencia de API local](./Docs/API_REFERENCE.md)
+- [Seguridad y credenciales](./Docs/SECURITY.md)
+- [Desarrollo y ampliación](./Docs/DEVELOPMENT.md)
+- [Compilación y empaquetado](./Docs/PACKAGING.md)
+- [Operación y resolución de problemas](./Docs/OPERATIONS_TROUBLESHOOTING.md)
+- [Estado actual e historial técnico](./Docs/PROJECT_STATUS.md)
+- [Contexto para continuar el proyecto](./PROJECT_CONTEXT.md)
 
-1. `git clone` el repo en el equipo nuevo.
-2. Copia el archivo `.env` de este proyecto (la copia "maestra" vive en este equipo, en la carpeta del repo) a la raíz del clon nuevo. Cópialo **a mano**, por un canal privado que ya controles (USB, tu NAS, un gestor de contraseñas) — nunca por git, email o un chat.
-3. `npm install`
-4. `npm run dev` — las 5 tarjetas deberían aparecer ya conectadas. Pulsa "Actualizar" si alguna sesión web ha caducado entre tanto (verás el aviso en la propia tarjeta).
+## Estado comprobado
 
-Trata ese `.env` como una contraseña maestra: quien lo tenga puede operar tus cuentas de OpenAI, Anthropic, Gemini y Google (vía DeepSeek) tal cual. Si alguna vez sospechas que se ha filtrado, cierra sesión en esas cuentas desde sus propias webs (revoca sesiones activas) y vuelve a conectar cada proveedor desde el dashboard.
+El 11 de agosto de 2026 se validó en Windows:
 
-## Generar el `.exe`
+- compilación de producción y comprobación de tipos;
+- ESLint sin errores;
+- generación de ambos ejecutables;
+- un único proceso `DashboardTray.exe` sin ventana (`MainWindowHandle = 0`);
+- servidor hijo oculto y respuesta HTTP 200 en `127.0.0.1:3000`;
+- carga real de las cinco integraciones configuradas;
+- funcionamiento del panel de ajustes.
 
-```bash
-npm run exe
-```
-
-Esto ejecuta `next build` y luego `scripts/build-exe.js`, empaquetando `dashboard.exe` en `dist/` junto con el build standalone de Next.js.
-
----
-
-## Arquitectura
-
-Ver [`AGENTS.md`](./AGENTS.md).
+Las sesiones de proveedor pueden expirar de forma independiente. Un error de autenticación en una tarjeta no significa que el servidor haya dejado de funcionar.
