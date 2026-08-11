@@ -2,7 +2,9 @@
 
 const { app, BrowserWindow, safeStorage, shell } = require('electron');
 const path = require('path');
-const Store = require('electron-store');
+// electron-store >=9 es ESM puro; require() en CommonJS devuelve el módulo
+// namespace, no la clase directamente — hay que tirar de .default.
+const Store = require('electron-store').default;
 const { startCredentialBroker } = require('./credential-broker');
 const { waitForServer, spawnServer } = require('./server-manager');
 const { createTray } = require('./tray');
