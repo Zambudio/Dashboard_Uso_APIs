@@ -130,9 +130,9 @@ Igual que con `dashboard.exe`/`DashboardTray.exe`, el instalador y el portable n
 
 ### Validación del widget
 
-- `npm test` (`node --test`) pasa: módulos puros de `electron/lib/` y `lib/cred-broker-client.js`.
+- `npm test` (`node --test`) pasa: módulos puros de `electron/lib/` y `lib/cred-broker-client.js` (34 pruebas tras la entrega del 11/08 tarde).
 - `npm run electron:dev` arranca con instancia única, broker de credenciales, servidor Next.js y widget con datos reales.
 - `credentials.enc` en `userData` empieza por el prefijo DPAPI `v10` (no es JSON/Base64 legible).
 - `npx electron-builder --win --dir` genera `dist/win-unpacked/` sin arrastrar `electron` dentro de `resources/standalone-bundle/`.
-- `npm run electron:build` genera el instalador y el portable sin errores.
-- **Pendiente de validar en un equipo sin Smart App Control activo (o con la app ya aprobada):** que el `.exe` final generado arranca de verdad al hacer doble clic. En la máquina donde se implementó este empaquetado, Smart App Control bloqueó la ejecución directa del binario recién compilado — la lógica de la app ya está verificada a fondo en modo `electron:dev` (mismo binario de Electron, mismo código), pero el paso final de "doble clic y funciona" no se pudo confirmar ahí.
+- `npm run electron:build` genera el instalador y el portable sin errores. Regenerado el 11 de agosto de 2026 por la tarde con los fixes de fiabilidad de DeepSeek, el bug de caché del broker y la personalización del widget (opacidad, visibilidad por proveedor, iconos, reset).
+- **Pendiente de validar en un equipo sin Smart App Control activo (o con la app ya aprobada):** que el `.exe` final generado arranca de verdad al hacer doble clic. En la máquina donde se implementó este empaquetado, Smart App Control bloqueó la ejecución directa del binario recién compilado (confirmado de nuevo tras este repaquetado, mismo bloqueo, sin cambios) — la lógica de la app ya está verificada a fondo en modo `electron:dev` (mismo binario de Electron, mismo código), pero el paso final de "doble clic y funciona" no se pudo confirmar ahí.

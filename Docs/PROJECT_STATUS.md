@@ -13,7 +13,7 @@
 - `DashboardTray.exe` WinForms sin consola, con instancia única, estado visual, abrir, reiniciar y salir.
 - Descarga bajo demanda de Chromium.
 - Documentación de usuario, arquitectura, API, proveedores, seguridad, desarrollo, empaquetado y operación.
-- **Widget de escritorio (Electron)**, alternativa al dashboard web: ventana flotante con todos los proveedores, icono de bandeja único, credenciales cifradas con `safeStorage`/DPAPI, instalador y versión portable (`electron-builder`). Convive con `DashboardTray.exe`/`dashboard.exe`, no los sustituye todavía (ver limitaciones).
+- **Widget de escritorio (Electron)**, alternativa al dashboard web: ventana flotante con todos los proveedores (icono real de cada uno, tiempo hasta el próximo reset cuando el proveedor lo expone), transparencia ajustable, visibilidad por proveedor independiente del dashboard web, icono de bandeja único, credenciales cifradas con `safeStorage`/DPAPI, instalador y versión portable (`electron-builder`). Convive con `DashboardTray.exe`/`dashboard.exe`, no los sustituye todavía (ver limitaciones).
 
 ## Cambios de la entrega actual
 
@@ -29,6 +29,9 @@
 10. Se corrigieron dos bugs de tipos heredados de una sesión previa sin commitear (`PollStatusResponse.secret` faltante en `BrowserLoginModal.tsx`, que rompía `next build`) al traer ese trabajo a este branch.
 11. Se corrigió que `next build` arrastraba `electron`/`electron-store` (~350MB) al standalone del servidor sin que ningún route handler los usara (`next.config.js`, `outputFileTracingExcludes`).
 12. El desarrollo/build volvió a bloquearse en la unidad NAS (mismo síntoma que el punto 1); se replicó el repositorio a una ruta NTFS local (`C:\ClaudeWork\Dashboard_Uso_APIs`) para todo el trabajo de Electron/build, sincronizando los commits de vuelta al repositorio original al terminar.
+13. Se investigó y corrigió con evidencia real (no suposiciones) por qué DeepSeek reportaba "sesión caducada" con una sesión válida: la condición de espera del scraper (`lib/usage/deepseek.server.ts`) comprobaba solo la etiqueta "Topped-up balance", que aparece antes de que el importe real termine de hidratar — se disparaba el scraping sobre una página a medio cargar. Corregido exigiendo un símbolo de moneda junto a la etiqueta. Se añadió además un reintento automático, persistencia de las cookies/`localStorage` refrescados tras cada consulta en vivo con éxito, y logging de diagnóstico no sensible.
+14. Se encontró y corrigió un bug real y más serio, descubierto durante la investigación anterior: `lib/cred-broker-client.js` no marcaba su `fetch()` hacia el broker de credenciales con `cache: 'no-store'`. Al ejecutarse dentro de una ruta de Next.js, el `fetch` global cacheaba la primera lectura de `/credentials` para siempre en el proceso — cualquier escritura posterior (guardar una clave, refrescar la sesión de DeepSeek) nunca se reflejaba en una lectura posterior, y como el guardado de claves hace "lee todo + fusiona + escribe todo", podía revertir en silencio credenciales de otros proveedores guardadas más recientemente. Confirmado con una prueba de escritura/lectura directa contra el broker en ejecución antes y después del fix; test de regresión añadido.
+15. Se añadió al widget: iconos reales de cada proveedor (`electron/renderer/logos/`, mismo mapeo que `ProviderLogo.tsx`), tiempo hasta el próximo reset por tarjeta, control de transparencia del panel (`preferences.widgetOpacity`) y visibilidad por proveedor específica del widget (`preferences.widgetHiddenProviderIds`), configurables desde el panel de ajustes del dashboard web.
 
 ## Validaciones ejecutadas
 
@@ -51,17 +54,24 @@
 | Detección de caída del servidor | Confirmada matando el proceso hijo de Next.js directamente; el widget/bandeja reflejan el estado. |
 | `npx electron-builder --win --dir` y `npm run electron:build` | Generan el paquete sin errores; instalador y portable (~145MB cada uno). |
 | Arranque del `.exe` final empaquetado | **No confirmado** en la máquina de desarrollo — bloqueado por Smart App Control de Windows (ver limitaciones). |
+| `npm test` (`node --test`), entrega del 11/08 tarde | 34 tests, todos correctos (se añadió un test de regresión para el bug de caché del broker). |
+| Fetch en vivo de DeepSeek tras el fix | Confirmado con la sesión real del usuario vía `POST /api/usage`: respuesta sin `error`, con coste/saldo reales, sin caer al snapshot en caché. |
+| Persistencia tras refresco de DeepSeek | Confirmado: `cachedSnapshot.fetchedAt` en el almacén cifrado pasa a reflejar el momento del último scraping en vivo con éxito, en vez de quedarse congelado en el login original. |
+| Bug de caché del broker de credenciales | Reproducido con una escritura/lectura directa contra `/api/keys` en ejecución (el valor escrito no aparecía en una lectura posterior); confirmado corregido tras aplicar `cache: 'no-store'`. |
+| Consola del renderer del widget | Se añadió reenvío de `console-message` del widget a la consola del proceso principal (`widget-window.js`) y se usó para confirmar en vivo, contra la sesión real del usuario: opacidad aplicada, lista de proveedores ocultos respetada, icono correcto resuelto para los 5 proveedores y tiempo de reset calculado coincidiendo con los valores ya mostrados en el dashboard web. |
+| Repaquetado final (`electron:build`) tras todos los cambios | Instalador y portable regenerados sin errores; mismo bloqueo ya documentado de Smart App Control al intentar el arranque directo en esta máquina (sin cambios respecto a la entrega anterior). |
 
 ## Estado operativo observado
 
 - OpenAI/ChatGPT y Anthropic devolvieron porcentajes reales durante la validación.
-- DeepSeek pudo mostrar saldo/coste guardado y avisó de sesión web caducada.
+- DeepSeek mostraba antes saldo/coste guardado con aviso de sesión web caducada por un bug de temporización del scraper, no por falta de sesión real; corregido el 11 de agosto de 2026 (tarde) — ver "Cambios de la entrega actual", punto 13.
 - Claude Pro indicó que la sesión actual no encontraba organización.
-- Estos dos últimos son estados de credencial y deben resolverse con **Iniciar sesión web**; no son fallos de arranque.
+- Este último es un estado de credencial y debe resolverse con **Iniciar sesión web**; no es un fallo de arranque.
 
 ## Limitaciones conocidas
 
-- Hay tests unitarios (`node --test`, 33 pruebas) solo para los módulos puros de `electron/lib/` y `lib/cred-broker-client.js`; nada del resto del código (proveedores, parsers, componentes React) tiene cobertura, y no hay tests E2E.
+- Hay tests unitarios (`node --test`, 34 pruebas) solo para los módulos puros de `electron/lib/` y `lib/cred-broker-client.js`; nada del resto del código (proveedores, parsers, componentes React, `lib/usage/deepseek.server.ts`) tiene cobertura, y no hay tests E2E. La corrección de DeepSeek se verificó end-to-end contra la cuenta real del usuario (no con un test automatizado) porque depende de estado de sesión real de un servicio de terceros.
+- El scraping de DeepSeek sigue dependiendo de la estructura DOM actual de `platform.deepseek.com` y de que su capa anti-bot (AWS WAF) no cambie de comportamiento; el reintento y el logging de diagnóstico añadidos mitigan fallos puntuales pero no garantizan fiabilidad al 100% si DeepSeek cambia su interfaz o su protección.
 - Las sesiones y endpoints internos pueden cambiar o expirar.
 - Con `DashboardTray.exe`/`npm run dev`: no hay cifrado de secretos en reposo; Base64 no protege el contenido. Con el widget de Electron sí se cifran las claves de proveedor (`safeStorage`/DPAPI), pero no la configuración/preferencias no sensibles.
 - Los binarios (ambas rutas) no tienen firma pública de código. Para el widget de Electron esto puede significar que **Smart App Control bloquee la ejecución por completo**, no solo un aviso de SmartScreen — comprobado durante el desarrollo (ver `Docs/SECURITY.md` y `Docs/PACKAGING.md`).
@@ -81,6 +91,7 @@
 5. Firmar releases con certificado reconocido (CA pública) y publicar checksums — la única forma real de evitar el bloqueo de Smart App Control.
 6. Actualizar Next.js 14.2.15 a una versión corregida tras validar compatibilidad.
 7. Añadir un icono de aplicación propio para el widget de Electron.
+8. Cubrir con tests unitarios la lógica pura de `lib/usage/deepseek.server.ts` (parseo, decisión de reintento) inyectando un scraper falso, para no depender solo de verificación manual contra la cuenta real.
 
 ## Criterio de terminado
 

@@ -8,8 +8,13 @@ Se puede usar de dos formas: como **widget flotante de escritorio** (nuevo, con 
 
 1. Copia la carpeta `dist/` completa al PC de destino.
 2. Ejecuta [`dist/Dashboard Uso APIs-0.1.0-Setup.exe`](./dist/) (instalador) o la versión `-portable.exe` si prefieres no instalar nada.
-3. Aparece una ventana flotante sin bordes con las tarjetas de todos los proveedores configurados, más un icono de bandeja con menú: **Mostrar widget**, **Abrir en navegador**, **Reiniciar servidor**, **Salir**.
+3. Aparece una ventana flotante sin bordes con las tarjetas de todos los proveedores configurados (con su icono real), más un icono de bandeja con menú: **Mostrar widget**, **Abrir en navegador**, **Reiniciar servidor**, **Salir**.
 4. Si tenías un `.env` de una instalación anterior con claves/cookies guardadas, se importa automáticamente una sola vez a un almacén cifrado (`credentials.enc`, cifrado con DPAPI) la primera vez que arranca.
+
+Cada tarjeta muestra icono del proveedor, punto de estado, uso (%/saldo) y, cuando el proveedor lo expone, el tiempo hasta el próximo reset ("Reset: 3 h" / "Reset: 7 d"). Desde **Ajustes del panel** en el dashboard web se controla también el widget:
+
+- **Transparencia del widget de escritorio**: un slider (30-100%) ajusta la opacidad del panel flotante.
+- **Proveedores visibles en el widget**: casillas independientes de "Ocultar" — permiten mostrar un proveedor en el dashboard web pero no en el widget compacto, o viceversa.
 
 > **Aviso de seguridad de Windows:** el instalador y el portable no tienen todavía una firma de código con reputación en la nube de Microsoft (ver [Seguridad](./Docs/SECURITY.md)). Si tu PC tiene activado **Smart App Control**, Windows puede bloquear la primera ejecución. Si eso ocurre, tendrás que aprobarlo manualmente (o mantener Smart App Control desactivado) hasta que el binario tenga una firma reconocida. Si prefieres evitar ese aviso por completo, usa `DashboardTray.exe` (más abajo), que no lo dispara.
 
@@ -135,3 +140,14 @@ El mismo día se validó también el widget de escritorio (Electron):
 - **Pendiente:** no se pudo confirmar por ejecución directa que el `.exe` final empaquetado arranca en esta máquina de prueba concreta — Smart App Control de Windows bloqueó el binario recién compilado por no tener firma con reputación en la nube (ver [Seguridad](./Docs/SECURITY.md)). Por eso `DashboardTray.exe`/`dashboard.exe` **no se han retirado**: siguen siendo la vía probada mientras alguien confirma el arranque del widget en un equipo real.
 
 Las sesiones de proveedor pueden expirar de forma independiente. Un error de autenticación en una tarjeta no significa que el servidor haya dejado de funcionar.
+
+### Entrega del 11 de agosto de 2026 (tarde): fiabilidad de DeepSeek y personalización del widget
+
+Se investigaron a fondo (con evidencia real, no suposiciones) dos bugs que hacían que DeepSeek mostrara "sesión caducada" incluso con una sesión válida:
+
+1. **La condición de espera del scraper era prematura.** Se esperaba a que apareciera la etiqueta "Topped-up balance" en la página, pero esa etiqueta forma parte del esqueleto estático y aparece antes de que el importe real termine de cargar — el scraper leía la página demasiado pronto y la reportaba como "sin datos" (falso negativo). Corregido: ahora se exige un símbolo de moneda junto a la etiqueta, señal real de que el dato ya está pintado.
+2. **El broker de credenciales servía siempre la primera lectura, congelada para siempre.** El `fetch()` que lee `/credentials` del broker se ejecuta dentro de una ruta de Next.js, cuyo `fetch` global cachea las respuestas por defecto — sin `cache: 'no-store'`, cualquier escritura posterior (login de un proveedor, sesión de DeepSeek refrescada) nunca se reflejaba en una lectura posterior, y un guardado que primero "lee todo + fusiona + escribe todo" podía revertir en silencio cambios recientes de otros proveedores. Corregido en `lib/cred-broker-client.js`, con test de regresión.
+
+Además: reintento automático si el primer intento de scraping falla, persistencia de las cookies/localStorage refrescados tras cada consulta en vivo (para no depender para siempre de la sesión capturada en el login original) y logging de diagnóstico no sensible para futuros fallos. Verificado end-to-end contra la cuenta real de DeepSeek del usuario: la consulta en vivo funciona y el almacén cifrado se actualiza con cada refresco exitoso.
+
+También se añadió: iconos reales de cada proveedor en las tarjetas del widget, tiempo hasta el próximo reset cuando el proveedor lo expone, control de transparencia del panel y visibilidad por proveedor independiente para el widget — todo verificado con `npm test` (34/34), `tsc --noEmit`, `next lint`, `next build` y una sesión real de `electron:dev` con inspección de la consola del renderer.

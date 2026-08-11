@@ -68,6 +68,7 @@ El instalador/portable del widget de Electron (`electron-builder`) tampoco tiene
 - Con `DashboardTray.exe`/`npm run dev`: no existe cifrado en reposo gestionado por la aplicación (Base64 en `.env`). Con el widget de Electron, las claves de proveedor sí se cifran (`safeStorage`/DPAPI), pero `DASHBOARD_CONFIG`/`DASHBOARD_PREFERENCES` (nombres, orden, preferencias — no secretos) siguen sin cifrar en `.env`.
 - El broker de credenciales del widget escucha solo en `127.0.0.1` con un token efímero, pero cualquier proceso local que consiga leer las variables de entorno del servidor Next.js (`DASHBOARD_CRED_BROKER_URL`/`_TOKEN`) podría usarlas mientras el proceso siga vivo — mismo modelo de confianza de "único usuario en un PC de confianza" que el resto de la aplicación.
 - Ningún binario (widget o `dashboard.exe`/`DashboardTray.exe`) tiene firma pública con reputación; en máquinas con Smart App Control activado esto puede bloquear la ejecución, no solo mostrar un aviso.
+- (Corregido el 11 de agosto de 2026) `lib/cred-broker-client.js` no marcaba su `fetch()` con `cache: 'no-store'`; Next.js cacheaba la primera lectura de `/credentials` para siempre dentro del proceso, así que un guardado de clave que primero lee-fusiona-escribe podía revertir en silencio cambios recientes de otro proveedor. No exponía secretos (la fuga era de disponibilidad/consistencia, no de confidencialidad), pero sí podía perder credenciales guardadas.
 
 ## Respuesta ante incidente
 
