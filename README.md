@@ -2,9 +2,22 @@
 
 Aplicación local para Windows que centraliza el uso, los costes y los límites reales de OpenAI/ChatGPT, Anthropic/Claude, Google Gemini y DeepSeek. La interfaz está en español y no utiliza datos simulados.
 
-## Inicio rápido en cualquier PC Windows
+Se puede usar de dos formas: como **widget flotante de escritorio** (nuevo, con Electron) o como **dashboard web** en el navegador (`DashboardTray.exe`, el lanzador original). Ambas comparten el mismo servidor y las mismas integraciones — el widget añade una ventana compacta con todos los proveedores y un icono de bandeja, y cifra las credenciales con `safeStorage`/DPAPI en vez de Base64.
 
-La forma recomendada de usar la aplicación es el lanzador de bandeja:
+## Widget de escritorio (Electron) — nuevo
+
+1. Copia la carpeta `dist/` completa al PC de destino.
+2. Ejecuta [`dist/Dashboard Uso APIs-0.1.0-Setup.exe`](./dist/) (instalador) o la versión `-portable.exe` si prefieres no instalar nada.
+3. Aparece una ventana flotante sin bordes con las tarjetas de todos los proveedores configurados, más un icono de bandeja con menú: **Mostrar widget**, **Abrir en navegador**, **Reiniciar servidor**, **Salir**.
+4. Si tenías un `.env` de una instalación anterior con claves/cookies guardadas, se importa automáticamente una sola vez a un almacén cifrado (`credentials.enc`, cifrado con DPAPI) la primera vez que arranca.
+
+> **Aviso de seguridad de Windows:** el instalador y el portable no tienen todavía una firma de código con reputación en la nube de Microsoft (ver [Seguridad](./Docs/SECURITY.md)). Si tu PC tiene activado **Smart App Control**, Windows puede bloquear la primera ejecución. Si eso ocurre, tendrás que aprobarlo manualmente (o mantener Smart App Control desactivado) hasta que el binario tenga una firma reconocida. Si prefieres evitar ese aviso por completo, usa `DashboardTray.exe` (más abajo), que no lo dispara.
+
+Detalles de arquitectura: [Widget de escritorio en ARCHITECTURE.md](./Docs/ARCHITECTURE.md#widget-de-escritorio-electron).
+
+## Dashboard web en el navegador (DashboardTray.exe)
+
+Forma alternativa, sin ventana flotante propia — abre el dashboard completo en tu navegador:
 
 1. Copia la carpeta `dist/` completa al PC de destino. No copies solamente los ejecutables.
 2. Ejecuta [`dist/DashboardTray.exe`](./dist/DashboardTray.exe).
@@ -32,16 +45,18 @@ No es necesario instalar Node.js, npm ni PowerShell en el PC de destino. `Dashbo
 
 ```text
 dist/
-├── DashboardTray.exe     # lanzador recomendado y propietario del icono
-├── dashboard.exe         # servidor empaquetado
+├── Dashboard Uso APIs-0.1.0-Setup.exe     # instalador del widget (Electron)
+├── Dashboard Uso APIs-0.1.0-portable.exe  # versión portable del widget
+├── DashboardTray.exe     # lanzador del dashboard web y propietario del icono
+├── dashboard.exe         # servidor empaquetado (usado por DashboardTray.exe)
 ├── server-entry.js       # entrada del servidor standalone
 ├── inspector-shim.js     # compatibilidad del runtime empaquetado
-├── standalone/           # aplicación Next.js y dependencias de ejecución
+├── standalone/           # aplicación Next.js y dependencias, para DashboardTray.exe
 ├── .env_example          # ejemplo sin secretos
-└── .env                  # se crea/actualiza localmente; contiene credenciales
+└── .env                  # se crea/actualiza localmente; contiene credenciales (solo ruta DashboardTray.exe)
 ```
 
-Toda la carpeta debe permanecer unida. Para moverla a otro PC, comprímela o cópiala completa.
+El widget de Electron no usa `dist/standalone/` ni `dist/.env` — lleva su propia copia del servidor dentro del instalador y guarda las credenciales cifradas en `%APPDATA%\Dashboard Uso APIs\credentials.enc`. Toda la carpeta `dist/` debe permanecer unida de todas formas si vas a usar también `DashboardTray.exe`.
 
 ## Requisitos
 
@@ -55,9 +70,11 @@ Consulta la guía detallada: [Instalación en Windows](./Docs/INSTALLATION_WINDO
 
 ## Credenciales y migración
 
-Las claves, cookies y sesiones se guardan en `dist/.env` cuando se usa el paquete o en `.env` cuando se ejecuta desde el código fuente. El valor está codificado en Base64 para su transporte, pero **no está cifrado**.
+**Con `DashboardTray.exe` (dashboard web):** las claves, cookies y sesiones se guardan en `dist/.env` cuando se usa el paquete o en `.env` cuando se ejecuta desde el código fuente. El valor está codificado en Base64 para su transporte, pero **no está cifrado**.
 
-Para trasladar conexiones existentes:
+**Con el widget de Electron:** se cifran de verdad con `safeStorage` (DPAPI en Windows), en `%APPDATA%\Dashboard Uso APIs\credentials.enc`. Al estar ligado a usuario/máquina, ya no es un fichero portable que puedas copiar sin más a otro PC — si migras de equipo, reconecta las sesiones desde el widget o desde el dashboard web (**Abrir en navegador**). Un `.env` antiguo se importa una sola vez al primer arranque.
+
+Para trasladar conexiones existentes entre PCs con `DashboardTray.exe`:
 
 1. Cierra el dashboard desde el icono.
 2. Copia `dist/.env` al mismo lugar de la nueva instalación por un canal privado.
@@ -70,10 +87,13 @@ Nunca subas `.env` a Git, correo, chat o almacenamiento público. Más informaci
 
 ```powershell
 npm ci
-npm run dev      # http://localhost:3000
+npm run dev           # http://localhost:3000 (dashboard web sin Electron)
 npm run lint
 npm run build
-npm run exe      # genera dashboard.exe y DashboardTray.exe
+npm test               # node --test — módulos puros de electron/lib y lib/cred-broker-client.js
+npm run exe            # genera dashboard.exe y DashboardTray.exe (ruta antigua)
+npm run electron:dev   # arranca el widget de Electron en modo desarrollo
+npm run electron:build # genera el instalador y la versión portable del widget
 ```
 
 Para desarrollar o compilar, usa una ruta NTFS local. `next dev` puede bloquearse o devolver errores `Watchpack`, `EPERM` o `Access denied` cuando el repositorio está en una unidad SMB/NAS.
@@ -94,7 +114,7 @@ Para desarrollar o compilar, usa una ruta NTFS local. `next dev` puede bloquears
 
 ## Estado comprobado
 
-El 11 de agosto de 2026 se validó en Windows:
+El 11 de agosto de 2026 se validó en Windows (dashboard web, `DashboardTray.exe`):
 
 - compilación de producción y comprobación de tipos;
 - ESLint sin errores;
@@ -103,5 +123,15 @@ El 11 de agosto de 2026 se validó en Windows:
 - servidor hijo oculto y respuesta HTTP 200 en `127.0.0.1:3000`;
 - carga real de las cinco integraciones configuradas;
 - funcionamiento del panel de ajustes.
+
+El mismo día se validó también el widget de escritorio (Electron):
+
+- 33 tests unitarios (`npm test`) de los módulos puros del broker de credenciales, el almacén cifrado, el gestor del servidor y el color de la bandeja;
+- arranque completo en modo desarrollo (`npm run electron:dev`) con instancia única, broker de credenciales y servidor Next.js;
+- migración real de las 5 claves/cookies del `.env` heredado de este equipo al almacén cifrado (`credentials.enc`, prefijo DPAPI `v10` confirmado — no es Base64/JSON legible);
+- widget mostrando datos reales de los proveedores configurados (capturas de pantalla), incluyendo errores reales sin inventar datos (p. ej. sesión de DeepSeek caducada);
+- detección de caída del servidor (matando el proceso hijo de Next.js) y actualización del estado en el widget/bandeja;
+- generación correcta del instalador y la versión portable con `electron-builder`.
+- **Pendiente:** no se pudo confirmar por ejecución directa que el `.exe` final empaquetado arranca en esta máquina de prueba concreta — Smart App Control de Windows bloqueó el binario recién compilado por no tener firma con reputación en la nube (ver [Seguridad](./Docs/SECURITY.md)). Por eso `DashboardTray.exe`/`dashboard.exe` **no se han retirado**: siguen siendo la vía probada mientras alguien confirma el arranque del widget en un equipo real.
 
 Las sesiones de proveedor pueden expirar de forma independiente. Un error de autenticación en una tarjeta no significa que el servidor haya dejado de funcionar.

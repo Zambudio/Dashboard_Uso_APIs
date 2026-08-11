@@ -93,3 +93,29 @@ El mapa de sesiones vive en `globalThis.__browserLoginSessions` para sobrevivir 
 Next.js genera `output: 'standalone'`. `dashboard.exe` contiene el runtime Node de `pkg`, pero carga `standalone/server.js` desde disco. `server-entry.js` instala primero `inspector-shim.js` porque el runtime empaquetado no expone `inspector` y Next lo requiere para su trazador.
 
 Playwright se copia completo dentro de `standalone/node_modules`. Su CLI se resuelve desde `process.cwd()`; no se usa `require.resolve('playwright')` porque Webpack lo convertiría en un identificador numérico del bundle.
+
+## Widget de escritorio (Electron)
+
+Vía alternativa a `DashboardTray.exe`, en `electron/`. No toca ninguna de las capas anteriores (proveedores, login web, rutas API) — solo cambia el *shell* que arranca el servidor y añade una interfaz nativa.
+
+```mermaid
+flowchart TD
+    MAIN[electron/main.js] --> BROKER[credential-broker.js]
+    MAIN --> SM[server-manager.js: spawnServer]
+    SM --> SERVER[standalone/server.js]
+    MAIN --> WIN[widget-window.js]
+    MAIN --> TRAY[tray.js]
+    MAIN --> POLL[usage-poller.js]
+    POLL -->|fetch, no-store| SERVER
+    WIN -->|IPC usage-update / server-status| RENDERER[renderer/widget.js]
+    BROKER -->|HTTP loopback + token| ENVKEYS[lib/env-keys.server.ts]
+    ENVKEYS -.->|sin broker: npm run dev| ENVFILE[.env]
+```
+
+- **`server-manager.js`** spawnea `standalone/server.js` con `ELECTRON_RUN_AS_NODE=1` (reutiliza el propio binario de Electron como runtime Node, sin depender de `pkg` ni de que el usuario tenga Node instalado). `waitForServer()` sondea `/api/config` (no `/`) porque en el standalone de Next, `/` está pre-renderizada y responde antes de que las rutas dinámicas terminen de inicializarse.
+- **`credential-broker.js`** cifra `DASHBOARD_PROVIDER_KEYS` con `safeStorage` (DPAPI) en `credentials.enc`, dentro de `app.getPath('userData')`. Como el servidor Next.js sigue siendo un proceso Node aparte (no puede llamar a `safeStorage` directamente), expone un HTTP en loopback con un token aleatorio por arranque; `lib/env-keys.server.ts` habla con él si detecta `DASHBOARD_CRED_BROKER_URL`/`_TOKEN` en su entorno, y si no, sigue leyendo `.env` en Base64 exactamente igual que antes (así `npm run dev` sin Electron no cambia). `DASHBOARD_CONFIG` y `DASHBOARD_PREFERENCES` (no sensibles) siguen en `.env` sin pasar por el broker.
+- **`usage-poller.js`** hace todo el sondeo a `/api/config`/`/api/usage` desde el proceso principal, nunca desde el renderer: la ventana del widget se carga con `loadFile()` (origen `file://`), y un `fetch()` cross-origin desde ahí sería bloqueado por CORS. Usa `cache: 'no-store'` porque el `fetch()` del proceso principal de Electron pasa por la caché HTTP de Chromium, persistida en `userData/Cache` entre reinicios.
+- **`widget-window.js`** / **`renderer/`** son la ventana flotante (sin bordes, siempre visible, colapsable) — reciben los datos por IPC (`usage-update`, `server-status`), nunca por `fetch()` directo.
+- **`tray.js`** pinta un único icono de bandeja (color según el peor estado entre proveedores, mismos tonos que `ProviderCard.tsx`) con menú Mostrar widget / Abrir en navegador / Reiniciar servidor / Salir.
+
+Detalles de diseño y alternativas descartadas: [Docs/superpowers/specs/2026-08-11-electron-widget-design.md](./superpowers/specs/2026-08-11-electron-widget-design.md).
