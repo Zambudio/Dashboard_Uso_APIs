@@ -767,9 +767,9 @@ const path = require('path');
 const http = require('http');
 const { spawn } = require('child_process');
 
-function probePort(host, port, timeoutMs = 800) {
+function probePort(host, port, timeoutMs = 800, probePath = '/') {
   return new Promise((resolve) => {
-    const req = http.get({ host, port, path: '/', timeout: timeoutMs }, (res) => {
+    const req = http.get({ host, port, path: probePath, timeout: timeoutMs }, (res) => {
       res.resume();
       resolve(true);
     });
@@ -778,9 +778,14 @@ function probePort(host, port, timeoutMs = 800) {
   });
 }
 
-async function waitForServer(host, port, { retries = 75, delayMs = 400 } = {}) {
+// El path por defecto es una ruta API dinámica (no la '/' estática) a
+// propósito: en el standalone de Next.js, '/' está pre-renderizada y
+// responde en cuanto el socket acepta conexiones, mientras que las rutas
+// dinámicas (force-dynamic, como /api/config) se inicializan de forma
+// perezosa en su primera petición.
+async function waitForServer(host, port, { retries = 75, delayMs = 400, probePath = '/api/config' } = {}) {
   for (let attempt = 0; attempt < retries; attempt++) {
-    if (await probePort(host, port)) return true;
+    if (await probePort(host, port, 800, probePath)) return true;
     await new Promise((resolve) => setTimeout(resolve, delayMs));
   }
   return false;
@@ -978,7 +983,7 @@ test('startUsagePolling calls onUpdate immediately and again after the configure
 test('startUsagePolling reports fetch failures via onError instead of throwing', async () => {
   const errors = [];
   const fakeSnapshot = async () => { throw new Error('network down'); };
-  const stop = startUsagePolling({ serverUrl: 'http://x', onUpdate: () => {}, onError: (e) => errors.push(e), defaultIntervalMs: 20 });
+  const stop = startUsagePolling({ serverUrl: 'http://x', onUpdate: () => {}, onError: (e) => errors.push(e), defaultIntervalMs: 20, fetchSnapshot: fakeSnapshot });
   await new Promise((r) => setTimeout(r, 30));
   stop();
   assert.ok(errors.length >= 1);
@@ -1017,27 +1022,41 @@ Crea `electron/usage-poller.js`:
 // tiene esa restricción.
 
 async function fetchJson(url, options) {
-  const res = await fetch(url, options);
+  // cache: 'no-store' es obligatorio: el fetch() del proceso principal de
+  // Electron pasa por la caché HTTP de Chromium (persistida en
+  // userData/Cache entre reinicios de la app), y sin esto el widget puede
+  // quedarse sirviendo una respuesta cacheada de un arranque anterior.
+  const res = await fetch(url, { ...options, cache: 'no-store' });
   if (!res.ok) throw new Error(`HTTP ${res.status} fetching ${url}`);
   return res.json();
 }
 
 async function fetchDashboardSnapshot(serverUrl) {
-  const configRes = await fetchJson(`${serverUrl}/api/config`);
+  // DASHBOARD_CONFIG siempre guarda apiKey: '' (lib/storage.ts la sanea
+  // antes de persistir) — la clave/cookie real vive aparte, en
+  // DASHBOARD_PROVIDER_KEYS. app/page.tsx la rehidrata igual (envKeys[id]
+  // ?? provider.apiKey ?? '') antes de decidir a quién consultar; hay que
+  // replicar el mismo merge aquí o el widget nunca pediría datos reales.
+  const [configRes, keys] = await Promise.all([
+    fetchJson(`${serverUrl}/api/config`),
+    fetchJson(`${serverUrl}/api/keys`),
+  ]);
   const providers = configRes.providers || [];
   const withUsage = await Promise.all(
     providers.map(async (provider) => {
-      if (!provider.apiKey) return provider;
+      const apiKey = keys[provider.id] || provider.apiKey || '';
+      if (!apiKey) return { ...provider, apiKey };
       try {
         const usage = await fetchJson(`${serverUrl}/api/usage`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ id: provider.id, provider: provider.provider }),
         });
-        return { ...provider, usage };
+        return { ...provider, apiKey, usage };
       } catch (err) {
         return {
           ...provider,
+          apiKey,
           usage: { fetchedAt: new Date().toISOString(), error: err instanceof Error ? err.message : String(err) },
         };
       }
@@ -1656,7 +1675,7 @@ npm install electron-store
 En `package.json`, añade `"main": "electron/main.js"` al nivel raíz (junto a `"name"`, `"version"`), y añade a `"scripts"`:
 
 ```json
-    "test": "node --test lib electron",
+    "test": "node --test",
     "electron:dev": "node scripts/prepare-standalone.js && electron .",
     "electron:build": "node scripts/prepare-standalone.js && electron-builder --win"
 ```
@@ -1672,7 +1691,9 @@ Crea `electron/main.js`:
 
 const { app, BrowserWindow, safeStorage, shell } = require('electron');
 const path = require('path');
-const Store = require('electron-store');
+// electron-store >=9 es ESM puro; require() en CommonJS devuelve el módulo
+// namespace, no la clase directamente — hay que tirar de .default.
+const Store = require('electron-store').default;
 const { startCredentialBroker } = require('./credential-broker');
 const { waitForServer, spawnServer } = require('./server-manager');
 const { createTray } = require('./tray');
