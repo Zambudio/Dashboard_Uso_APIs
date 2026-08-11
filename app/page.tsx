@@ -6,7 +6,7 @@ import { BrowserLoginModal } from '@/components/BrowserLoginModal';
 import { DashboardSettingsPanel } from '@/components/DashboardSettingsPanel';
 import { ProviderCard } from '@/components/ProviderCard';
 import { ProviderSettingsPanel } from '@/components/ProviderSettingsPanel';
-import { fetchProviderUsage, loadEnvKeys, loadPreferences, loadProviders, savePreferences, saveProviders } from '@/lib/storage';
+import { fetchProviderUsage, fetchServerConfig, loadEnvKeys, loadPreferences, loadProviders, savePreferences, saveProviders } from '@/lib/storage';
 import { getProviderDefinition } from '@/lib/providers';
 import { ApiProviderConfig, ApiUsageSnapshot, DashboardPreferences, ProviderKey, ProviderVisibility } from '@/types/api';
 
@@ -22,6 +22,7 @@ const defaultPreferences: DashboardPreferences = {
   showHiddenProviders: false,
   showSummaryCards: true,
   sortOrder: 'default',
+  refreshWidgetSeconds: 300,
 };
 
 function SummaryCard({ title, value, subtitle }: { title: string; value: string; subtitle: string }) {
@@ -55,22 +56,68 @@ export default function HomePage() {
   const [initialLoadingIds, setInitialLoadingIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
-    const stored = loadProviders();
-    const storedPrefs = loadPreferences();
+    async function loadData() {
+      // 1. Get configs from server & local
+      const [serverConfig, envKeys] = await Promise.all([
+        fetchServerConfig(),
+        loadEnvKeys()
+      ]);
 
-    if (stored.length) {
-      // Ensure all standard providers are present
-      const storedIds = new Set(stored.map((p) => p.id));
+      const localProviders = loadProviders();
+      const localPrefs = loadPreferences();
+
+      // 2. Resolve preferences
+      const effectivePrefs = serverConfig.preferences || localPrefs || defaultPreferences;
+      if (!serverConfig.preferences && localPrefs) {
+        savePreferences(localPrefs);
+      }
+      setPreferences(effectivePrefs);
+
+      // 3. Resolve providers
+      const effectiveProviders = serverConfig.providers || localProviders;
+      let baseProviders = effectiveProviders.length > 0 ? effectiveProviders : initialProviders;
+      
+      const storedIds = new Set(baseProviders.map((p) => p.id));
       const missingDefaults = initialProviders.filter((p) => !storedIds.has(p.id));
-      const merged = [...stored, ...missingDefaults];
-      setProviders(merged);
-    } else {
-      saveProviders(initialProviders);
+      baseProviders = [...baseProviders, ...missingDefaults];
+
+      if (effectiveProviders.length === 0 || (!serverConfig.providers && localProviders.length > 0)) {
+        saveProviders(baseProviders);
+      }
+
+      // 4. Merge API keys
+      const mergedWithKeys = baseProviders.map((provider) => ({
+        ...provider,
+        apiKey: envKeys[provider.id] ?? provider.apiKey ?? ''
+      }));
+
+      // 5. Fetch usage
+      const toRefresh = mergedWithKeys.filter((provider) => provider.apiKey && getProviderDefinition(provider.provider).usageImplemented);
+
+      if (toRefresh.length) {
+        setInitialLoadingIds(new Set(toRefresh.map((p) => p.id)));
+        setProviders(mergedWithKeys); // Update state immediately before fetch
+        const results = await Promise.all(
+          toRefresh.map((provider) =>
+            fetchProviderUsage(provider.id, provider.provider).then((snapshot) => ({ id: provider.id, snapshot }))
+          )
+        );
+        const byId = new Map(results.map((r) => [r.id, r.snapshot]));
+        const finalProviders = mergedWithKeys.map((provider) => {
+          const snapshot = byId.get(provider.id);
+          if (!snapshot) return provider;
+          return { ...provider, usage: snapshot, status: snapshot.error ? ('error' as const) : ('online' as const) };
+        });
+        setProviders(finalProviders);
+        saveProviders(finalProviders);
+        setInitialLoadingIds(new Set());
+      } else {
+        setProviders(mergedWithKeys);
+      }
     }
 
-    if (storedPrefs) {
-      setPreferences(storedPrefs);
-    }
+    loadData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const saveAllProviders = useCallback((updated: ApiProviderConfig[]) => {
@@ -99,41 +146,6 @@ export default function HomePage() {
 
       return current;
     });
-  }, []);
-
-  // Al cargar la página, todas las tarjetas conectadas se refrescan a la vez y
-  // revelan sus datos juntas (nada de ir "apareciendo" una a una según responda cada API).
-  useEffect(() => {
-    loadEnvKeys().then((envKeys) => {
-      setProviders((current) => {
-        const merged = current.map((provider) => ({ ...provider, apiKey: envKeys[provider.id] ?? provider.apiKey ?? '' }));
-        const toRefresh = merged.filter((provider) => provider.apiKey && getProviderDefinition(provider.provider).usageImplemented);
-
-        if (toRefresh.length) {
-          setInitialLoadingIds(new Set(toRefresh.map((p) => p.id)));
-          Promise.all(
-            toRefresh.map((provider) =>
-              fetchProviderUsage(provider.id, provider.provider).then((snapshot) => ({ id: provider.id, snapshot }))
-            )
-          ).then((results) => {
-            setProviders((latest) => {
-              const byId = new Map(results.map((r) => [r.id, r.snapshot]));
-              const next = latest.map((provider) => {
-                const snapshot = byId.get(provider.id);
-                if (!snapshot) return provider;
-                return { ...provider, usage: snapshot, status: snapshot.error ? ('error' as const) : ('online' as const) };
-              });
-              saveProviders(next);
-              return next;
-            });
-            setInitialLoadingIds(new Set());
-          });
-        }
-
-        return merged;
-      });
-    });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const totalBalance = useMemo(() => providers.reduce((sum, item) => sum + (item.usage?.balance ?? 0), 0), [providers]);
@@ -279,14 +291,19 @@ export default function HomePage() {
     }
   };
 
-  const handleBrowserLoginSuccess = async (providerId: string, snapshot: ApiUsageSnapshot) => {
-    const envKeys = await loadEnvKeys();
+  const handleBrowserLoginSuccess = async (providerId: string, snapshot: ApiUsageSnapshot, secret?: string) => {
+    let actualSecret = secret;
+    if (!actualSecret) {
+      const envKeys = await loadEnvKeys();
+      actualSecret = envKeys[providerId];
+    }
+
     setProviders((current) => {
       const next = current.map((p) => {
         if (p.id === providerId) {
           return {
             ...p,
-            apiKey: envKeys[providerId] || 'connected-session',
+            apiKey: actualSecret || 'connected-session',
             status: 'online' as const,
             usage: snapshot,
           };

@@ -66,6 +66,21 @@ export function DashboardSettingsPanel({ preferences, onSave, onClose }: Dashboa
         </label>
         <p className="mt-2 text-xs text-slate-500">Selecciona cómo se ordenan las tarjetas de proveedor.</p>
       </div>
+
+      <div className="mt-5 rounded-2xl border border-white/10 bg-slate-950/30 p-4 text-sm text-slate-300">
+        <label className="flex items-center justify-between gap-3">
+          <span>Refresco del widget de escritorio (segundos)</span>
+          <input
+            type="number"
+            min={30}
+            step={30}
+            value={preferences.refreshWidgetSeconds ?? 300}
+            onChange={(event) => onSave({ ...preferences, refreshWidgetSeconds: Number(event.target.value) || 300 })}
+            className="w-24 rounded-xl border border-white/10 bg-[#141424] px-3 py-2 text-white"
+          />
+        </label>
+        <p className="mt-2 text-xs text-slate-500">Cada cuánto consulta el widget flotante los datos de todos los proveedores.</p>
+      </div>
     </div>
   );
 }

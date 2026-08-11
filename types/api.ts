@@ -46,4 +46,6 @@ export interface DashboardPreferences {
   sortOrder: 'default' | 'status' | 'balance' | 'cost';
   /** Orden manual de tarjetas (ids de proveedor) fijado arrastrando. Solo se aplica con sortOrder 'default'. */
   cardOrder?: string[];
+  /** Segundos entre refrescos automáticos del widget de escritorio. Por defecto 300 (5 min). */
+  refreshWidgetSeconds?: number;
 }
