@@ -5,7 +5,7 @@ const path = require('path');
 
 const WIDGET_WIDTH = 340;
 const HEADER_HEIGHT = 56;
-const CARD_HEIGHT = 64;
+const CARD_HEIGHT = 74;
 
 function isPositionOnScreen(x, y, width, height) {
   return screen.getAllDisplays().some((display) => {
@@ -52,6 +52,13 @@ function createWidgetWindow({ store, serverUrl }) {
   }
 
   win.loadFile(path.join(__dirname, 'renderer', 'widget.html'));
+
+  // Reenvía la consola del renderer (file://, sin DevTools abiertas por
+  // defecto) a la consola del proceso principal: sin esto, un error de JS en
+  // widget.js queda invisible tanto en producción como al depurar.
+  win.webContents.on('console-message', (_event, _level, message) => {
+    console.log('[widget-renderer]', message);
+  });
 
   let saveTimer = null;
   win.on('move', () => {

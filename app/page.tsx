@@ -23,6 +23,8 @@ const defaultPreferences: DashboardPreferences = {
   showSummaryCards: true,
   sortOrder: 'default',
   refreshWidgetSeconds: 300,
+  widgetOpacity: 92,
+  widgetHiddenProviderIds: [],
 };
 
 function SummaryCard({ title, value, subtitle }: { title: string; value: string; subtitle: string }) {
@@ -379,6 +381,7 @@ export default function HomePage() {
         {settingsOpen && (
           <DashboardSettingsPanel
             preferences={preferences}
+            providers={providers}
             onSave={(prefs) => saveAllPreferences(prefs)}
             onClose={() => setSettingsOpen(false)}
           />

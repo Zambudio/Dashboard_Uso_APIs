@@ -48,4 +48,8 @@ export interface DashboardPreferences {
   cardOrder?: string[];
   /** Segundos entre refrescos automáticos del widget de escritorio. Por defecto 300 (5 min). */
   refreshWidgetSeconds?: number;
+  /** Opacidad del panel del widget de escritorio, 30-100 (%). Por defecto 92. */
+  widgetOpacity?: number;
+  /** IDs de proveedor ocultos solo en el widget flotante (independiente de `visibility`, que oculta también en el dashboard web). */
+  widgetHiddenProviderIds?: string[];
 }
