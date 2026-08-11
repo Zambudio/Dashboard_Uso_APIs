@@ -38,7 +38,7 @@ export async function POST(request: NextRequest) {
     let snapshot: ApiUsageSnapshot;
     switch (provider) {
       case 'deepseek':
-        snapshot = await fetchDeepSeekUsage(secret);
+        snapshot = await fetchDeepSeekUsage(secret, id);
         break;
       case 'openai':
         snapshot = await fetchOpenAIUsage(secret);

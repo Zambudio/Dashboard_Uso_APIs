@@ -18,14 +18,26 @@ function installChromium(): void {
   }
 }
 
+// Flags estándar de Chromium para evitar que trate esta página como "en
+// segundo plano" y le recorte el reloj de JS/temporizadores. Sin esto, el SPA
+// de DeepSeek (perfil de usuario, saldo, coste) puede quedarse sin terminar
+// de hidratar indefinidamente cuando este proceso headless corre como hijo
+// de otro proceso con ventana (Electron) que compite por el mismo throttling
+// de "aplicación en segundo plano" del sistema operativo.
+const ANTI_THROTTLE_ARGS = [
+  '--disable-background-timer-throttling',
+  '--disable-backgrounding-occluded-windows',
+  '--disable-renderer-backgrounding',
+];
+
 export async function launchDeepSeekChromium(): Promise<Browser> {
   try {
-    return await chromium.launch({ headless: true });
+    return await chromium.launch({ headless: true, args: ANTI_THROTTLE_ARGS });
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     if (!message.includes('Executable doesn')) throw err;
     installChromium();
-    return chromium.launch({ headless: true });
+    return chromium.launch({ headless: true, args: ANTI_THROTTLE_ARGS });
   }
 }
 
