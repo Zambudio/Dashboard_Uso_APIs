@@ -7,7 +7,7 @@ import { ProviderLogo } from './ProviderLogo';
 
 interface BrowserLoginModalProps {
   provider: ApiProviderConfig;
-  onSuccess: (providerId: string, snapshot: ApiUsageSnapshot) => void;
+  onSuccess: (providerId: string, snapshot: ApiUsageSnapshot, secret?: string) => void;
   onClose: () => void;
 }
 
@@ -96,7 +96,7 @@ export function BrowserLoginModal({ provider, onSuccess, onClose }: BrowserLogin
           active = false;
           clearInterval(interval);
           setTimeout(() => {
-            onSuccess(provider.id, data.usageSnapshot!);
+            onSuccess(provider.id, data.usageSnapshot!, data.secret);
           }, 500);
         } else if (data.status === 'error') {
           setErrorMsg(data.error || data.statusMessage || 'Error durante la autenticación');
@@ -137,7 +137,7 @@ export function BrowserLoginModal({ provider, onSuccess, onClose }: BrowserLogin
         setStatus('completed');
         setStatusMessage(data.statusMessage || '¡Sesión detectada y datos obtenidos!');
         setTimeout(() => {
-          onSuccess(provider.id, data.usageSnapshot!);
+          onSuccess(provider.id, data.usageSnapshot!, data.secret);
         }, 500);
       }
     } catch {

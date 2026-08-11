@@ -46,7 +46,7 @@ export async function fetchProviderUsage(id: string, provider: ProviderKey): Pro
 
 async function fetchEnvKeys(): Promise<Record<string, string>> {
   try {
-    const res = await fetch(KEYS_ENDPOINT);
+    const res = await fetch(KEYS_ENDPOINT, { cache: 'no-store' });
     if (!res.ok) return {};
     const data = await res.json();
     return data && typeof data === 'object' ? (data as Record<string, string>) : {};
@@ -71,6 +71,28 @@ export async function loadEnvKeys(): Promise<Record<string, string>> {
   return fetchEnvKeys();
 }
 
+const CONFIG_ENDPOINT = '/api/config';
+
+export async function fetchServerConfig(): Promise<{ providers: ApiProviderConfig[] | null, preferences: DashboardPreferences | null }> {
+  try {
+    const res = await fetch(CONFIG_ENDPOINT);
+    if (!res.ok) return { providers: null, preferences: null };
+    return await res.json();
+  } catch {
+    return { providers: null, preferences: null };
+  }
+}
+
+async function saveServerConfig(data: { providers?: ApiProviderConfig[], preferences?: DashboardPreferences }) {
+  try {
+    await fetch(CONFIG_ENDPOINT, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    });
+  } catch {}
+}
+
 export function saveProviders(providers: ApiProviderConfig[]) {
   if (typeof window === 'undefined') return;
 
@@ -84,6 +106,7 @@ export function saveProviders(providers: ApiProviderConfig[]) {
 
   window.localStorage.setItem(STORAGE_KEY, toBase64(JSON.stringify(sanitized)));
   void saveEnvKeys(keys);
+  void saveServerConfig({ providers: sanitized });
 }
 
 export function loadProviders(): ApiProviderConfig[] {
@@ -100,6 +123,7 @@ export function loadProviders(): ApiProviderConfig[] {
 export function savePreferences(preferences: DashboardPreferences) {
   if (typeof window === 'undefined') return;
   window.localStorage.setItem(PREFS_KEY, toBase64(JSON.stringify(preferences)));
+  void saveServerConfig({ preferences });
 }
 
 export function loadPreferences(): DashboardPreferences | null {

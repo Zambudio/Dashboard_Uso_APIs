@@ -5,10 +5,10 @@
 ## Implementado
 
 - Dashboard Next.js 14 en español con cinco integraciones estándar y proveedores personalizados.
-- Persistencia sensible en `.env`, separada de `localStorage`.
+- Persistencia sensible y configuración de interfaz movida a `.env` vía backend `/api/config` para compartir sesión al 100% entre navegadores, desvinculándola de `localStorage`.
 - Consultas reales de OpenAI, Anthropic, Claude, Gemini y DeepSeek según las capacidades de cada fuente.
 - Login web interactivo con Playwright, polling, cancelación y timeout de cinco minutos.
-- Preferencias, tarjetas ocultas, orden manual y resumen global.
+- Preferencias, tarjetas ocultas, orden manual y resumen global guardados persistentemente.
 - Build standalone y `dashboard.exe` para Windows x64.
 - `DashboardTray.exe` WinForms sin consola, con instancia única, estado visual, abrir, reiniciar y salir.
 - Descarga bajo demanda de Chromium.
@@ -23,6 +23,7 @@
 5. Se añadió `DashboardTray.exe` para ocultar consola y mantener la aplicación en la bandeja.
 6. Se añadió `DASHBOARD_NO_BROWSER=1` y se protegieron callbacks de sondeo para evitar aperturas duplicadas.
 7. Se creó la carpeta `Docs/` y se actualizaron README, AGENTS y contexto de continuación.
+8. Se movió la persistencia de UI (proveedores y preferencias) a `.env` usando una nueva ruta `/api/config` para que las sesiones y ajustes permanezcan al cambiar de navegador.
 
 ## Validaciones ejecutadas
 

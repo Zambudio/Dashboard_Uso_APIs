@@ -7,10 +7,12 @@ Dashboard_Uso_APIs es una aplicación Next.js 14 App Router de una sola página.
 ```mermaid
 flowchart TD
     UI[app/page.tsx y components] --> STORAGE[lib/storage.ts]
+    STORAGE --> CONFIG[/api/config]
     STORAGE --> KEYS[/api/keys]
     STORAGE --> USAGE[/api/usage]
     UI --> LOGIN[/api/auth/browser-login]
-    KEYS --> ENV[.env local]
+    CONFIG --> ENV[.env local]
+    KEYS --> ENV
     USAGE --> FETCHERS[lib/usage/*.server.ts]
     LOGIN --> PLAYWRIGHT[Chromium interactivo]
     FETCHERS --> PROVIDERS[APIs y consolas oficiales]
@@ -23,8 +25,8 @@ flowchart TD
 |---|---|---|
 | Presentación | `app/page.tsx`, `components/` | Tarjetas, resúmenes, ajustes, orden manual y estados. |
 | Modelo | `types/api.ts`, `lib/providers.ts` | Tipos y capacidades declaradas por proveedor. |
-| Persistencia cliente | `lib/storage.ts` | Configuración no sensible en `localStorage` y llamadas a la API local. |
-| API local | `app/api/**/route.ts` | Credenciales, uso y sesiones de navegador. |
+| Persistencia cliente | `lib/storage.ts` | Configuración y preferencias, consultando a la API local. |
+| API local | `app/api/**/route.ts` | Configuración, credenciales, uso y sesiones de navegador. |
 | Integraciones | `lib/usage/*.server.ts` | Consultas reales, normalización y errores por proveedor. |
 | Automatización web | `lib/browser-login.server.ts` | Login interactivo, captura de sesión y snapshots. |
 | Empaquetado | `launcher.js`, `server-entry.js`, `inspector-shim.js`, `scripts/` | Servidor standalone, compatibilidad pkg y bandeja Windows. |
@@ -52,12 +54,10 @@ sequenceDiagram
 
 ## Carga y refresco de datos
 
-1. `app/page.tsx` carga configuración visual desde `localStorage`.
-2. `GET /api/keys` aporta los secretos desde `.env`.
-3. Las integraciones configuradas se refrescan en paralelo con `POST /api/usage`.
+1. `app/page.tsx` carga configuración visual y secreta combinando `/api/config` y `/api/keys` (ambos en `.env`).
+2. Las integraciones configuradas se refrescan en paralelo con `POST /api/usage`.
 4. Cada fetcher devuelve `ApiUsageSnapshot` con sólo los campos realmente disponibles.
-5. Los campos que el proveedor no expone se incluyen en `unavailable`; nunca se inventan valores.
-6. Los snapshots visibles y preferencias vuelven a guardarse en `localStorage`, sin incluir `apiKey`.
+4. Los snapshots visibles y preferencias se guardan en `.env` (vía `/api/config`), asegurando que las sesiones se mantengan independientemente del navegador o equipo usado.
 
 ## Inicio de sesión web
 
@@ -85,9 +85,8 @@ El mapa de sesiones vive en `globalThis.__browserLoginSessions` para sobrevivir 
 
 | Ubicación | Contenido | Sensible |
 |---|---|---|
-| `.env` o `dist/.env` | API keys, cookies, tokens y snapshots serializados bajo `DASHBOARD_PROVIDER_KEYS`. | Sí |
-| `localStorage: ai-api-dashboard-config` | Proveedores, estado y snapshots; `apiKey` se vacía antes de guardar. | No debería contener secretos |
-| `localStorage: ai-api-dashboard-preferences` | Visibilidad, orden y preferencias del panel. | No |
+| `.env` o `dist/.env` | Configuración completa: API keys bajo `DASHBOARD_PROVIDER_KEYS`, proveedores bajo `DASHBOARD_CONFIG`, y preferencias bajo `DASHBOARD_PREFERENCES`. Todo serializado en Base64. | Sí (claves y sesiones) |
+| `localStorage: ai-api-dashboard-*` | Respaldo y migración local. Utilizado solo como fallback inicial. | No |
 
 ## Empaquetado
 

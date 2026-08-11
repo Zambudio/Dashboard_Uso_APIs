@@ -108,22 +108,45 @@ async function scrapeLiveDeepSeekUsage(
 ): Promise<Partial<ApiUsageSnapshot> | null> {
   if (!cookies.length && Object.keys(localStorageData).length === 0) return null;
 
+  const USER_AGENT =
+    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36';
+
   const browser = await launchDeepSeekChromium();
   try {
-    const context = await browser.newContext();
+    const context = await browser.newContext({
+      userAgent: USER_AGENT,
+      viewport: null,
+    });
     if (cookies.length) await addCookiesSafely(context, cookies);
+
+    await context.addInitScript(() => {
+      try {
+        delete (navigator as any).__proto__.webdriver;
+        Object.defineProperty(navigator, 'webdriver', { get: () => undefined });
+        (window as any).chrome = {
+          runtime: {},
+          loadTimes: () => {},
+          csi: () => {},
+          app: {},
+        };
+        Object.defineProperty(navigator, 'plugins', {
+          get: () => [1, 2, 3, 4, 5],
+        });
+        Object.defineProperty(navigator, 'languages', {
+          get: () => ['es-ES', 'es', 'en-US', 'en'],
+        });
+      } catch {}
+    });
 
     const page = await context.newPage();
 
     if (Object.keys(localStorageData).length) {
-      // localStorage solo se puede escribir una vez cargado el origen correspondiente.
-      await page.goto('https://platform.deepseek.com/', { waitUntil: 'domcontentloaded', timeout: 12000 });
-      await page.evaluate((data) => {
-        for (const [key, value] of Object.entries(data)) {
-          try {
-            localStorage.setItem(key, value);
-          } catch {
-            // almacenamiento lleno o clave inválida: se ignora esa entrada
+      await context.addInitScript((data) => {
+        if (window.location.hostname.includes('deepseek.com')) {
+          for (const [key, value] of Object.entries(data)) {
+            try {
+              localStorage.setItem(key, value);
+            } catch {}
           }
         }
       }, localStorageData);

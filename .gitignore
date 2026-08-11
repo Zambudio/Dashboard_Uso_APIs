@@ -27,3 +27,6 @@ Thumbs.db
 
 # Scripts de prueba sueltos, no forman parte de la app.
 /scratch/
+
+# Proyecto de widget Claude como ejemplo para la IA
+/claude-usage-widget-main/
