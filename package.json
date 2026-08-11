@@ -44,5 +44,39 @@
       "node22-win-x64"
     ],
     "outputPath": "dist"
+  },
+  "build": {
+    "appId": "com.zambudio.dashboard-uso-apis",
+    "productName": "Dashboard Uso APIs",
+    "copyright": "Copyright (c) 2026 Pedro Zambudio",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "electron/**/*",
+      "!electron/**/*.test.js"
+    ],
+    "extraResources": [
+      {
+        "from": "build/standalone-bundle",
+        "to": "standalone-bundle"
+      }
+    ],
+    "win": {
+      "target": [
+        "nsis",
+        "portable"
+      ]
+    },
+    "portable": {
+      "artifactName": "${productName}-${version}-portable.${ext}"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "artifactName": "${productName}-${version}-Setup.${ext}"
+    }
   }
 }
