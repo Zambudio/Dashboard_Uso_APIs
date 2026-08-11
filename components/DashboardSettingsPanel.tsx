@@ -9,8 +9,17 @@ interface DashboardSettingsPanelProps {
   onClose: () => void;
 }
 
+const WIDGET_THEMES: { id: NonNullable<DashboardPreferences['widgetTheme']>; label: string; swatch: [string, string] }[] = [
+  { id: 'aurora', label: 'Aurora (cian/fucsia)', swatch: ['#22d3ee', '#d946ef'] },
+  { id: 'esmeralda', label: 'Esmeralda', swatch: ['#10b981', '#2dd4bf'] },
+  { id: 'ambar', label: 'Ámbar', swatch: ['#f59e0b', '#fb923c'] },
+  { id: 'violeta', label: 'Violeta', swatch: ['#8b5cf6', '#ec4899'] },
+  { id: 'mono', label: 'Monocromo', swatch: ['#94a3b8', '#cbd5e1'] },
+];
+
 export function DashboardSettingsPanel({ preferences, providers, onSave, onClose }: DashboardSettingsPanelProps) {
   const widgetHidden = new Set(preferences.widgetHiddenProviderIds ?? []);
+  const activeTheme = preferences.widgetTheme ?? 'aurora';
 
   function toggleWidgetVisible(id: string, visible: boolean) {
     const next = new Set(widgetHidden);
@@ -106,6 +115,28 @@ export function DashboardSettingsPanel({ preferences, providers, onSave, onClose
           className="mt-3 w-full accent-cyan-400"
         />
         <p className="mt-2 text-xs text-slate-500">Al 100% el panel es sólido; valores bajos lo hacen más transparente sobre el escritorio.</p>
+      </div>
+
+      <div className="mt-5 rounded-2xl border border-white/10 bg-slate-950/30 p-4 text-sm text-slate-300">
+        <p>Tema de color del widget de escritorio</p>
+        <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-5">
+          {WIDGET_THEMES.map((theme) => (
+            <button
+              key={theme.id}
+              type="button"
+              onClick={() => onSave({ ...preferences, widgetTheme: theme.id })}
+              className={`flex flex-col items-center gap-2 rounded-xl border px-2 py-3 transition ${
+                activeTheme === theme.id ? 'border-cyan-400/70 bg-cyan-500/10' : 'border-white/10 bg-[#141424] hover:bg-white/5'
+              }`}
+            >
+              <span className="flex gap-1">
+                <span className="h-4 w-4 rounded-full" style={{ background: theme.swatch[0] }} />
+                <span className="h-4 w-4 rounded-full" style={{ background: theme.swatch[1] }} />
+              </span>
+              <span className="text-[11px] text-slate-300">{theme.label}</span>
+            </button>
+          ))}
+        </div>
       </div>
 
       <div className="mt-5 rounded-2xl border border-white/10 bg-slate-950/30 p-4 text-sm text-slate-300">

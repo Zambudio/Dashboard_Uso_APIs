@@ -5,7 +5,7 @@ const path = require('path');
 
 const WIDGET_WIDTH = 340;
 const HEADER_HEIGHT = 56;
-const CARD_HEIGHT = 74;
+const CARD_HEIGHT = 92;
 
 function isPositionOnScreen(x, y, width, height) {
   return screen.getAllDisplays().some((display) => {

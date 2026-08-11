@@ -151,3 +151,11 @@ Se investigaron a fondo (con evidencia real, no suposiciones) dos bugs que hací
 Además: reintento automático si el primer intento de scraping falla, persistencia de las cookies/localStorage refrescados tras cada consulta en vivo (para no depender para siempre de la sesión capturada en el login original) y logging de diagnóstico no sensible para futuros fallos. Verificado end-to-end contra la cuenta real de DeepSeek del usuario: la consulta en vivo funciona y el almacén cifrado se actualiza con cada refresco exitoso.
 
 También se añadió: iconos reales de cada proveedor en las tarjetas del widget, tiempo hasta el próximo reset cuando el proveedor lo expone, control de transparencia del panel y visibilidad por proveedor independiente para el widget — todo verificado con `npm test` (34/34), `tsc --noEmit`, `next lint`, `next build` y una sesión real de `electron:dev` con inspección de la consola del renderer.
+
+### Entrega del 12 de agosto de 2026: barras de sesión, orden, temas de color y saldo de OpenAI
+
+- El widget ahora muestra barras de progreso de sesión y límite semanal (antes un único porcentaje en texto), respeta el orden manual de tarjetas del dashboard web (`cardOrder`, que antes ignoraba) y añade un selector de tema de color (5 temas) desde **Ajustes del panel**.
+- La fila "Sesión actual" (dashboard web y widget) ya no se muestra vacía (0%, sin fecha de reset) cuando un proveedor no tiene datos reales de sesión — antes se forzaba siempre para Claude y Gemini.
+- `lib/usage/openai.server.ts`: una Project API Key normal (`sk-proj-...`) no tiene permiso para consultar tokens/coste (hace falta una Admin API Key), pero esa llamada fallaba sin protección y tumbaba toda la tarjeta, sin mostrar ni el saldo. Ahora el saldo se intenta por separado y se muestra aunque el resto falle, conservando el aviso de qué se necesita para ver tokens/coste. **No se pudo verificar en vivo contra una Project API Key real** (revisado por código/tipado; confirmar con una cuenta real).
+
+Verificado con `npm test` (34/34), `tsc --noEmit`, `next lint`, `next build`, y una sesión real de `electron:dev`: orden y tema confirmados contra datos reales vía la consola del renderer reenviada al proceso principal.

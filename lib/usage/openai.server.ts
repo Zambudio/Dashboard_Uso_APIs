@@ -227,31 +227,64 @@ export async function fetchOpenAIUsage(secret: string): Promise<ApiUsageSnapshot
     };
   }
 
-  // Standard Admin API key flow
+  // Standard API key flow (project key sk-proj-... o admin key sk-admin-...).
+  // usage/completions y costs requieren scopes "api.usage.read"/"api.costs.read"
+  // que solo tiene una Admin API Key — una key de proyecto normal, la más
+  // habitual, falla ahí con 403. Antes esa llamada no estaba protegida con
+  // try/catch, así que ese 403 se propagaba como error duro y la tarjeta no
+  // mostraba nada, ni siquiera el saldo. El saldo de crédito (endpoint clásico
+  // "dashboard/billing/credit_grants") sí suele responder con cualquier key en
+  // cuentas de pago por uso, sin scope de admin — se intenta primero y por
+  // separado para poder mostrarlo aunque el resto falle.
   const startTime = Math.floor(Date.now() / 1000) - SEVEN_DAYS_SECONDS;
-
-  const usage = await openaiGet<OpenAIUsagePage>(
-    `https://api.openai.com/v1/organization/usage/completions?start_time=${startTime}&bucket_width=1d&limit=7`,
-    token,
-    customHeaders
-  );
-
-  let tokensUsed = 0;
-  let requestCount = 0;
-  for (const bucket of usage.data ?? []) {
-    for (const result of bucket.results ?? []) {
-      tokensUsed += (result.input_tokens ?? 0) + (result.output_tokens ?? 0);
-      requestCount += result.num_model_requests ?? 0;
-    }
-  }
 
   const snapshot: ApiUsageSnapshot = {
     fetchedAt,
-    tokensUsed,
-    requestCount,
     planType: token.startsWith('sk-admin') ? 'OpenAI API (Admin)' : 'OpenAI API',
-    unavailable: ['balance'],
+    unavailable: [],
   };
+
+  let balanceError: unknown;
+  try {
+    // Endpoint clásico del dashboard de facturación (no requiere scope de
+    // admin), NO va bajo /v1/ como el resto de la API moderna.
+    const grants = await openaiGet<OpenAIDashboardCreditGrants>(
+      'https://api.openai.com/dashboard/billing/credit_grants',
+      token,
+      customHeaders
+    );
+    if (typeof grants.total_available === 'number') {
+      snapshot.balance = grants.total_available;
+      snapshot.currency = 'USD';
+    } else {
+      snapshot.unavailable!.push('balance');
+    }
+  } catch (err) {
+    balanceError = err;
+    snapshot.unavailable!.push('balance');
+  }
+
+  let usageError: unknown;
+  try {
+    const usage = await openaiGet<OpenAIUsagePage>(
+      `https://api.openai.com/v1/organization/usage/completions?start_time=${startTime}&bucket_width=1d&limit=7`,
+      token,
+      customHeaders
+    );
+    let tokensUsed = 0;
+    let requestCount = 0;
+    for (const bucket of usage.data ?? []) {
+      for (const result of bucket.results ?? []) {
+        tokensUsed += (result.input_tokens ?? 0) + (result.output_tokens ?? 0);
+        requestCount += result.num_model_requests ?? 0;
+      }
+    }
+    snapshot.tokensUsed = tokensUsed;
+    snapshot.requestCount = requestCount;
+  } catch (err) {
+    usageError = err;
+    snapshot.unavailable!.push('tokensUsed', 'requestCount');
+  }
 
   try {
     const costs = await openaiGet<OpenAICostPage>(
@@ -270,9 +303,24 @@ export async function fetchOpenAIUsage(secret: string): Promise<ApiUsageSnapshot
       }
     }
     snapshot.accumulatedCost = accumulatedCost;
-    snapshot.currency = currency;
+    snapshot.currency = snapshot.currency ?? currency;
   } catch {
-    snapshot.unavailable = [...(snapshot.unavailable ?? []), 'accumulatedCost'];
+    snapshot.unavailable!.push('accumulatedCost');
+  }
+
+  // Si absolutamente nada respondió, no devolvemos una tarjeta vacía: se
+  // propaga el error más informativo que tengamos (normalmente el 403 de
+  // usage/completions, que explica qué tipo de key hace falta).
+  if (snapshot.balance === undefined && snapshot.tokensUsed === undefined && snapshot.accumulatedCost === undefined) {
+    throw (usageError ?? balanceError ?? new Error('No se pudo obtener ningún dato de OpenAI con esta clave.'));
+  }
+
+  // Si conseguimos algo (ej. el saldo) pero tokens/coste fallaron por falta
+  // de permisos, no ocultamos esa explicación solo porque ya no lanzamos un
+  // error duro — se muestra como aviso no bloqueante junto a los datos que sí
+  // tenemos, en vez de perderla.
+  if (usageError instanceof Error) {
+    snapshot.error = usageError.message;
   }
 
   return snapshot;

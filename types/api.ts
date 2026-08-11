@@ -52,4 +52,6 @@ export interface DashboardPreferences {
   widgetOpacity?: number;
   /** IDs de proveedor ocultos solo en el widget flotante (independiente de `visibility`, que oculta también en el dashboard web). */
   widgetHiddenProviderIds?: string[];
+  /** Tema de color del widget de escritorio. Por defecto 'aurora' (cian/fucsia, el mismo del dashboard web). */
+  widgetTheme?: 'aurora' | 'esmeralda' | 'ambar' | 'violeta' | 'mono';
 }

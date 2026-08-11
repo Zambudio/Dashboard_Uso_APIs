@@ -1,5 +1,14 @@
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
+/* Temas de color: solo afectan a acentos decorativos (cabecera, barras de
+   progreso). Los colores de estado (verde/ámbar/rojo del punto de cada
+   tarjeta) son funcionales, no decorativos, y no cambian con el tema. */
+body, body[data-theme="aurora"] { --accent-1: #22d3ee; --accent-2: #d946ef; }
+body[data-theme="esmeralda"] { --accent-1: #10b981; --accent-2: #2dd4bf; }
+body[data-theme="ambar"] { --accent-1: #f59e0b; --accent-2: #fb923c; }
+body[data-theme="violeta"] { --accent-1: #8b5cf6; --accent-2: #ec4899; }
+body[data-theme="mono"] { --accent-1: #94a3b8; --accent-2: #cbd5e1; }
+
 body {
   font-family: -apple-system, "Segoe UI", sans-serif;
   /* Valor por defecto antes de que llegue la primera preferencia real desde
@@ -21,7 +30,7 @@ body {
   font-weight: 600;
   letter-spacing: 0.05em;
   text-transform: uppercase;
-  color: #67e8f9;
+  color: var(--accent-1);
 }
 
 #header-actions {
@@ -132,12 +141,49 @@ body.collapsed #cards {
   text-overflow: ellipsis;
 }
 
-.reset {
-  flex-shrink: 0;
-  color: #67e8f9;
+.card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.bar-block {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.bar-row {
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.bar-label {
+  color: #94a3b8;
+  font-size: 11px;
+}
+
+.bar-value {
+  color: #cbd5e1;
   font-size: 11px;
   white-space: nowrap;
+  flex-shrink: 0;
 }
+
+.bar-track {
+  height: 4px;
+  border-radius: 2px;
+  background: rgba(255,255,255,0.08);
+  overflow: hidden;
+}
+
+.bar-fill {
+  height: 100%;
+  border-radius: 2px;
+}
+
+.bar-fill.session { background: var(--accent-1); }
+.bar-fill.weekly { background: var(--accent-2); }
 
 .empty {
   padding: 10px;

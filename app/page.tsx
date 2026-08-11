@@ -25,6 +25,7 @@ const defaultPreferences: DashboardPreferences = {
   refreshWidgetSeconds: 300,
   widgetOpacity: 92,
   widgetHiddenProviderIds: [],
+  widgetTheme: 'aurora',
 };
 
 function SummaryCard({ title, value, subtitle }: { title: string; value: string; subtitle: string }) {

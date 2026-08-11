@@ -124,14 +124,12 @@ export function ProviderCard({
   const usage = provider.usage;
   const unavailable = new Set(usage?.unavailable ?? []);
   // Claude (Anthropic) y Gemini tienen una ventana de sesión de 5h/actual además del
-  // límite semanal; la mostramos siempre que haya datos de sesión, sin importar si
-  // llegó por la key "claude-pro" (suscripción) o "anthropic" (vía sesión web).
-  const hasSessionWindow =
-    usage?.sessionUtilization !== undefined ||
-    usage?.sessionResetsAt !== undefined ||
-    provider.provider === 'claude-pro' ||
-    provider.provider === 'anthropic' ||
-    provider.provider === 'gemini';
+  // límite semanal, pero solo la mostramos si hay datos reales: antes se forzaba
+  // también por tipo de proveedor, así que una tarjeta sin sesión iniciada (ej.
+  // Claude Pro sin datos) mostraba una barra vacía en 0% con "—" en el reset,
+  // ruido sin información. 0 es un valor real (sesión empezada sin uso todavía)
+  // y sí debe mostrarse; solo `undefined` en ambos campos oculta la fila.
+  const hasSessionWindow = usage?.sessionUtilization !== undefined || usage?.sessionResetsAt !== undefined;
   const isSubscriptionLayout = provider.kind === 'subscription' || usage?.sessionUtilization !== undefined || usage?.weeklyUtilization !== undefined;
 
   const handleRefresh = async () => {
