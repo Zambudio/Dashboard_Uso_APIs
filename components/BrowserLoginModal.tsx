@@ -15,6 +15,7 @@ interface PollStatusResponse {
   status: 'starting' | 'waiting_user_login' | 'extracting' | 'completed' | 'cancelled' | 'error';
   statusMessage: string;
   usageSnapshot?: ApiUsageSnapshot;
+  secret?: string;
   error?: string;
 }
 

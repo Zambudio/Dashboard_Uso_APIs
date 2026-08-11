@@ -97,3 +97,42 @@ No es fiable. Next puede fallar al crear o bloquear `.next` en SMB. Procedimient
 - El icono pasa a verde.
 - **Salir** cierra el árbol propiedad del icono.
 - Las claves siguen disponibles y no aparecen en Git.
+
+## Widget de escritorio (Electron)
+
+`npm run electron:build` ejecuta `scripts/prepare-standalone.js` y después `electron-builder --win` (requiere `npm run build` antes, igual que la ruta anterior).
+
+```mermaid
+flowchart LR
+    A[next build] --> B[.next/standalone]
+    B --> C[prepare-standalone.js]
+    C --> D[build/standalone-bundle/]
+    D --> E[electron-builder]
+    E --> F[dist/...-Setup.exe]
+    E --> G[dist/...-portable.exe]
+```
+
+### 1. `scripts/prepare-standalone.js`
+
+Hace la misma copia que la etapa 1 de la ruta `dashboard.exe` (`.next/standalone` + `static` + `public` + Playwright completo), pero a `build/standalone-bundle/` en vez de `dist/standalone/`. No compila ningún ejecutable — solo prepara los ficheros que `electron-builder` empaquetará vía `extraResources` (bloque `"build"` de `package.json`).
+
+### 2. Exclusión de `electron`/`electron-store` del standalone
+
+`next build` (con `outputFileTracingRoot` apuntando a la raíz del proyecto) arrastraba `electron`/`electron-store` completos (~350MB) al `.next/standalone`, aunque ningún route handler los importa — solo los usa `electron/main.js`, fuera del árbol que Next traza. `next.config.js` los excluye explícitamente con `experimental.outputFileTracingExcludes`. Sin esto, el bundle standalone pasa de ~27MB a ~370MB.
+
+### 3. `electron-builder`
+
+Configurado en el bloque `"build"` de `package.json`: genera un instalador NSIS (`oneClick: false`, permite elegir carpeta) y una versión portable, ambos para `win` x64. `extraResources` copia `build/standalone-bundle/` a `resources/standalone-bundle/` dentro del paquete; en tiempo de ejecución, `electron/main.js` (vía `standaloneDir()`) lo localiza con `process.resourcesPath` cuando `app.isPackaged` es `true`. No hay icono propio configurado todavía (`electron-builder` usa el de Electron por defecto) — pendiente cosmético.
+
+### 4. Firma y Smart App Control
+
+Igual que con `dashboard.exe`/`DashboardTray.exe`, el instalador y el portable no llevan firma con reputación en la nube de Microsoft. Además del aviso clásico de SmartScreen, si el PC tiene **Smart App Control** activado (`HKLM:\SYSTEM\CurrentControlSet\Control\CI\Policy!VerifiedAndReputablePolicyState = 1`), Windows puede **bloquear la ejecución por completo** (no solo avisar) — el error visible es "Una directiva de Control de aplicaciones bloqueó este archivo". `scripts/sign-exe.ps1` (firma autofirmada) no lo soluciona: SAC solo confía en firmantes con reputación en la nube, nunca en un certificado autofirmado. Para evitarlo de verdad hace falta un certificado de una CA reconocida (EV code signing).
+
+### Validación del widget
+
+- `npm test` (`node --test`) pasa: módulos puros de `electron/lib/` y `lib/cred-broker-client.js`.
+- `npm run electron:dev` arranca con instancia única, broker de credenciales, servidor Next.js y widget con datos reales.
+- `credentials.enc` en `userData` empieza por el prefijo DPAPI `v10` (no es JSON/Base64 legible).
+- `npx electron-builder --win --dir` genera `dist/win-unpacked/` sin arrastrar `electron` dentro de `resources/standalone-bundle/`.
+- `npm run electron:build` genera el instalador y el portable sin errores.
+- **Pendiente de validar en un equipo sin Smart App Control activo (o con la app ya aprobada):** que el `.exe` final generado arranca de verdad al hacer doble clic. En la máquina donde se implementó este empaquetado, Smart App Control bloqueó la ejecución directa del binario recién compilado — la lógica de la app ya está verificada a fondo en modo `electron:dev` (mismo binario de Electron, mismo código), pero el paso final de "doble clic y funciona" no se pudo confirmar ahí.

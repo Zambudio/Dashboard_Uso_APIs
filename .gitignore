@@ -30,3 +30,13 @@ Thumbs.db
 
 # Proyecto de widget Claude como ejemplo para la IA
 /claude-usage-widget-main/
+
+# Bundle intermedio del servidor standalone para el empaquetado con
+# Electron (scripts/prepare-standalone.js) — se regenera con cada build,
+# no aporta nada versionado.
+/build/
+
+# Artefactos de electron-builder que no forman parte de la distribución
+# final (solo los .exe/instalador finales en dist/ se versionan).
+dist/win-unpacked/
+dist/builder-debug.yml

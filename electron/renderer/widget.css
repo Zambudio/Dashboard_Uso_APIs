@@ -1,0 +1,111 @@
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: -apple-system, "Segoe UI", sans-serif;
+  background: #14141ecc;
+  color: #e2e8f0;
+  border-radius: 16px;
+  border: 1px solid rgba(255,255,255,0.12);
+  overflow: hidden;
+  -webkit-app-region: drag;
+}
+
+#header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: #67e8f9;
+}
+
+#header-actions {
+  display: flex;
+  gap: 6px;
+  -webkit-app-region: no-drag;
+}
+
+#open-dashboard,
+#toggle-collapse {
+  -webkit-app-region: no-drag;
+  background: rgba(255,255,255,0.08);
+  border: 1px solid rgba(255,255,255,0.12);
+  color: #e2e8f0;
+  border-radius: 8px;
+  width: 26px;
+  height: 26px;
+  cursor: pointer;
+}
+
+#banner {
+  display: none;
+  background: #f43f5e;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 6px 10px;
+  text-align: center;
+  -webkit-app-region: no-drag;
+}
+
+body.server-down #banner {
+  display: block;
+}
+
+body.server-down #cards {
+  opacity: 0.45;
+}
+
+body.collapsed #cards {
+  display: none;
+}
+
+#cards {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 0 12px 12px;
+}
+
+.card {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 10px;
+  padding: 8px 10px;
+  font-size: 12.5px;
+  cursor: pointer;
+  -webkit-app-region: no-drag;
+}
+
+.dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.name {
+  flex: 1;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.value {
+  color: #94a3b8;
+  white-space: nowrap;
+}
+
+.empty {
+  padding: 10px;
+  font-size: 12px;
+  color: #94a3b8;
+  text-align: center;
+}

@@ -2,14 +2,19 @@
   "name": "dashboard-uso-apis",
   "version": "0.1.0",
   "private": true,
+  "main": "electron/main.js",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "exe": "npm run build && node scripts/build-exe.js"
+    "test": "node --test",
+    "exe": "npm run build && node scripts/build-exe.js",
+    "electron:dev": "node scripts/prepare-standalone.js && electron .",
+    "electron:build": "node scripts/prepare-standalone.js && electron-builder --win"
   },
   "dependencies": {
+    "electron-store": "^11.0.2",
     "next": "14.2.15",
     "playwright": "^1.62.1",
     "react": "18.3.1",
@@ -21,6 +26,8 @@
     "@types/react-dom": "18.3.1",
     "@yao-pkg/pkg": "^6.22.0",
     "autoprefixer": "10.4.20",
+    "electron": "^43.3.0",
+    "electron-builder": "^26.15.3",
     "eslint": "8.57.1",
     "eslint-config-next": "14.2.15",
     "postcss": "8.4.49",
@@ -37,5 +44,39 @@
       "node22-win-x64"
     ],
     "outputPath": "dist"
+  },
+  "build": {
+    "appId": "com.zambudio.dashboard-uso-apis",
+    "productName": "Dashboard Uso APIs",
+    "copyright": "Copyright (c) 2026 Pedro Zambudio",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "electron/**/*",
+      "!electron/**/*.test.js"
+    ],
+    "extraResources": [
+      {
+        "from": "build/standalone-bundle",
+        "to": "standalone-bundle"
+      }
+    ],
+    "win": {
+      "target": [
+        "nsis",
+        "portable"
+      ]
+    },
+    "portable": {
+      "artifactName": "${productName}-${version}-portable.${ext}"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "artifactName": "${productName}-${version}-Setup.${ext}"
+    }
   }
 }

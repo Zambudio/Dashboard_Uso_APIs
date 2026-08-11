@@ -4,9 +4,9 @@ const path = require('path');
 const http = require('http');
 const { spawn } = require('child_process');
 
-function probePort(host, port, timeoutMs = 800) {
+function probePort(host, port, timeoutMs = 800, probePath = '/') {
   return new Promise((resolve) => {
-    const req = http.get({ host, port, path: '/', timeout: timeoutMs }, (res) => {
+    const req = http.get({ host, port, path: probePath, timeout: timeoutMs }, (res) => {
       res.resume();
       resolve(true);
     });
@@ -15,9 +15,16 @@ function probePort(host, port, timeoutMs = 800) {
   });
 }
 
-async function waitForServer(host, port, { retries = 75, delayMs = 400 } = {}) {
+// El path por defecto es una ruta API dinámica (no la '/' estática) a
+// propósito: en el standalone de Next.js, '/' está pre-renderizada y
+// responde en cuanto el socket acepta conexiones, mientras que las rutas
+// dinámicas (force-dynamic, como /api/config) se inicializan de forma
+// perezosa en su primera petición. Si el sondeo solo comprobara '/', el
+// primer sondeo real del widget (electron/usage-poller.js) sería el que
+// paga ese coste de arranque y puede recibir una respuesta vacía/parcial.
+async function waitForServer(host, port, { retries = 75, delayMs = 400, probePath = '/api/config' } = {}) {
   for (let attempt = 0; attempt < retries; attempt++) {
-    if (await probePort(host, port)) return true;
+    if (await probePort(host, port, 800, probePath)) return true;
     await new Promise((resolve) => setTimeout(resolve, delayMs));
   }
   return false;

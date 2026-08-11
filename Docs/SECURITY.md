@@ -14,12 +14,16 @@ La aplicación está diseñada para un único usuario en un PC de confianza. El 
 - cookies estructuradas y `localStorage` de una consola;
 - snapshots de uso guardados junto a una sesión.
 
-El JSON se codifica en Base64 dentro de `.env`. Base64 **no es cifrado**. Quien lea el archivo puede reutilizar las credenciales mientras sigan válidas.
+**Con `DashboardTray.exe` (dashboard web) o `npm run dev`:** el JSON se codifica en Base64 dentro de `.env`. Base64 **no es cifrado**. Quien lea el archivo puede reutilizar las credenciales mientras sigan válidas.
+
+**Con el widget de escritorio (Electron):** el mismo JSON se cifra de verdad con `safeStorage` (usa DPAPI en Windows, ligado a usuario+máquina) antes de escribirse a disco, en `credentials.enc`. El servidor Next.js sigue siendo un proceso Node aparte que no puede llamar a `safeStorage` directamente, así que habla con el proceso Electron a través de un broker HTTP en `127.0.0.1` con un puerto efímero y un token aleatorio de 24 bytes generado en cada arranque (`electron/credential-broker.js`) — ni el puerto ni el token se reutilizan entre arranques, y el broker solo acepta peticiones con el token exacto en la cabecera `Authorization`. Si `DASHBOARD_CRED_BROKER_URL`/`_TOKEN` no están en el entorno del proceso (p. ej. `npm run dev` sin Electron), se usa el `.env` en Base64 de siempre — el cifrado es exclusivo de la app empaquetada/`electron:dev`.
+
+Al estar ligado a DPAPI del usuario/máquina, `credentials.enc` no es portable entre PCs como sí lo era `.env`: si migras de equipo, reconecta las sesiones en vez de copiar el fichero. Un `.env` heredado se importa una sola vez, automáticamente, la primera vez que arranca el widget (si el almacén cifrado está vacío).
 
 ## Ubicación
 
-- Desarrollo: `<repo>/.env`.
-- Paquete: `<dist>/.env`.
+- Desarrollo (`npm run dev`) o `DashboardTray.exe`: `<repo>/.env` o `<dist>/.env`.
+- Widget de Electron: `%APPDATA%\Dashboard Uso APIs\credentials.enc` (cifrado) para las claves de proveedor; `DASHBOARD_CONFIG`/`DASHBOARD_PREFERENCES` (no sensibles) siguen en `.env` sin cifrar, igual que antes.
 - Chromium de Playwright: `%LOCALAPPDATA%\ms-playwright`.
 
 Los `.env`, certificados y claves privadas están excluidos por `.gitignore`. Antes de cada commit debe verificarse con `git status` y una búsqueda de secretos.
@@ -53,13 +57,17 @@ Los binarios del repositorio no están firmados por una autoridad pública. Una 
 
 `scripts/sign-exe.ps1` genera una firma autofirmada para entornos controlados. Esa firma sólo aporta confianza si el certificado se instala explícitamente en el equipo y no evita Smart App Control.
 
+El instalador/portable del widget de Electron (`electron-builder`) tampoco tiene firma con reputación en la nube. En una máquina con **Smart App Control activado**, esto puede ir más allá del aviso de SmartScreen: Windows puede **bloquear la ejecución directamente** ("Una directiva de Control de aplicaciones bloqueó este archivo"), algo comprobado durante el desarrollo de este empaquetado. No hay forma de evitarlo sin una firma de código con reputación (CA reconocida) — un certificado autofirmado no sirve para esto.
+
 ## Riesgos conocidos
 
 - Los endpoints internos de proveedores pueden cambiar sin aviso.
 - La automatización de DOM puede romperse si cambia la interfaz.
 - Las sesiones pueden estar vinculadas al dispositivo o revocarse.
 - Un proceso distinto que responda HTTP 200 en el puerto 3000 podría confundirse con el dashboard; comprueba el puerto si el contenido abierto no es el esperado.
-- No existe cifrado en reposo gestionado por la aplicación.
+- Con `DashboardTray.exe`/`npm run dev`: no existe cifrado en reposo gestionado por la aplicación (Base64 en `.env`). Con el widget de Electron, las claves de proveedor sí se cifran (`safeStorage`/DPAPI), pero `DASHBOARD_CONFIG`/`DASHBOARD_PREFERENCES` (nombres, orden, preferencias — no secretos) siguen sin cifrar en `.env`.
+- El broker de credenciales del widget escucha solo en `127.0.0.1` con un token efímero, pero cualquier proceso local que consiga leer las variables de entorno del servidor Next.js (`DASHBOARD_CRED_BROKER_URL`/`_TOKEN`) podría usarlas mientras el proceso siga vivo — mismo modelo de confianza de "único usuario en un PC de confianza" que el resto de la aplicación.
+- Ningún binario (widget o `dashboard.exe`/`DashboardTray.exe`) tiene firma pública con reputación; en máquinas con Smart App Control activado esto puede bloquear la ejecución, no solo mostrar un aviso.
 
 ## Respuesta ante incidente
 
