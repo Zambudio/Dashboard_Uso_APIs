@@ -28,7 +28,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: `La consulta de uso todavía no está implementada para ${definition.label}.` }, { status: 501 });
   }
 
-  const keys = readEnvKeys();
+  const keys = await readEnvKeys();
   const secret = keys[id];
   if (!secret) {
     return NextResponse.json({ error: 'No hay clave/cookie guardada para este proveedor.' }, { status: 400 });

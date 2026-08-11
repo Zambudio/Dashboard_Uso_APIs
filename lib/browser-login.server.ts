@@ -78,10 +78,10 @@ async function launchInteractiveChromium() {
 const USER_AGENT =
   'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36';
 
-function saveSecretForProvider(providerId: string, secret: string) {
-  const currentKeys = readEnvKeys();
+async function saveSecretForProvider(providerId: string, secret: string) {
+  const currentKeys = await readEnvKeys();
   currentKeys[providerId] = secret;
-  writeEnvKeys(currentKeys);
+  await writeEnvKeys(currentKeys);
 }
 
 export async function startBrowserLogin(providerId: string, provider: ProviderKey): Promise<{ sessionId: string }> {
@@ -283,7 +283,7 @@ async function setupClaudeLogin(session: BrowserLoginSession) {
         }
 
         if (secret) {
-          saveSecretForProvider(session.providerId, secret);
+          await saveSecretForProvider(session.providerId, secret);
           session.secret = secret;
         }
 
@@ -526,7 +526,7 @@ async function setupOpenAILogin(session: BrowserLoginSession) {
         });
 
         session.secret = secretPayload;
-        saveSecretForProvider(session.providerId, secretPayload);
+        await saveSecretForProvider(session.providerId, secretPayload);
 
         // Fallback to fetchOpenAIUsage
         if (!snapshot && bearer) {
@@ -695,7 +695,7 @@ async function setupGeminiLogin(session: BrowserLoginSession) {
           });
 
           session.secret = secretPayload;
-          saveSecretForProvider(session.providerId, secretPayload);
+          await saveSecretForProvider(session.providerId, secretPayload);
 
           session.usageSnapshot = snapshot;
           session.status = 'completed';
@@ -877,7 +877,7 @@ async function setupDeepSeekLogin(session: BrowserLoginSession) {
           });
 
           session.secret = secretPayload;
-          saveSecretForProvider(session.providerId, secretPayload);
+          await saveSecretForProvider(session.providerId, secretPayload);
 
           session.usageSnapshot = snapshot;
           session.status = 'completed';
