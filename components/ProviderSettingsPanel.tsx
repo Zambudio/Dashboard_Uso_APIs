@@ -9,13 +9,20 @@ interface ProviderSettingsPanelProps {
   provider: ApiProviderConfig;
   onSave: (updated: ApiProviderConfig) => void;
   onClose: () => void;
+  onDelete?: (id: string) => void;
   onBrowserLogin?: (provider: ApiProviderConfig) => void;
 }
 
-export function ProviderSettingsPanel({ provider, onSave, onClose, onBrowserLogin }: ProviderSettingsPanelProps) {
+export function ProviderSettingsPanel({ provider, onSave, onClose, onDelete, onBrowserLogin }: ProviderSettingsPanelProps) {
   const [form, setForm] = useState(provider);
   const hasApiKey = Boolean(form.apiKey);
   const definition = getProviderDefinition(form.provider);
+
+  const handleDelete = () => {
+    if (window.confirm(`¿Eliminar la tarjeta "${provider.name}"? Se borrará también la clave o sesión guardada. Esta acción no se puede deshacer.`)) {
+      onDelete?.(provider.id);
+    }
+  };
 
   const statusTone = useMemo(() => {
     switch (form.status) {
@@ -113,13 +120,20 @@ export function ProviderSettingsPanel({ provider, onSave, onClose, onBrowserLogi
         <p>La clave se guarda en el archivo .env local junto al ejecutable, no en el navegador ni en ningún servidor externo.</p>
       </div>
 
-      <div className="mt-5 flex justify-end gap-3">
-        <button onClick={onClose} className="rounded-xl border border-white/10 px-4 py-2 text-sm text-slate-300 transition hover:bg-white/10">
-          Cancelar
-        </button>
-        <button onClick={() => onSave(form)} className={`rounded-xl px-4 py-2 text-sm font-medium text-white ${statusTone} bg-white/10`}>
-          Guardar cambios
-        </button>
+      <div className="mt-5 flex items-center justify-between gap-3">
+        {onDelete ? (
+          <button onClick={handleDelete} className="rounded-xl border border-rose-500/30 bg-rose-500/10 px-4 py-2 text-sm font-medium text-rose-300 transition hover:bg-rose-500/20">
+            Eliminar tarjeta
+          </button>
+        ) : <span />}
+        <div className="flex gap-3">
+          <button onClick={onClose} className="rounded-xl border border-white/10 px-4 py-2 text-sm text-slate-300 transition hover:bg-white/10">
+            Cancelar
+          </button>
+          <button onClick={() => onSave(form)} className={`rounded-xl px-4 py-2 text-sm font-medium text-white ${statusTone} bg-white/10`}>
+            Guardar cambios
+          </button>
+        </div>
       </div>
     </div>
   );

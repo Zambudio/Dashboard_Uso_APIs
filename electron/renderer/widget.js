@@ -3,8 +3,35 @@
 const cardsEl = document.getElementById('cards');
 const openBtn = document.getElementById('open-dashboard');
 const collapseBtn = document.getElementById('toggle-collapse');
+const minimizeBtn = document.getElementById('widget-minimize');
+const closeBtn = document.getElementById('widget-close');
+const hiddenCountBtn = document.getElementById('hidden-count');
+const hiddenPanelEl = document.getElementById('hidden-panel');
 
 openBtn.addEventListener('click', () => window.widgetAPI.openDashboard());
+minimizeBtn.addEventListener('click', () => window.widgetAPI.minimize());
+closeBtn.addEventListener('click', () => window.widgetAPI.close());
+
+// Última foto recibida del proceso principal: se necesita fuera del
+// callback de onUsageUpdate para poder re-renderizar de forma optimista
+// (ocultar/mostrar una tarjeta) sin esperar al siguiente ciclo de sondeo.
+let lastProviders = [];
+let lastPreferences = {};
+let hiddenPanelOpen = false;
+
+function setProviderHidden(id, hidden) {
+  const current = new Set(lastPreferences.widgetHiddenProviderIds || []);
+  if (hidden) current.add(id);
+  else current.delete(id);
+  lastPreferences = { ...lastPreferences, widgetHiddenProviderIds: Array.from(current) };
+  renderProviders(lastProviders, lastPreferences);
+  window.widgetAPI.setProviderHidden(id, hidden);
+}
+
+hiddenCountBtn.addEventListener('click', () => {
+  hiddenPanelOpen = !hiddenPanelOpen;
+  renderProviders(lastProviders, lastPreferences);
+});
 
 // Estado de colapsado persistido en localStorage del propio renderer (no
 // necesita pasar por electron-store: solo afecta a esta ventana y no hace
@@ -157,10 +184,41 @@ function buildCardBody(provider) {
 function renderProviders(providers, preferences) {
   cardsEl.innerHTML = '';
   const hiddenInWidget = new Set((preferences && preferences.widgetHiddenProviderIds) || []);
+  const all = providers || [];
   const visible = applyCardOrder(
-    (providers || []).filter((p) => p.visibility !== 'hidden' && !hiddenInWidget.has(p.id)),
+    all.filter((p) => p.visibility !== 'hidden' && !hiddenInWidget.has(p.id)),
     preferences
   );
+  // Solo se ofrecen para "volver a mostrar" los ocultados desde el propio
+  // widget — los ocultados desde la web (provider.visibility === 'hidden')
+  // siguen sin aparecer aquí ni en ningún sitio del widget, a propósito
+  // (mismo comportamiento que ya tenía antes de este panel).
+  const hiddenByWidget = all.filter((p) => p.visibility !== 'hidden' && hiddenInWidget.has(p.id));
+
+  if (hiddenByWidget.length === 0) hiddenPanelOpen = false;
+  hiddenCountBtn.hidden = hiddenByWidget.length === 0;
+  hiddenCountBtn.textContent = `${hiddenByWidget.length} oculto${hiddenByWidget.length === 1 ? '' : 's'}`;
+  hiddenCountBtn.classList.toggle('open', hiddenPanelOpen);
+
+  hiddenPanelEl.innerHTML = '';
+  hiddenPanelEl.classList.toggle('open', hiddenPanelOpen && hiddenByWidget.length > 0);
+  if (hiddenPanelOpen) {
+    hiddenByWidget.forEach((provider) => {
+      const row = document.createElement('div');
+      row.className = 'hidden-row';
+      const name = document.createElement('span');
+      name.className = 'name';
+      name.textContent = provider.name;
+      const showBtn = document.createElement('button');
+      showBtn.textContent = 'Mostrar';
+      showBtn.addEventListener('click', (event) => {
+        event.stopPropagation();
+        setProviderHidden(provider.id, false);
+      });
+      row.append(name, showBtn);
+      hiddenPanelEl.appendChild(row);
+    });
+  }
 
   if (visible.length === 0) {
     const empty = document.createElement('div');
@@ -194,7 +252,15 @@ function renderProviders(providers, preferences) {
       const dot = document.createElement('span');
       dot.className = 'dot';
       dot.style.background = STATUS_COLORS[provider.status] || STATUS_COLORS.unconfigured;
-      header.append(name, dot);
+      const hideBtn = document.createElement('button');
+      hideBtn.className = 'card-hide-btn';
+      hideBtn.textContent = '✕';
+      hideBtn.title = 'Ocultar en el widget';
+      hideBtn.addEventListener('click', (event) => {
+        event.stopPropagation();
+        setProviderHidden(provider.id, true);
+      });
+      header.append(name, dot, hideBtn);
 
       info.append(header, buildCardBody(provider));
 
@@ -214,7 +280,9 @@ function renderProviders(providers, preferences) {
 }
 
 window.widgetAPI.onUsageUpdate((data) => {
-  applyOpacity(data.preferences);
-  applyTheme(data.preferences);
-  renderProviders(data.providers, data.preferences);
+  lastProviders = data.providers || [];
+  lastPreferences = data.preferences || {};
+  applyOpacity(lastPreferences);
+  applyTheme(lastPreferences);
+  renderProviders(lastProviders, lastPreferences);
 });

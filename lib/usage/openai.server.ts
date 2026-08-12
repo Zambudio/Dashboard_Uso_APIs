@@ -90,6 +90,28 @@ async function openaiGet<T>(url: string, token: string, extraHeaders?: Record<st
   return res.json() as Promise<T>;
 }
 
+/**
+ * El flujo de sesión web (browser login) nunca intentaba leer el saldo —
+ * solo uso/coste — así que la tarjeta lo marcaba como "no disponible" pase
+ * lo que pase. Con la cookie/token de sesión real (no una API key de
+ * proyecto) sí tiene sentido intentar el endpoint clásico de créditos.
+ */
+async function tryFetchBalance(token: string, customHeaders: Record<string, string>): Promise<{ balance?: number; currency?: string }> {
+  try {
+    const grants = await openaiGet<OpenAIDashboardCreditGrants>(
+      'https://api.openai.com/dashboard/billing/credit_grants',
+      token,
+      customHeaders
+    );
+    if (typeof grants.total_available === 'number') {
+      return { balance: grants.total_available, currency: 'USD' };
+    }
+  } catch {
+    // El caller marca 'balance' como no disponible.
+  }
+  return {};
+}
+
 export async function fetchOpenAIUsage(secret: string): Promise<ApiUsageSnapshot> {
   const fetchedAt = new Date().toISOString();
   let token = secret.trim();
@@ -145,13 +167,16 @@ export async function fetchOpenAIUsage(secret: string): Promise<ApiUsageSnapshot
         const resetAtSeconds = wham.rate_limit?.primary_window?.reset_at;
         const weeklyResetsAt = resetAtSeconds ? new Date(resetAtSeconds * 1000).toISOString() : undefined;
         const planName = wham.plan_type ? `ChatGPT ${wham.plan_type.charAt(0).toUpperCase() + wham.plan_type.slice(1)}` : 'ChatGPT Plus';
+        const balanceInfo = await tryFetchBalance(token, customHeaders);
 
         return {
           fetchedAt,
           weeklyUtilization: weeklyUtil,
           weeklyResetsAt,
           planType: planName,
-          unavailable: ['balance', 'accumulatedCost', 'tokensUsed', 'requestCount'],
+          balance: balanceInfo.balance,
+          currency: balanceInfo.currency,
+          unavailable: ['accumulatedCost', 'tokensUsed', 'requestCount', ...(balanceInfo.balance === undefined ? ['balance'] : [])],
         };
       }
     } catch {
@@ -211,15 +236,18 @@ export async function fetchOpenAIUsage(secret: string): Promise<ApiUsageSnapshot
       // ignore
     }
 
+    const balanceInfo = await tryFetchBalance(token, customHeaders);
+
     return {
       fetchedAt,
+      balance: balanceInfo.balance,
       accumulatedCost,
-      currency,
+      currency: balanceInfo.currency ?? currency,
       tokensUsed,
       requestCount,
       planType,
       unavailable: [
-        'balance',
+        ...(balanceInfo.balance === undefined ? ['balance'] : []),
         ...(accumulatedCost === undefined ? ['accumulatedCost'] : []),
         ...(tokensUsed === undefined ? ['tokensUsed'] : []),
         ...(requestCount === undefined ? ['requestCount'] : []),

@@ -68,3 +68,9 @@ export async function writeEnvKeys(keys: Record<string, string>): Promise<void> 
   if (broker) return writeKeysToBroker(broker, keys);
   writeEnvVar(KEYS_VAR, keys);
 }
+
+export async function deleteEnvKeys(ids: string[]): Promise<void> {
+  const existing = await readEnvKeys();
+  for (const id of ids) delete existing[id];
+  await writeEnvKeys(existing);
+}

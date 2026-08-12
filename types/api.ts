@@ -52,6 +52,8 @@ export interface DashboardPreferences {
   widgetOpacity?: number;
   /** IDs de proveedor ocultos solo en el widget flotante (independiente de `visibility`, que oculta también en el dashboard web). */
   widgetHiddenProviderIds?: string[];
+  /** IDs de las tarjetas por defecto (openai/claude-pro/gemini/anthropic/deepseek) que el usuario ha eliminado explícitamente, para que no se vuelvan a crear solas al cargar la página. */
+  deletedDefaultProviderIds?: string[];
   /** Tema de color del widget de escritorio. Por defecto 'aurora' (cian/fucsia, el mismo del dashboard web). */
   widgetTheme?: 'aurora' | 'esmeralda' | 'ambar' | 'violeta' | 'mono';
 }

@@ -45,6 +45,12 @@ if (!gotLock) {
       : path.join(__dirname, '..', '.env');
   }
 
+  function browserProfileDir() {
+    return app.isPackaged
+      ? path.join(app.getPath('userData'), 'browser-profiles')
+      : path.join(__dirname, '..', '.browser-profiles');
+  }
+
   async function startServer(broker) {
     console.log('[widget] Arrancando servidor en ' + SERVER_URL);
     serverChild = spawnServer({
@@ -52,6 +58,7 @@ if (!gotLock) {
       port: PORT,
       host: HOST,
       envFile: envFilePath(),
+      browserProfileDir: browserProfileDir(),
       execPath: process.execPath,
       brokerUrl: broker.url,
       brokerToken: broker.token,

@@ -2,6 +2,7 @@
 
 const { BrowserWindow, screen, ipcMain, shell } = require('electron');
 const path = require('path');
+const { setProviderHidden } = require('./usage-poller');
 
 const WIDGET_WIDTH = 340;
 const HEADER_HEIGHT = 56;
@@ -36,6 +37,17 @@ function createWidgetWindow({ store, serverUrl }) {
     y: savedPosition ? savedPosition.y : undefined,
     frame: false,
     transparent: true,
+    // '#00000000' (transparente explícito) en vez de dejarlo por defecto:
+    // en Windows, un BrowserWindow transparent:true sin backgroundColor
+    // explícito a veces sigue pintando un fondo opaco por debajo del
+    // primer paint de la página, y ese rectángulo opaco asoma por las
+    // esquinas que el CSS (border-radius en <body>) redondea por encima.
+    backgroundColor: '#00000000',
+    // Sin esto, Windows sigue dibujando la sombra rectangular por defecto
+    // detrás de la ventana transparente: el contenido (body) ya sale con
+    // esquinas redondeadas por CSS, pero esa sombra cuadrada asomando por
+    // detrás hace que se vea como si no lo estuviera.
+    hasShadow: false,
     alwaysOnTop: true,
     resizable: false,
     skipTaskbar: false,
@@ -70,10 +82,13 @@ function createWidgetWindow({ store, serverUrl }) {
   });
 
   // Cerrar la ventana solo la oculta — la bandeja es la única forma de
-  // salir de verdad (mismo patrón que el proyecto de referencia).
+  // salir de verdad (mismo patrón que el proyecto de referencia). El botón
+  // "✕" de la cabecera reproduce este mismo comportamiento (ver
+  // 'widget-close' más abajo), no un cierre real de la app.
+  const hideWindow = () => win.hide();
   win.on('close', (event) => {
     event.preventDefault();
-    win.hide();
+    hideWindow();
   });
 
   ipcMain.on('widget-resize', (event, height) => {
@@ -87,6 +102,25 @@ function createWidgetWindow({ store, serverUrl }) {
 
   ipcMain.on('widget-open-dashboard', () => {
     shell.openExternal(serverUrl);
+  });
+
+  ipcMain.on('widget-minimize', (event) => {
+    if (event.sender !== win.webContents) return;
+    win.minimize();
+  });
+
+  ipcMain.on('widget-close', (event) => {
+    if (event.sender !== win.webContents) return;
+    hideWindow();
+  });
+
+  ipcMain.on('widget-set-provider-hidden', (event, payload) => {
+    if (event.sender !== win.webContents) return;
+    const { id, hidden } = payload || {};
+    if (!id) return;
+    setProviderHidden(serverUrl, id, Boolean(hidden)).catch((err) => {
+      console.error('[widget] Error al cambiar la visibilidad de un proveedor:', err.message);
+    });
   });
 
   return win;

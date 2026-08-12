@@ -8,12 +8,16 @@
 <body>
   <header id="header">
     <span id="title">Uso de APIs</span>
+    <button id="hidden-count" title="Proveedores ocultos en el widget" hidden>0 ocultos</button>
     <div id="header-actions">
       <button id="toggle-collapse" title="Colapsar/expandir">▾</button>
       <button id="open-dashboard" title="Abrir dashboard completo">⤢</button>
+      <button id="widget-minimize" title="Minimizar">─</button>
+      <button id="widget-close" title="Cerrar (sigue en la bandeja del sistema)">✕</button>
     </div>
   </header>
   <div id="banner">El servidor no responde</div>
+  <div id="hidden-panel"></div>
   <main id="cards"></main>
   <script src="widget.js"></script>
 </body>

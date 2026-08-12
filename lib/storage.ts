@@ -71,6 +71,18 @@ export async function loadEnvKeys(): Promise<Record<string, string>> {
   return fetchEnvKeys();
 }
 
+export async function deleteEnvKeys(ids: string[]): Promise<void> {
+  try {
+    await fetch(KEYS_ENDPOINT, {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ids }),
+    });
+  } catch {
+    // Ignore: the local .env stays untouched if the server is unavailable.
+  }
+}
+
 const CONFIG_ENDPOINT = '/api/config';
 
 export async function fetchServerConfig(): Promise<{ providers: ApiProviderConfig[] | null, preferences: DashboardPreferences | null }> {

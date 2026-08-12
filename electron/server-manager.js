@@ -35,7 +35,7 @@ async function waitForServer(host, port, { retries = 75, delayMs = 400, probePat
 // Se lanza con ELECTRON_RUN_AS_NODE=1 para reutilizar el propio binario de
 // Electron (process.execPath) como runtime Node del proceso hijo, sin
 // depender de que el usuario tenga Node.js instalado ni de pkg.
-function spawnServer({ standaloneDir, port, host, envFile, execPath, brokerUrl, brokerToken, onExit }) {
+function spawnServer({ standaloneDir, port, host, envFile, browserProfileDir, execPath, brokerUrl, brokerToken, onExit }) {
   const entryPath = path.join(standaloneDir, 'server-entry.js');
   const child = spawn(execPath, [entryPath], {
     cwd: path.join(standaloneDir, 'standalone'),
@@ -45,6 +45,7 @@ function spawnServer({ standaloneDir, port, host, envFile, execPath, brokerUrl, 
       PORT: String(port),
       HOSTNAME: host,
       DASHBOARD_ENV_FILE: envFile,
+      DASHBOARD_BROWSER_PROFILE_DIR: browserProfileDir,
       DASHBOARD_CRED_BROKER_URL: brokerUrl,
       DASHBOARD_CRED_BROKER_TOKEN: brokerToken,
     }),

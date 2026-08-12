@@ -6,7 +6,7 @@ import { BrowserLoginModal } from '@/components/BrowserLoginModal';
 import { DashboardSettingsPanel } from '@/components/DashboardSettingsPanel';
 import { ProviderCard } from '@/components/ProviderCard';
 import { ProviderSettingsPanel } from '@/components/ProviderSettingsPanel';
-import { fetchProviderUsage, fetchServerConfig, loadEnvKeys, loadPreferences, loadProviders, savePreferences, saveProviders } from '@/lib/storage';
+import { deleteEnvKeys, fetchProviderUsage, fetchServerConfig, loadEnvKeys, loadPreferences, loadProviders, savePreferences, saveProviders } from '@/lib/storage';
 import { getProviderDefinition } from '@/lib/providers';
 import { ApiProviderConfig, ApiUsageSnapshot, DashboardPreferences, ProviderKey, ProviderVisibility } from '@/types/api';
 
@@ -57,6 +57,12 @@ export default function HomePage() {
   const [browserLoginProvider, setBrowserLoginProvider] = useState<ApiProviderConfig | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [initialLoadingIds, setInitialLoadingIds] = useState<Set<string>>(new Set());
+  // La carga inicial (config + claves + uso por proveedor) es asíncrona y el
+  // último paso puede tardar varios segundos porque llama a APIs externas
+  // reales. Si el usuario edita la lista de proveedores (p.ej. borra una
+  // tarjeta) mientras tanto, esta bandera evita que loadData() sobrescriba
+  // ese cambio — y lo que persiste en disco — cuando termine de cargar.
+  const providersEditedRef = useRef(false);
 
   useEffect(() => {
     async function loadData() {
@@ -81,7 +87,8 @@ export default function HomePage() {
       let baseProviders = effectiveProviders.length > 0 ? effectiveProviders : initialProviders;
       
       const storedIds = new Set(baseProviders.map((p) => p.id));
-      const missingDefaults = initialProviders.filter((p) => !storedIds.has(p.id));
+      const deletedDefaultIds = new Set(effectivePrefs.deletedDefaultProviderIds ?? []);
+      const missingDefaults = initialProviders.filter((p) => !storedIds.has(p.id) && !deletedDefaultIds.has(p.id));
       baseProviders = [...baseProviders, ...missingDefaults];
 
       if (effectiveProviders.length === 0 || (!serverConfig.providers && localProviders.length > 0)) {
@@ -99,22 +106,38 @@ export default function HomePage() {
 
       if (toRefresh.length) {
         setInitialLoadingIds(new Set(toRefresh.map((p) => p.id)));
-        setProviders(mergedWithKeys); // Update state immediately before fetch
+        if (!providersEditedRef.current) setProviders(mergedWithKeys); // Update state immediately before fetch
         const results = await Promise.all(
           toRefresh.map((provider) =>
             fetchProviderUsage(provider.id, provider.provider).then((snapshot) => ({ id: provider.id, snapshot }))
           )
         );
         const byId = new Map(results.map((r) => [r.id, r.snapshot]));
-        const finalProviders = mergedWithKeys.map((provider) => {
-          const snapshot = byId.get(provider.id);
-          if (!snapshot) return provider;
-          return { ...provider, usage: snapshot, status: snapshot.error ? ('error' as const) : ('online' as const) };
-        });
-        setProviders(finalProviders);
-        saveProviders(finalProviders);
+
+        if (providersEditedRef.current) {
+          // El usuario ya borró/editó una tarjeta mientras esto seguía en
+          // vuelo: solo aplicamos el uso recién obtenido a lo que siga
+          // existiendo, sin resucitar nada.
+          setProviders((current) => {
+            const next = current.map((provider) => {
+              const snapshot = byId.get(provider.id);
+              if (!snapshot) return provider;
+              return { ...provider, usage: snapshot, status: snapshot.error ? ('error' as const) : ('online' as const) };
+            });
+            saveProviders(next);
+            return next;
+          });
+        } else {
+          const finalProviders = mergedWithKeys.map((provider) => {
+            const snapshot = byId.get(provider.id);
+            if (!snapshot) return provider;
+            return { ...provider, usage: snapshot, status: snapshot.error ? ('error' as const) : ('online' as const) };
+          });
+          setProviders(finalProviders);
+          saveProviders(finalProviders);
+        }
         setInitialLoadingIds(new Set());
-      } else {
+      } else if (!providersEditedRef.current) {
         setProviders(mergedWithKeys);
       }
     }
@@ -124,6 +147,7 @@ export default function HomePage() {
   }, []);
 
   const saveAllProviders = useCallback((updated: ApiProviderConfig[]) => {
+    providersEditedRef.current = true;
     setProviders(updated);
     saveProviders(updated);
   }, []);
@@ -301,6 +325,7 @@ export default function HomePage() {
       actualSecret = envKeys[providerId];
     }
 
+    providersEditedRef.current = true;
     setProviders((current) => {
       const next = current.map((p) => {
         if (p.id === providerId) {
@@ -329,6 +354,23 @@ export default function HomePage() {
     });
 
     saveAllProviders(nextProviders);
+  };
+
+  const removeProvider = (id: string) => {
+    const nextProviders = providers.filter((provider) => provider.id !== id);
+    saveAllProviders(nextProviders);
+
+    const isDefault = initialProviders.some((provider) => provider.id === id);
+    if (isDefault) {
+      const nextPrefs: DashboardPreferences = {
+        ...preferences,
+        deletedDefaultProviderIds: [...(preferences.deletedDefaultProviderIds ?? []), id],
+      };
+      saveAllPreferences(nextPrefs);
+    }
+
+    void deleteEnvKeys([id]);
+    setSelectedProvider(null);
   };
 
   const connectProvider = (provider: ApiProviderConfig) => {
@@ -392,6 +434,7 @@ export default function HomePage() {
           <ProviderSettingsPanel
             provider={selectedProvider}
             onSave={updateProvider}
+            onDelete={removeProvider}
             onClose={() => setSelectedProvider(null)}
             onBrowserLogin={(p) => {
               setSelectedProvider(null);

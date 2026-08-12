@@ -18,7 +18,12 @@ function copyDir(src, dest) {
   fs.cpSync(src, dest, { recursive: true });
 }
 
-fs.rmSync(bundleDir, { recursive: true, force: true });
+// maxRetries/retryDelay: en la unidad de red (N:\, SMB) un rmSync
+// recursivo puede fallar con ENOTEMPTY de forma transitoria (el listado de
+// la carpeta que se está borrando llega desincronizado del estado real por
+// la latencia de red) — sin retry, el build entero abortaba en este paso
+// de forma intermitente y sin relación con el código.
+fs.rmSync(bundleDir, { recursive: true, force: true, maxRetries: 10, retryDelay: 300 });
 fs.mkdirSync(bundleDir, { recursive: true });
 
 copyDir(nextStandalone, bundleStandalone);

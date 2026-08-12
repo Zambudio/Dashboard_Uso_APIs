@@ -52,6 +52,13 @@ async function fetchDashboardSnapshot(serverUrl) {
   return { providers: withUsage, preferences: configRes.preferences };
 }
 
+// Tras un fallo (servidor reiniciando, blip de red durante una
+// actualización, etc.) se reintenta pronto en vez de heredar el intervalo
+// normal (5 min por defecto) — si no, el widget se queda con el banner
+// "servidor no responde" y datos obsoletos hasta el siguiente ciclo
+// completo, aunque el servidor ya haya vuelto a responder.
+const RETRY_INTERVAL_MS = 15000;
+
 function startUsagePolling({ serverUrl, onUpdate, onError, defaultIntervalMs = 300000, fetchSnapshot = fetchDashboardSnapshot }) {
   let stopped = false;
   let timer = null;
@@ -65,6 +72,7 @@ function startUsagePolling({ serverUrl, onUpdate, onError, defaultIntervalMs = 3
       onUpdate(snapshot);
     } catch (err) {
       if (onError) onError(err);
+      intervalMs = Math.min(defaultIntervalMs, RETRY_INTERVAL_MS);
     }
     if (!stopped) timer = setTimeout(tick, intervalMs);
   }
@@ -76,4 +84,24 @@ function startUsagePolling({ serverUrl, onUpdate, onError, defaultIntervalMs = 3
   };
 }
 
-module.exports = { fetchDashboardSnapshot, startUsagePolling };
+// Añade/quita `id` de `preferences.widgetHiddenProviderIds` y lo persiste en
+// el servidor. Es un read-modify-write porque PUT /api/config reemplaza
+// `preferences` entero (no hace merge) — hay que partir del valor actual.
+async function setProviderHidden(serverUrl, id, hidden) {
+  const configRes = await fetchJson(`${serverUrl}/api/config`);
+  const preferences = configRes.preferences || {};
+  const current = new Set(preferences.widgetHiddenProviderIds || []);
+  if (hidden) current.add(id);
+  else current.delete(id);
+  const nextPreferences = { ...preferences, widgetHiddenProviderIds: Array.from(current) };
+
+  const res = await fetch(`${serverUrl}/api/config`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ preferences: nextPreferences }),
+    cache: 'no-store',
+  });
+  if (!res.ok) throw new Error(`HTTP ${res.status} updating preferences`);
+}
+
+module.exports = { fetchDashboardSnapshot, startUsagePolling, setProviderHidden };

@@ -8,6 +8,10 @@ out/
 dist/.env
 dist/standalone/.env
 
+# Perfil persistente de Chromium/Chrome para "Iniciar sesión web" (cookies de
+# sesión reales, no debe versionarse ni distribuirse con el instalador).
+/.browser-profiles/
+
 # Certificados de firma de codigo autofirmados: solo tienen valor en la
 # maquina que los genero, no aportan nada al clonar el repo.
 *.cer
@@ -40,3 +44,4 @@ Thumbs.db
 # final (solo los .exe/instalador finales en dist/ se versionan).
 dist/win-unpacked/
 dist/builder-debug.yml
+dist/latest.yml

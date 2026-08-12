@@ -27,6 +27,8 @@ export interface BrowserLoginSession {
   timeoutTimer?: NodeJS.Timeout;
   capturedBearer?: string;
   isProcessing?: boolean;
+  /** true si `context` viene de launchPersistentContext (perfil en disco reutilizable) en vez de browser.newContext(). Cambia cómo se limpia la sesión. */
+  isPersistentContext?: boolean;
 }
 
 declare global {
@@ -78,6 +80,46 @@ async function launchInteractiveChromium() {
 const USER_AGENT =
   'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36';
 
+function resolveBrowserProfileDir(provider: string): string {
+  const root = process.env.DASHBOARD_BROWSER_PROFILE_DIR || path.resolve(process.cwd(), '.browser-profiles');
+  return path.join(root, provider);
+}
+
+// platform.openai.com/login pone un reto de Cloudflare que suele detectar
+// navegadores automatizados. Dos mitigaciones (sin garantía: Cloudflare está
+// diseñado justo para detectar esto):
+// 1. Perfil persistente en disco en vez de un contexto "incógnito" que se
+//    tira al cerrar: si el usuario supera el reto una vez, la cookie de
+//    Cloudflare y el resto del fingerprint se conservan para el siguiente
+//    intento, en vez de volver a empezar de cero cada vez.
+// 2. Canal 'chrome' real (si está instalado) en vez del Chromium empaquetado
+//    con Playwright, que tiene una huella más fácil de identificar como bot.
+async function launchOpenAIPersistentContext(): Promise<BrowserContext> {
+  const userDataDir = resolveBrowserProfileDir('openai');
+  const baseOptions = {
+    headless: false,
+    ignoreDefaultArgs: ['--enable-automation'],
+    args: ['--no-sandbox', '--disable-blink-features=AutomationControlled', '--start-maximized', '--disable-infobars'],
+    userAgent: USER_AGENT,
+    viewport: null,
+  };
+
+  try {
+    return await chromium.launchPersistentContext(userDataDir, { ...baseOptions, channel: 'chrome' });
+  } catch {
+    // Chrome real no instalado (o falló por otra razón): usar el Chromium empaquetado con Playwright.
+  }
+
+  try {
+    return await chromium.launchPersistentContext(userDataDir, baseOptions);
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    if (!message.includes('Executable doesn')) throw err;
+    installChromium();
+    return chromium.launchPersistentContext(userDataDir, baseOptions);
+  }
+}
+
 async function saveSecretForProvider(providerId: string, secret: string) {
   const currentKeys = await readEnvKeys();
   currentKeys[providerId] = secret;
@@ -108,13 +150,18 @@ export async function startBrowserLogin(providerId: string, provider: ProviderKe
   // Background execution
   void (async () => {
     try {
-      const browser = await launchInteractiveChromium();
-      session.browser = browser;
-
-      const context = await browser.newContext({
-        userAgent: USER_AGENT,
-        viewport: null, // native size
-      });
+      let context: BrowserContext;
+      if (provider === 'openai') {
+        context = await launchOpenAIPersistentContext();
+        session.isPersistentContext = true;
+      } else {
+        const browser = await launchInteractiveChromium();
+        session.browser = browser;
+        context = await browser.newContext({
+          userAgent: USER_AGENT,
+          viewport: null, // native size
+        });
+      }
       session.context = context;
 
       // Anti-bot stealth init script for Google / OAuth popups
@@ -152,7 +199,9 @@ export async function startBrowserLogin(providerId: string, provider: ProviderKe
         });
       });
 
-      const page = await context.newPage();
+      // Un contexto persistente ya abre con una pestaña; reutilizarla evita
+      // una ventana extra en blanco junto a la que sí navegamos.
+      const page = context.pages()[0] ?? (await context.newPage());
       session.page = page;
 
       // Handle user manually closing the browser window
@@ -457,7 +506,16 @@ async function setupOpenAILogin(session: BrowserLoginSession) {
                   .then((r) => (r.ok ? r.json() : null))
                   .catch(() => null);
 
-                return { orgsRes, costsRes, usageRes, activeOrg, domWeeklyUtilization, domWeeklyResetsAt };
+                // Endpoint clásico del dashboard de facturación: se hace con
+                // fetch() dentro de la propia página (credentials: 'include'
+                // manda las cookies de sesión reales), igual que el dashboard
+                // oficial de OpenAI para mostrar el saldo — más fiable que
+                // repetir la llamada desde el servidor con solo el bearer.
+                const grantsRes = await fetch('https://api.openai.com/dashboard/billing/credit_grants', { credentials: 'include', headers })
+                  .then((r) => (r.ok ? r.json() : null))
+                  .catch(() => null);
+
+                return { orgsRes, costsRes, usageRes, grantsRes, activeOrg, domWeeklyUtilization, domWeeklyResetsAt };
               } catch {
                 return null;
               }
@@ -467,9 +525,11 @@ async function setupOpenAILogin(session: BrowserLoginSession) {
 
           const costsData = capturedCostsData || billingInfo?.costsRes;
           const usageData = capturedUsageData || billingInfo?.usageRes;
+          const grantsData = billingInfo?.grantsRes;
           const orgTitle = capturedOrgTitle || billingInfo?.orgsRes?.data?.[0]?.title || 'OpenAI';
           const weeklyUtil = capturedWeeklyUtilization ?? billingInfo?.domWeeklyUtilization;
           const weeklyResetsAt = capturedWeeklyResetsAt ?? billingInfo?.domWeeklyResetsAt;
+          const balance = typeof grantsData?.total_available === 'number' ? grantsData.total_available : undefined;
 
           if (weeklyUtil !== undefined) {
             snapshot = {
@@ -477,9 +537,11 @@ async function setupOpenAILogin(session: BrowserLoginSession) {
               weeklyUtilization: weeklyUtil,
               weeklyResetsAt,
               planType: 'ChatGPT / OpenAI Workspace',
-              unavailable: ['balance', 'accumulatedCost', 'tokensUsed', 'requestCount'],
+              balance,
+              currency: balance !== undefined ? 'USD' : undefined,
+              unavailable: ['accumulatedCost', 'tokensUsed', 'requestCount', ...(balance === undefined ? ['balance'] : [])],
             };
-          } else if (costsData || usageData) {
+          } else if (costsData || usageData || grantsData) {
             let accumulatedCost = 0;
             let currency = 'USD';
             if (costsData?.data) {
@@ -506,12 +568,13 @@ async function setupOpenAILogin(session: BrowserLoginSession) {
 
             snapshot = {
               fetchedAt: new Date().toISOString(),
+              balance,
               accumulatedCost,
               currency,
               tokensUsed,
               requestCount,
               planType: orgTitle,
-              unavailable: ['balance'],
+              unavailable: balance === undefined ? ['balance'] : [],
             };
           }
         } catch {
@@ -982,11 +1045,28 @@ function cleanupSession(sessionId: string, closeBrowser = true) {
     session.timeoutTimer = undefined;
   }
 
-  if (closeBrowser && session.browser) {
-    void session.browser.close().catch(() => {});
+  if (closeBrowser && (session.browser || session.context)) {
+    // Un contexto persistente (session.isPersistentContext) no tiene un
+    // Browser separado: cerrar el contexto ya cierra el proceso. Si no se
+    // cierra aquí, el proceso queda huérfano y bloquea el directorio de
+    // perfil, impidiendo el siguiente "Iniciar sesión web".
+    const context = session.context;
+    const browser = session.browser;
     session.browser = undefined;
     session.context = undefined;
     session.page = undefined;
+    void (async () => {
+      try {
+        await context?.close();
+      } catch {
+        // ignore
+      }
+      try {
+        await browser?.close();
+      } catch {
+        // ignore
+      }
+    })();
   }
 
   // Keep result in memory for 5 minutes so polling clients receive final status, then delete
