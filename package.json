@@ -47,7 +47,7 @@
     "autoprefixer": "10.5.4",
     "electron": "43.4.0",
     "electron-builder": "26.15.3",
-    "eslint": "9.39.2",
+    "eslint": "9.39.5",
     "eslint-config-next": "16.3.0",
     "postcss": "8.5.26",
     "tailwindcss": "3.4.14",
