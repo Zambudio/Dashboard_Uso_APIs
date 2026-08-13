@@ -18,7 +18,7 @@
 - CI, Dependabot, licencia MIT, guía de contribución y política de seguridad.
 - Workflow de release Windows que exige firma válida y publica SHA-256.
 - `dist/`, ejecutables, runtime y diagnósticos locales excluidos de Git.
-- Procedimiento documentado para retirar del historial previo los binarios que GitHub no admite.
+- Historial Git saneado: `dist/` eliminado de todas las revisiones y procedimiento documentado.
 - Empaquetado sin duplicar Next, React y Playwright entre `app.asar` y el bundle standalone.
 - Fuses de Electron endurecidos y servidor migrado de `runAsNode` a `utilityProcess`.
 
@@ -47,7 +47,6 @@
 - No existe conversión de divisas.
 - El proveedor `custom` no consulta uso automáticamente.
 - Una build local sin certificado seguirá pudiendo activar SmartScreen/EDR. El código no puede sustituir la reputación y firma del editor.
-- La rama local heredada aún necesita la limpieza única descrita en `REPOSITORY_CLEANUP.md` antes de su primer push; requiere autorización porque reescribe commits.
 - La ruta heredada `DashboardTray.exe` se mantiene en código por compatibilidad, pero no es la distribución recomendada y no ofrece DPAPI.
 
 ## Criterio de terminado

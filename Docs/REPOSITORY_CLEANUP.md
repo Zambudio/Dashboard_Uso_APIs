@@ -1,4 +1,14 @@
-# Limpieza única del historial de Git
+# Limpieza del historial de Git
+
+## Estado
+
+Completada el 13 de agosto de 2026 antes de publicar `0.2.0`:
+
+- respaldo completo creado y verificado fuera del repositorio;
+- `dist/` eliminado de todas las referencias mediante `git-filter-repo`;
+- ninguna ruta `dist/` permanece en el historial alcanzable;
+- base de objetos reducida de 1,20 GiB a aproximadamente 553 KiB;
+- artefactos locales preservados como archivos ignorados.
 
 ## Motivo
 
@@ -7,31 +17,30 @@ ejecutables superan los 100 MB, por lo que GitHub rechazará la rama aunque esos
 archivos se borren en un commit posterior: los blobs siguen formando parte del
 historial que se intenta publicar.
 
-El árbol actual ya ignora `dist/`, `.next/`, diagnósticos y artefactos de release.
-La limpieza descrita aquí sólo es necesaria una vez, antes de publicar la rama.
+El árbol actual ignora `dist/`, `.next/`, diagnósticos y artefactos de release.
+Este procedimiento queda documentado como registro operativo y no debe repetirse
+en clones creados después de la publicación del historial limpio.
 
-## Condiciones previas
+## Procedimiento utilizado
 
-Reescribir el historial cambia los identificadores de commit y obliga a coordinar
-un `push --force-with-lease`. Antes de hacerlo:
+Reescribir el historial cambia los identificadores de commit. Las condiciones
+aplicadas fueron:
 
 1. confirmar que no hay colaboradores trabajando sobre la rama remota;
 2. crear una copia o etiqueta de respaldo fuera de la rama que se publicará;
 3. confirmar que el árbol de trabajo no contiene cambios ajenos sin guardar;
 4. instalar `git-filter-repo` desde su distribución oficial.
 
-## Procedimiento recomendado
-
-Desde una copia de respaldo y con autorización explícita del mantenedor:
+Con respaldo y autorización explícita del mantenedor:
 
 ```powershell
-git filter-repo --path dist --invert-paths
+git filter-repo --path dist --invert-paths --force
 git fsck --full
 git count-objects -vH
 git push --force-with-lease origin main
 ```
 
-Después se debe clonar de nuevo desde GitHub y ejecutar:
+Después de publicar se valida desde un clon nuevo:
 
 ```powershell
 npm ci
