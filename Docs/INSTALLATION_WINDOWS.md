@@ -50,4 +50,8 @@ npm run check
 npm run electron:dev
 ```
 
-Usa Node.js 22.12+ y una unidad NTFS. `npm run dev` abre solo el dashboard y mantiene compatibilidad heredada con `.env`; no es la modalidad segura recomendada para usuarios finales.
+Usa Node.js 22.12+. Si el checkout está en NAS, `electron:dev` prepara el build
+automáticamente en `%LOCALAPPDATA%` y no copia `.env`. El widget de desarrollo
+usa `http://127.0.0.1:32123` y datos DPAPI separados de una instalación normal.
+`npm run dev` abre solo el dashboard y mantiene compatibilidad heredada con
+`.env`; no es la modalidad segura recomendada para usuarios finales.

@@ -73,8 +73,8 @@ function createWidgetWindow({ store, serverUrl }) {
   // Reenvía la consola del renderer (file://, sin DevTools abiertas por
   // defecto) a la consola del proceso principal: sin esto, un error de JS en
   // widget.js queda invisible tanto en producción como al depurar.
-  win.webContents.on('console-message', (_event, _level, message) => {
-    console.log('[widget-renderer]', message);
+  win.webContents.on('console-message', (event) => {
+    console.log('[widget-renderer]', event.message);
   });
 
   let saveTimer = null;

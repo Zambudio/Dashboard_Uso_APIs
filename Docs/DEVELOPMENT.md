@@ -4,7 +4,7 @@
 
 - Windows 10/11 x64.
 - Node.js 22.12+ y npm 10+.
-- Checkout NTFS local para build.
+- Checkout NTFS local para build directo; `electron:dev` prepara su propia copia local si el checkout está en NAS.
 
 ```powershell
 npm ci
@@ -21,7 +21,7 @@ npm run dev
 | `npm test` | Tests unitarios dirigidos; no ejecuta scripts de diagnóstico. |
 | `npm run check` | lint + tipos + tests. |
 | `npm run build` | Standalone de producción. |
-| `npm run electron:dev` | Prepara standalone y abre Electron. |
+| `npm run electron:dev` | Copia fuentes versionadas a NTFS, prepara standalone y abre un Electron aislado. |
 | `npm run electron:build` | Instalador y portable locales. |
 | `npm run release:windows` | Release firmada y SHA-256. |
 
@@ -72,3 +72,21 @@ git status --short
 ```
 
 Confirma que no hay `.env`, volcados, binarios ni datos reales staged. Actualiza el documento especializado y `Docs/PROJECT_STATUS.md` sin presentar como validado lo que no se ejecutó.
+
+## Desarrollo desde NAS/SMB
+
+Turbopack necesita junctions que algunos servidores SMB no admiten. Por eso
+`electron:dev` sincroniza únicamente archivos visibles para Git —nunca `.env`,
+`dist/` ni diagnósticos ignorados— con
+`%LOCALAPPDATA%\DashboardUsoAPIs\dev-worktree`. Instala dependencias allí solo
+cuando cambia el lockfile y recompila siempre desde NTFS.
+
+El modo desarrollo utiliza por defecto:
+
+- servidor `127.0.0.1:32123`;
+- configuración y credenciales cifradas en
+  `%LOCALAPPDATA%\DashboardUsoAPIs\dev-user-data`;
+- bloqueo de instancia independiente de la aplicación instalada.
+
+Para reiniciar completamente ese entorno, cierra el widget y elimina esas dos
+carpetas locales. No es necesario mover ni modificar el checkout del NAS.

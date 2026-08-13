@@ -58,7 +58,9 @@ npm run build
 npm run electron:build
 ```
 
-No ejecutar build o desarrollo desde SMB/NAS si aparecen Watchpack, EPERM o bloqueos de `.next`; usar una copia NTFS local y desplegar después `dist/`.
+`npm run electron:dev` usa staging NTFS automático. Para otros builds desde
+SMB/NAS, si aparecen Watchpack, EPERM, error 4390 o bloqueos de `.next`, usar una
+copia NTFS local y desplegar después `dist/`.
 
 ## Criterios de validación
 

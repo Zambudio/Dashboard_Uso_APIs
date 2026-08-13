@@ -48,6 +48,12 @@ npm run check
 npm run electron:dev
 ```
 
+`electron:dev` detecta que el repositorio puede vivir en NAS/SMB y prepara
+automáticamente una copia de trabajo sin secretos en
+`%LOCALAPPDATA%\DashboardUsoAPIs\dev-worktree`. El widget de desarrollo usa el
+puerto `32123` y un almacén DPAPI independiente, por lo que puede convivir con
+una instalación abierta en el puerto `3000`.
+
 Para ejecutar solo el dashboard web:
 
 ```powershell
@@ -77,7 +83,9 @@ npm test
 npm run build
 ```
 
-No ejecutes build o desarrollo desde SMB/NAS si aparecen fallos de Watchpack, `EPERM` o bloqueos de `.next`; usa una copia NTFS local.
+`npm run electron:dev` traslada automáticamente su build a NTFS. Para
+`npm run build`, `npm run dev` o empaquetado manual desde SMB/NAS, usa una copia
+NTFS si aparecen fallos de Watchpack, `EPERM`, junctions o bloqueos de `.next`.
 
 Los artefactos de `dist/` no se versionan. Se generan en CI o localmente:
 

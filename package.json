@@ -24,11 +24,11 @@
     "start": "next start",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit --incremental false",
-    "test": "node --test electron/*.test.js electron/lib/*.test.js lib/*.test.js",
+    "test": "node --test electron/*.test.js electron/lib/*.test.js lib/*.test.js scripts/*.test.js",
     "check": "npm run lint && npm run typecheck && npm test",
     "icons": "node scripts/generate-icons.js",
     "exe": "npm run build && node scripts/build-exe.js",
-    "electron:dev": "npm run build && node scripts/prepare-standalone.js && electron .",
+    "electron:dev": "node scripts/run-electron-dev.js",
     "electron:build": "npm run icons && npm run build && node scripts/prepare-standalone.js && electron-builder --win --publish never",
     "release:windows": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/build-signed-release.ps1"
   },

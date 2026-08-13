@@ -53,7 +53,15 @@ Si sospechas exposición, cierra la app, revoca todas las credenciales afectadas
 
 ## NAS/SMB
 
-Watchpack, `EPERM` o bloqueos de `.next` indican que el build debe trasladarse a NTFS local. El paquete instalado puede ejecutarse desde su ubicación normal; el problema afecta principalmente a desarrollo y compilación.
+Watchpack, `EPERM`, error 4390 al crear junctions o bloqueos de `.next` indican
+que Turbopack no puede compilar sobre ese servidor SMB. Usa
+`npm run electron:dev`: el lanzador crea una copia NTFS segura bajo
+`%LOCALAPPDATA%\DashboardUsoAPIs\dev-worktree` y arranca en el puerto `32123`.
+No copies manualmente `.env` a esa carpeta.
+
+Si el comando termina sin mostrar ventana, comprueba la bandeja. El modo de
+desarrollo tiene un bloqueo de instancia y almacén propios, así que una versión
+instalada en el puerto `3000` no debería impedir ya su arranque.
 
 ## Ruta heredada
 

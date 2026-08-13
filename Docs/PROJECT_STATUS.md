@@ -29,7 +29,7 @@
 |---|---|
 | ESLint 9 | Correcto |
 | TypeScript estricto y sin caché incremental | Correcto |
-| Tests unitarios dirigidos | 39/39 correctos |
+| Tests unitarios dirigidos | 42/42 correctos |
 | Auditoría del lockfile actualizado | 0 vulnerabilidades |
 | `npm run check` con dependencias nuevas | Correcto en copia NTFS limpia |
 | `npm run build` con Next.js 16 | Correcto en copia NTFS limpia |
@@ -37,6 +37,7 @@
 | Arranque del paquete previo al sellado de fuses | HTTP 200 en `127.0.0.1:31873` con perfil aislado |
 | Arranque del paquete final endurecido | Bloqueado antes de ejecutar por App Control corporativo; requiere firma/allowlisting |
 | Configuración de fuses del EXE final | Verificada con `@electron/fuses read` |
+| `electron:dev` invocado desde NAS | Correcto mediante staging NTFS; HTTP 200 en `127.0.0.1:32123` |
 | Firma pública reconocida | Requiere certificado del mantenedor |
 | Prueba visual/instalación en equipo corporativo | Bloqueada hasta firmar o autorizar el editor/hash |
 

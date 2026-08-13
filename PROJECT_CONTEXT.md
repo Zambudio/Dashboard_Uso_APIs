@@ -37,4 +37,7 @@ git diff --check
 
 Para una release: `npm run release:windows`, comprobación de firma, instalación limpia, una sola instancia, HTTP 200 en `127.0.0.1:3000` e interacción básica del widget.
 
-Usa una copia NTFS para build si el checkout vive en NAS/SMB.
+`npm run electron:dev` crea automáticamente una copia NTFS sin secretos en
+`%LOCALAPPDATA%\DashboardUsoAPIs\dev-worktree`, usa el puerto `32123` y datos de
+usuario separados. Para otros builds desde NAS/SMB sigue siendo necesaria una
+copia NTFS.

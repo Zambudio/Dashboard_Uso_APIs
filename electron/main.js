@@ -15,6 +15,11 @@ const PORT = Number(process.env.DASHBOARD_PORT) || 3000;
 const HOST = '127.0.0.1';
 const SERVER_URL = `http://${HOST}:${PORT}`;
 
+if (!app.isPackaged && process.env.DASHBOARD_DEV_USER_DATA) {
+  const devUserData = path.resolve(process.env.DASHBOARD_DEV_USER_DATA);
+  app.setPath('userData', devUserData);
+}
+
 const gotLock = app.requestSingleInstanceLock();
 if (!gotLock) {
   app.quit();

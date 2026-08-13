@@ -25,3 +25,8 @@ Este proyecto sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) 
 - Los perfiles persistentes de Playwright y la persistencia del dashboard en `localStorage` se han eliminado.
 - `dist/`, binarios y volcados de diagnóstico dejan de versionarse.
 - Se deshabilitan `runAsNode`, `NODE_OPTIONS` e inspector y se exige integridad/carga desde ASAR.
+
+### Corregido
+
+- `electron:dev` ya no intenta compilar sobre NAS/SMB: usa staging NTFS sin copiar secretos.
+- El widget de desarrollo usa puerto, configuración y bloqueo de instancia separados de la aplicación instalada.
