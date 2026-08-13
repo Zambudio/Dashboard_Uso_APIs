@@ -17,6 +17,7 @@ Este proyecto sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) 
 - Las sesiones de navegador se capturan en contextos efímeros y se conservan únicamente en el almacén cifrado.
 - Actualización a Next.js 16.3, React 19.2 y Electron 43.4.
 - El servidor Next se ejecuta como proceso auxiliar de Electron y el paquete evita duplicar dependencias web.
+- Dependabot evita saltos semánticos mayores automáticos y los workflows usan las Actions vigentes.
 
 ### Seguridad
 

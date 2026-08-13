@@ -16,6 +16,7 @@
 - Migración única desde `.env` heredado al almacén cifrado de Electron.
 - Next.js 16.3, React 19.2 y Electron 43.4.
 - CI, Dependabot, licencia MIT, guía de contribución y política de seguridad.
+- Actions actualizadas y Dependabot limitado a cambios compatibles; los saltos mayores requieren migración planificada.
 - Workflow de release Windows que exige firma válida y publica SHA-256.
 - `dist/`, ejecutables, runtime y diagnósticos locales excluidos de Git.
 - Historial Git saneado: `dist/` eliminado de todas las revisiones y procedimiento documentado.
