@@ -15,7 +15,7 @@ Este proyecto sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) 
 - Una sola fuente de verdad para preferencias y proveedores en Electron.
 - El renderer solo conoce si existe una credencial; nunca recibe su contenido.
 - Las sesiones de navegador se capturan en contextos efímeros y se conservan únicamente en el almacén cifrado.
-- Actualización a Next.js 16.3, React 19.2 y Electron 43.4.
+- Actualización a Next.js 16.3, React 19.2, Electron 43.4, TypeScript 5.9 y ESLint 9.39.
 - El servidor Next se ejecuta como proceso auxiliar de Electron y el paquete evita duplicar dependencias web.
 - Dependabot evita saltos semánticos mayores automáticos y los workflows usan las Actions vigentes.
 
