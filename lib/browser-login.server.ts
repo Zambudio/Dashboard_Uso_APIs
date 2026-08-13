@@ -1,11 +1,10 @@
-import { chromium, Browser, BrowserContext, Page, Cookie } from 'playwright';
+import { chromium, Browser, BrowserContext, Page } from 'playwright';
 import { spawnSync } from 'child_process';
 import path from 'path';
 import { ApiUsageSnapshot, ProviderKey } from '@/types/api';
 import { readEnvKeys, writeEnvKeys } from '@/lib/env-keys.server';
 import { fetchClaudeProUsage } from '@/lib/usage/claude-pro.server';
 import { fetchOpenAIUsage } from '@/lib/usage/openai.server';
-import { fetchGeminiUsage } from '@/lib/usage/gemini.server';
 import { parseDeepSeekUsageText } from '@/lib/usage/deepseek-scrape.server';
 
 export type BrowserLoginState = 'starting' | 'waiting_user_login' | 'extracting' | 'completed' | 'cancelled' | 'error';
@@ -21,18 +20,14 @@ export interface BrowserLoginSession {
   context?: BrowserContext;
   page?: Page;
   usageSnapshot?: ApiUsageSnapshot;
-  secret?: string;
   error?: string;
   checkInterval?: NodeJS.Timeout;
   timeoutTimer?: NodeJS.Timeout;
   capturedBearer?: string;
   isProcessing?: boolean;
-  /** true si `context` viene de launchPersistentContext (perfil en disco reutilizable) en vez de browser.newContext(). Cambia cómo se limpia la sesión. */
-  isPersistentContext?: boolean;
 }
 
 declare global {
-  // eslint-disable-next-line no-var
   var __browserLoginSessions: Map<string, BrowserLoginSession> | undefined;
 }
 
@@ -77,49 +72,6 @@ async function launchInteractiveChromium() {
   }
 }
 
-const USER_AGENT =
-  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36';
-
-function resolveBrowserProfileDir(provider: string): string {
-  const root = process.env.DASHBOARD_BROWSER_PROFILE_DIR || path.resolve(process.cwd(), '.browser-profiles');
-  return path.join(root, provider);
-}
-
-// platform.openai.com/login pone un reto de Cloudflare que suele detectar
-// navegadores automatizados. Dos mitigaciones (sin garantía: Cloudflare está
-// diseñado justo para detectar esto):
-// 1. Perfil persistente en disco en vez de un contexto "incógnito" que se
-//    tira al cerrar: si el usuario supera el reto una vez, la cookie de
-//    Cloudflare y el resto del fingerprint se conservan para el siguiente
-//    intento, en vez de volver a empezar de cero cada vez.
-// 2. Canal 'chrome' real (si está instalado) en vez del Chromium empaquetado
-//    con Playwright, que tiene una huella más fácil de identificar como bot.
-async function launchOpenAIPersistentContext(): Promise<BrowserContext> {
-  const userDataDir = resolveBrowserProfileDir('openai');
-  const baseOptions = {
-    headless: false,
-    ignoreDefaultArgs: ['--enable-automation'],
-    args: ['--no-sandbox', '--disable-blink-features=AutomationControlled', '--start-maximized', '--disable-infobars'],
-    userAgent: USER_AGENT,
-    viewport: null,
-  };
-
-  try {
-    return await chromium.launchPersistentContext(userDataDir, { ...baseOptions, channel: 'chrome' });
-  } catch {
-    // Chrome real no instalado (o falló por otra razón): usar el Chromium empaquetado con Playwright.
-  }
-
-  try {
-    return await chromium.launchPersistentContext(userDataDir, baseOptions);
-  } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
-    if (!message.includes('Executable doesn')) throw err;
-    installChromium();
-    return chromium.launchPersistentContext(userDataDir, baseOptions);
-  }
-}
-
 async function saveSecretForProvider(providerId: string, secret: string) {
   const currentKeys = await readEnvKeys();
   currentKeys[providerId] = secret;
@@ -150,26 +102,20 @@ export async function startBrowserLogin(providerId: string, provider: ProviderKe
   // Background execution
   void (async () => {
     try {
-      let context: BrowserContext;
-      if (provider === 'openai') {
-        context = await launchOpenAIPersistentContext();
-        session.isPersistentContext = true;
-      } else {
-        const browser = await launchInteractiveChromium();
-        session.browser = browser;
-        context = await browser.newContext({
-          userAgent: USER_AGENT,
-          viewport: null, // native size
-        });
-      }
+      const browser = await launchInteractiveChromium();
+      session.browser = browser;
+      const context: BrowserContext = await browser.newContext({
+        viewport: null, // native size
+      });
       session.context = context;
 
       // Anti-bot stealth init script for Google / OAuth popups
       await context.addInitScript(() => {
         try {
-          delete (navigator as any).__proto__.webdriver;
+          const navigatorPrototype = Object.getPrototypeOf(navigator) as { webdriver?: unknown };
+          delete navigatorPrototype.webdriver;
           Object.defineProperty(navigator, 'webdriver', { get: () => undefined });
-          (window as any).chrome = {
+          (window as Window & { chrome?: Record<string, unknown> }).chrome = {
             runtime: {},
             loadTimes: () => {},
             csi: () => {},
@@ -333,7 +279,6 @@ async function setupClaudeLogin(session: BrowserLoginSession) {
 
         if (secret) {
           await saveSecretForProvider(session.providerId, secret);
-          session.secret = secret;
         }
 
         session.usageSnapshot = snapshot;
@@ -367,8 +312,16 @@ async function setupOpenAILogin(session: BrowserLoginSession) {
 
   let capturedOrgId = '';
   let capturedOrgTitle = '';
-  let capturedCostsData: any = null;
-  let capturedUsageData: any = null;
+  type UsageBucketResponse = {
+    data?: Array<{ results?: Array<{
+      amount?: { value?: number; currency?: string };
+      input_tokens?: number;
+      output_tokens?: number;
+      num_model_requests?: number;
+    }> }>;
+  };
+  let capturedCostsData: UsageBucketResponse | null = null;
+  let capturedUsageData: UsageBucketResponse | null = null;
   let hasNavigatedToUsage = false;
 
   let capturedWeeklyUtilization: number | undefined;
@@ -588,7 +541,6 @@ async function setupOpenAILogin(session: BrowserLoginSession) {
           cachedSnapshot: snapshot,
         });
 
-        session.secret = secretPayload;
         await saveSecretForProvider(session.providerId, secretPayload);
 
         // Fallback to fetchOpenAIUsage
@@ -757,7 +709,6 @@ async function setupGeminiLogin(session: BrowserLoginSession) {
             planType: domInfo?.detectedPlan || 'Google Gemini Pro',
           });
 
-          session.secret = secretPayload;
           await saveSecretForProvider(session.providerId, secretPayload);
 
           session.usageSnapshot = snapshot;
@@ -939,7 +890,6 @@ async function setupDeepSeekLogin(session: BrowserLoginSession) {
             planType: 'DeepSeek Platform',
           });
 
-          session.secret = secretPayload;
           await saveSecretForProvider(session.providerId, secretPayload);
 
           session.usageSnapshot = snapshot;
@@ -1001,7 +951,6 @@ export function getBrowserLoginStatus(sessionId: string): {
   status: BrowserLoginState;
   statusMessage: string;
   usageSnapshot?: ApiUsageSnapshot;
-  secret?: string;
   error?: string;
 } {
   const session = activeSessions.get(sessionId);
@@ -1017,7 +966,6 @@ export function getBrowserLoginStatus(sessionId: string): {
     status: session.status,
     statusMessage: session.statusMessage,
     usageSnapshot: session.usageSnapshot,
-    secret: session.secret,
     error: session.error,
   };
 }
@@ -1046,10 +994,8 @@ function cleanupSession(sessionId: string, closeBrowser = true) {
   }
 
   if (closeBrowser && (session.browser || session.context)) {
-    // Un contexto persistente (session.isPersistentContext) no tiene un
-    // Browser separado: cerrar el contexto ya cierra el proceso. Si no se
-    // cierra aquí, el proceso queda huérfano y bloquea el directorio de
-    // perfil, impidiendo el siguiente "Iniciar sesión web".
+    // Cerramos primero el contexto efímero y después el proceso Playwright
+    // para no dejar navegadores huérfanos tras finalizar o cancelar el login.
     const context = session.context;
     const browser = session.browser;
     session.browser = undefined;

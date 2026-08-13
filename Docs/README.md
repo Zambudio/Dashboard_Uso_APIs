@@ -18,7 +18,8 @@ Este directorio es la fuente de verdad técnica y operativa de Dashboard_Uso_API
 3. [Desarrollo y ampliación](./DEVELOPMENT.md)
 4. [Compilación y empaquetado](./PACKAGING.md)
 5. [Estado actual e historial técnico](./PROJECT_STATUS.md)
-6. [Contexto de continuación](../PROJECT_CONTEXT.md)
+6. [Limpieza única del historial de Git](./REPOSITORY_CLEANUP.md)
+7. [Contexto de continuación](../PROJECT_CONTEXT.md)
 
 ## Regla de mantenimiento
 

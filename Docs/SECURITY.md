@@ -1,79 +1,71 @@
-# Seguridad y gestión de credenciales
+# Seguridad y credenciales
 
-## Modelo de confianza
+## Principios
 
-La aplicación está diseñada para un único usuario en un PC de confianza. El servidor se enlaza a `127.0.0.1` y no debe publicarse directamente en una LAN o Internet.
+- Servidor limitado a `127.0.0.1`.
+- Secretos fuera del renderer y del almacenamiento web.
+- Cifrado obligatorio en reposo para la distribución Electron.
+- Validación en cada frontera: API local, IPC y broker.
+- Sin datos simulados ni mensajes que oculten limitaciones del proveedor.
 
-## Qué se almacena
+## Persistencia
 
-`DASHBOARD_PROVIDER_KEYS` puede contener:
+| Dato | Ubicación Electron | Protección |
+|---|---|---|
+| Claves, tokens y sesiones | `%APPDATA%\Dashboard Uso APIs\credentials.enc` | `safeStorage`/DPAPI |
+| Proveedores y preferencias | configuración de `electron-store` | No sensible |
+| Posición, colapsado y ajustes nativos | configuración de `electron-store` | No sensible |
+| Perfil de navegador | No persistido | Contexto efímero |
 
-- API keys administrativas;
-- cookies de sesión;
-- bearer tokens;
-- cookies estructuradas y `localStorage` de una consola;
-- snapshots de uso guardados junto a una sesión.
+La aplicación no usa `localStorage`, `sessionStorage` ni cookies propias para conservar la sesión. DeepSeek y otros proveedores pueden exigir cookies o almacenamiento web de su origen; si se capturan, se serializan dentro del secreto cifrado y se rehidratan únicamente en un navegador efímero durante la consulta.
 
-**Con `DashboardTray.exe` (dashboard web) o `npm run dev`:** el JSON se codifica en Base64 dentro de `.env`. Base64 **no es cifrado**. Quien lea el archivo puede reutilizar las credenciales mientras sigan válidas.
+## Defensa del renderer Electron
 
-**Con el widget de escritorio (Electron):** el mismo JSON se cifra de verdad con `safeStorage` (usa DPAPI en Windows, ligado a usuario+máquina) antes de escribirse a disco, en `credentials.enc`. El servidor Next.js sigue siendo un proceso Node aparte que no puede llamar a `safeStorage` directamente, así que habla con el proceso Electron a través de un broker HTTP en `127.0.0.1` con un puerto efímero y un token aleatorio de 24 bytes generado en cada arranque (`electron/credential-broker.js`) — ni el puerto ni el token se reutilizan entre arranques, y el broker solo acepta peticiones con el token exacto en la cabecera `Authorization`. Si `DASHBOARD_CRED_BROKER_URL`/`_TOKEN` no están en el entorno del proceso (p. ej. `npm run dev` sin Electron), se usa el `.env` en Base64 de siempre — el cifrado es exclusivo de la app empaquetada/`electron:dev`.
+- `nodeIntegration: false`.
+- `contextIsolation: true`.
+- `sandbox: true`.
+- CSP local con `connect-src 'none'`.
+- Navegaciones y ventanas nuevas bloqueadas.
+- API de preload mínima y operaciones sensibles mediante IPC validado.
+- Altura de ventana limitada al área útil de pantalla.
+- Fuses de producción: `runAsNode`, `NODE_OPTIONS` e inspector deshabilitados;
+  integridad ASAR y carga exclusiva desde `app.asar` habilitadas.
+- El servidor standalone se ejecuta mediante `utilityProcess.fork`, no poniendo
+  el ejecutable distribuido en modo Node.
 
-Al estar ligado a DPAPI del usuario/máquina, `credentials.enc` no es portable entre PCs como sí lo era `.env`: si migras de equipo, reconecta las sesiones en vez de copiar el fichero. Un `.env` heredado se importa una sola vez, automáticamente, la primera vez que arranca el widget (si el almacén cifrado está vacío).
+## API local
 
-## Ubicación
+- `/api/keys` GET devuelve solo IDs configurados.
+- PUT/DELETE validan identificadores y tamaños.
+- `/api/usage` comprueba que el ID almacenado corresponde al proveedor solicitado antes de usar la credencial.
+- El broker exige token aleatorio y vuelve a validar el payload.
+- Las respuestas sensibles usan `no-store` y las rutas son dinámicas.
 
-- Desarrollo (`npm run dev`) o `DashboardTray.exe`: `<repo>/.env` o `<dist>/.env`.
-- Widget de Electron: `%APPDATA%\Dashboard Uso APIs\credentials.enc` (cifrado) para las claves de proveedor; `DASHBOARD_CONFIG`/`DASHBOARD_PREFERENCES` (no sensibles) siguen en `.env` sin cifrar, igual que antes.
-- Chromium de Playwright: `%LOCALAPPDATA%\ms-playwright`.
+El modelo sigue confiando en el usuario local: un proceso con capacidad de inspeccionar o manipular procesos del mismo usuario puede atacar la aplicación. No se debe exponer el puerto en LAN o Internet sin autenticación, TLS y una revisión de amenazas nueva.
 
-Los `.env`, certificados y claves privadas están excluidos por `.gitignore`. Antes de cada commit debe verificarse con `git status` y una búsqueda de secretos.
+## Desarrollo heredado
 
-## Recomendaciones
+`npm run dev` sin Electron conserva compatibilidad con `.env` y Base64. Base64 no cifra. Esta modalidad es para desarrollo, no para distribuir a usuarios finales. La migración a Electron importa una vez las credenciales y elimina `DASHBOARD_PROVIDER_KEYS` del `.env` heredado.
 
-1. Restringe permisos NTFS de la carpeta al usuario que ejecuta la aplicación.
-2. No instales el paquete en una carpeta compartida con escritura o lectura para otros usuarios.
-3. Copia `.env` sólo mediante un canal privado.
-4. Cierra sesiones en los proveedores si sospechas una filtración.
-5. Usa claves administrativas sólo cuando la métrica realmente lo requiera.
-6. No captures ni publiques logs que puedan contener cabeceras, cookies o respuestas completas.
-7. Mantén el servidor en localhost.
+## Firma y antivirus
 
-## Navegador interactivo
+SmartScreen, Smart App Control y muchos EDR valoran firma, reputación del editor, prevalencia y comportamiento. No hay un cambio de código que garantice la aceptación de un binario nuevo y sin reputación.
 
-Playwright abre una ventana visible para que el usuario introduzca sus credenciales directamente en el proveedor. La aplicación no debe registrar contraseñas, OTP ni passkeys. Después detecta el estado autenticado mediante cookies, tokens, respuestas o DOM y guarda sólo lo necesario para futuras lecturas.
+Una release pública debe:
 
-Cada sesión:
+1. compilarse en CI desde un tag;
+2. firmarse con certificado reconocido mediante `WIN_CSC_LINK` y `WIN_CSC_KEY_PASSWORD`;
+3. pasar `Get-AuthenticodeSignature`;
+4. publicar `SHA256SUMS.txt`;
+5. probarse en una máquina limpia y, para empresa, pasar el proceso de allowlisting del EDR.
 
-- expira tras cinco minutos;
-- puede cancelarse desde la UI;
-- cierra Chromium al completarse o cancelarse;
-- se elimina del mapa de sesiones después de la limpieza.
-
-## Binarios Windows
-
-`DashboardTray.exe` se compila con el compilador C# de Microsoft como `winexe`, sin consola y sin depender de PowerShell. `dashboard.exe` se crea con `@yao-pkg/pkg`.
-
-Los binarios del repositorio no están firmados por una autoridad pública. Una copia descargada de Internet puede activar SmartScreen. No se debe recomendar desactivar SmartScreen o Defender; la solución para distribución profesional es una firma de código reconocida y un proceso de releases verificable.
-
-`scripts/sign-exe.ps1` genera una firma autofirmada para entornos controlados. Esa firma sólo aporta confianza si el certificado se instala explícitamente en el equipo y no evita Smart App Control.
-
-El instalador/portable del widget de Electron (`electron-builder`) tampoco tiene firma con reputación en la nube. En una máquina con **Smart App Control activado**, esto puede ir más allá del aviso de SmartScreen: Windows puede **bloquear la ejecución directamente** ("Una directiva de Control de aplicaciones bloqueó este archivo"), algo comprobado durante el desarrollo de este empaquetado. No hay forma de evitarlo sin una firma de código con reputación (CA reconocida) — un certificado autofirmado no sirve para esto.
-
-## Riesgos conocidos
-
-- Los endpoints internos de proveedores pueden cambiar sin aviso.
-- La automatización de DOM puede romperse si cambia la interfaz.
-- Las sesiones pueden estar vinculadas al dispositivo o revocarse.
-- Un proceso distinto que responda HTTP 200 en el puerto 3000 podría confundirse con el dashboard; comprueba el puerto si el contenido abierto no es el esperado.
-- Con `DashboardTray.exe`/`npm run dev`: no existe cifrado en reposo gestionado por la aplicación (Base64 en `.env`). Con el widget de Electron, las claves de proveedor sí se cifran (`safeStorage`/DPAPI), pero `DASHBOARD_CONFIG`/`DASHBOARD_PREFERENCES` (nombres, orden, preferencias — no secretos) siguen sin cifrar en `.env`.
-- El broker de credenciales del widget escucha solo en `127.0.0.1` con un token efímero, pero cualquier proceso local que consiga leer las variables de entorno del servidor Next.js (`DASHBOARD_CRED_BROKER_URL`/`_TOKEN`) podría usarlas mientras el proceso siga vivo — mismo modelo de confianza de "único usuario en un PC de confianza" que el resto de la aplicación.
-- Ningún binario (widget o `dashboard.exe`/`DashboardTray.exe`) tiene firma pública con reputación; en máquinas con Smart App Control activado esto puede bloquear la ejecución, no solo mostrar un aviso.
-- (Corregido el 11 de agosto de 2026) `lib/cred-broker-client.js` no marcaba su `fetch()` con `cache: 'no-store'`; Next.js cacheaba la primera lectura de `/credentials` para siempre dentro del proceso, así que un guardado de clave que primero lee-fusiona-escribe podía revertir en silencio cambios recientes de otro proveedor. No exponía secretos (la fuga era de disponibilidad/consistencia, no de confidencialidad), pero sí podía perder credenciales guardadas.
+La firma autofirmada sirve para laboratorio, no para reputación pública.
 
 ## Respuesta ante incidente
 
-1. Cierra el icono de bandeja.
-2. Revoca sesiones y claves desde cada proveedor.
-3. Mueve o elimina de forma segura el `.env` afectado.
+1. Cierra la aplicación desde la bandeja.
+2. Revoca claves y sesiones en cada proveedor.
+3. Aparta el almacén cifrado y cualquier `.env` afectado.
 4. Genera credenciales nuevas.
-5. Revisa `git status`, historial, copias de seguridad y canales por los que pasó el archivo.
+5. Revisa `git status`, historial, logs y copias de seguridad.
+6. Comunica vulnerabilidades según [la política raíz](../SECURITY.md).

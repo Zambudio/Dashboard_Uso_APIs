@@ -24,26 +24,28 @@ async function fetchDashboardSnapshot(serverUrl) {
   // DASHBOARD_PROVIDER_KEYS. app/page.tsx la rehidrata igual (envKeys[id]
   // ?? provider.apiKey ?? '') antes de decidir a quién consultar; hay que
   // replicar el mismo merge aquí o el widget nunca pediría datos reales.
-  const [configRes, keys] = await Promise.all([
+  const [configRes, credentialStatus] = await Promise.all([
     fetchJson(`${serverUrl}/api/config`),
     fetchJson(`${serverUrl}/api/keys`),
   ]);
   const providers = configRes.providers || [];
+  const configuredIds = new Set(credentialStatus.configuredIds || []);
   const withUsage = await Promise.all(
     providers.map(async (provider) => {
-      const apiKey = keys[provider.id] || provider.apiKey || '';
-      if (!apiKey) return { ...provider, apiKey };
+      const connected = configuredIds.has(provider.id);
+      if (!connected) return { ...provider, apiKey: '', connected: false };
       try {
         const usage = await fetchJson(`${serverUrl}/api/usage`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ id: provider.id, provider: provider.provider }),
         });
-        return { ...provider, apiKey, usage };
+        return { ...provider, apiKey: '', connected: true, usage };
       } catch (err) {
         return {
           ...provider,
-          apiKey,
+          apiKey: '',
+          connected: true,
           usage: { fetchedAt: new Date().toISOString(), error: err instanceof Error ? err.message : String(err) },
         };
       }
@@ -104,4 +106,17 @@ async function setProviderHidden(serverUrl, id, hidden) {
   if (!res.ok) throw new Error(`HTTP ${res.status} updating preferences`);
 }
 
-module.exports = { fetchDashboardSnapshot, startUsagePolling, setProviderHidden };
+async function updatePreferences(serverUrl, patch) {
+  const configRes = await fetchJson(`${serverUrl}/api/config`);
+  const nextPreferences = { ...(configRes.preferences || {}), ...patch };
+  const res = await fetch(`${serverUrl}/api/config`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ preferences: nextPreferences }),
+    cache: 'no-store',
+  });
+  if (!res.ok) throw new Error(`HTTP ${res.status} updating preferences`);
+  return nextPreferences;
+}
+
+module.exports = { fetchDashboardSnapshot, startUsagePolling, setProviderHidden, updatePreferences };

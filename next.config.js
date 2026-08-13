@@ -1,15 +1,25 @@
-﻿const nextConfig = {
+/** @type {import('next').NextConfig} */
+const nextConfig = {
   reactStrictMode: true,
-  experimental: {
-    outputFileTracingRoot: __dirname,
-    // El servidor Next.js nunca importa 'electron'/'electron-store' (solo
-    // los usa electron/main.js, fuera del árbol app/api que Next traza),
-    // pero el tracer los arrastraba igualmente al standalone (~350MB).
-    outputFileTracingExcludes: {
-      '*': ['node_modules/electron/**', 'node_modules/@electron/**', 'node_modules/electron-store/**'],
-    },
-  },
+  poweredByHeader: false,
   output: 'standalone',
+  outputFileTracingRoot: __dirname,
+  // Electron solo pertenece al proceso principal, nunca al servidor Next.
+  outputFileTracingExcludes: {
+    '/*': ['node_modules/electron/**', 'node_modules/@electron/**', 'node_modules/electron-store/**'],
+  },
+  async headers() {
+    return [{
+      source: '/:path*',
+      headers: [
+        { key: 'X-Content-Type-Options', value: 'nosniff' },
+        { key: 'X-Frame-Options', value: 'DENY' },
+        { key: 'Referrer-Policy', value: 'no-referrer' },
+        { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=()' },
+        { key: 'Cross-Origin-Opener-Policy', value: 'same-origin' },
+      ],
+    }];
+  },
 };
 
 module.exports = nextConfig;

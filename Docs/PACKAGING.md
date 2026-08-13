@@ -1,138 +1,90 @@
-# Compilación y empaquetado Windows
+# Compilación, firma y publicación Windows
 
-## Resultado
+## Artefactos
 
-`npm run exe` ejecuta `next build` y después `scripts/build-exe.js`.
+`npm run electron:build` genera localmente:
 
 ```text
 dist/
-├── DashboardTray.exe
-├── dashboard.exe
-├── server-entry.js
-├── inspector-shim.js
-├── .env_example
-└── standalone/
+├── Dashboard Uso APIs-<versión>-Setup.exe
+└── Dashboard Uso APIs-<versión>-portable.exe
 ```
 
-## Etapas
+`dist/` está ignorado y no se versiona. Las descargas públicas pertenecen a GitHub Releases.
+
+## Pipeline
 
 ```mermaid
 flowchart LR
-    A[next build] --> B[.next/standalone]
-    B --> C[Copiar static y public]
-    C --> D[Copiar Playwright completo]
-    D --> E[pkg: dashboard.exe]
-    D --> F[csc /target:winexe]
-    F --> G[DashboardTray.exe]
+  A[npm ci] --> B[npm run check]
+  B --> C[next build standalone]
+  C --> D[prepare-standalone]
+  D --> E[electron-builder]
+  E --> F[Firma Authenticode]
+  F --> G[Verificar firma]
+  G --> H[SHA256SUMS]
+  H --> I[GitHub Release]
 ```
 
-### 1. Next.js standalone
+`scripts/prepare-standalone.js` copia `.next/standalone`, `.next/static`, `public` y los paquetes completos de Playwright. La CLI de Playwright se resuelve desde `process.cwd()/node_modules/playwright/cli.js`; no debe usarse `require.resolve('playwright')` dentro del código empaquetado por Next.
 
-`next.config.js` usa `output: 'standalone'`. El empaquetador copia:
+Las dependencias web (`next`, React y Playwright) se excluyen expresamente de
+`app.asar`: ya están trazadas dentro del recurso standalone y duplicarlas aumenta
+el tamaño y la superficie del instalador. `app.asar` conserva únicamente el
+proceso Electron, sus recursos y las dependencias del proceso principal.
 
-- `.next/standalone`;
-- `.next/static` a `standalone/.next/static`;
-- `public/` a `standalone/public`;
-- los paquetes completos `playwright` y `playwright-core`.
+Durante el empaquetado se fijan fuses de Electron para impedir `runAsNode`,
+opciones/inspección de Node y cargas alternativas fuera de ASAR. El servidor
+Next se inicia como `utilityProcess`, por lo que no necesita relajar esos fuses.
 
-Next no copia `public` y static automáticamente al standalone; omitir este paso deja la interfaz sin logos o assets.
+## Build local
 
-### 2. Servidor `dashboard.exe`
-
-`@yao-pkg/pkg` compila `launcher.js` para `node22-win-x64`. El ejecutable:
-
-- verifica que `standalone/server.js` exista;
-- usa `127.0.0.1:3000` por defecto;
-- evita iniciar otro servidor si el puerto ya responde;
-- lanza `server-entry.js` con el `.env` situado junto al ejecutable;
-- abre el navegador salvo que reciba `DASHBOARD_NO_BROWSER=1`.
-
-Los callbacks de sondeo se protegen para que timeout y error no abran múltiples pestañas.
-
-### 3. Compatibilidad de `inspector`
-
-El runtime de `pkg` no ofrece `inspector`, pero Next lo carga en su trazador. `server-entry.js` requiere primero `inspector-shim.js` y después el servidor standalone.
-
-### 4. Playwright
-
-El navegador Chromium no se incorpora al repositorio ni al paquete. Se descarga bajo demanda. La CLI se localiza en:
-
-```text
-<cwd standalone>/node_modules/playwright/cli.js
+```powershell
+npm ci
+npm run check
+npm run electron:build
 ```
 
-No uses `path.dirname(require.resolve('playwright'))` dentro de código compilado por Next: Webpack puede sustituir la resolución por un id numérico y provocar `The "path" argument must be of type string`.
+Este build puede quedar sin firma y activar controles de Windows. Es adecuado para desarrollo, no para una release pública.
 
-### 5. Bandeja `DashboardTray.exe`
+## Release firmada
 
-`scripts/tray-launcher.cs` se compila con el `csc.exe` de .NET Framework incluido en Windows:
+Exporta el certificado reconocido como PFX/Base64 y configura:
 
-- `/target:winexe`: sin consola;
-- `/platform:anycpu`;
-- referencias a `System`, `System.Drawing` y `System.Windows.Forms`.
+- `WIN_CSC_LINK`
+- `WIN_CSC_KEY_PASSWORD`
 
-El PC de destino no necesita el compilador. El icono crea una instancia única mediante mutex y controla el proceso del servidor.
+Después ejecuta:
 
-## Compilar desde una unidad NAS
-
-No es fiable. Next puede fallar al crear o bloquear `.next` en SMB. Procedimiento recomendado:
-
-1. copia el código a una carpeta temporal NTFS local;
-2. ejecuta `npm ci` y `npm run exe` allí;
-3. detén el paquete activo;
-4. copia el nuevo `dist/` al destino;
-5. conserva el `dist/.env` operativo;
-6. arranca `DashboardTray.exe` y valida HTTP 200.
-
-## Firma
-
-`scripts/sign-exe.ps1` ofrece firma autofirmada para laboratorio, pero no equivale a una firma pública con reputación. Para releases corporativas, firma ambos ejecutables con un certificado reconocido y publica checksums.
-
-## Validación del paquete
-
-- `DashboardTray.exe` permanece activo sin ventana.
-- Sólo existe una instancia del icono.
-- `dashboard.exe` y su hijo tampoco muestran consola.
-- `GET /` devuelve 200.
-- El icono pasa a verde.
-- **Salir** cierra el árbol propiedad del icono.
-- Las claves siguen disponibles y no aparecen en Git.
-
-## Widget de escritorio (Electron)
-
-`npm run electron:build` ejecuta `scripts/prepare-standalone.js` y después `electron-builder --win` (requiere `npm run build` antes, igual que la ruta anterior).
-
-```mermaid
-flowchart LR
-    A[next build] --> B[.next/standalone]
-    B --> C[prepare-standalone.js]
-    C --> D[build/standalone-bundle/]
-    D --> E[electron-builder]
-    E --> F[dist/...-Setup.exe]
-    E --> G[dist/...-portable.exe]
+```powershell
+npm run release:windows
 ```
 
-### 1. `scripts/prepare-standalone.js`
+El script se detiene si faltan credenciales de firma, si algún ejecutable no tiene estado Authenticode `Valid` o si no se generan artefactos. Finalmente crea `dist/SHA256SUMS.txt`.
 
-Hace la misma copia que la etapa 1 de la ruta `dashboard.exe` (`.next/standalone` + `static` + `public` + Playwright completo), pero a `build/standalone-bundle/` en vez de `dist/standalone/`. No compila ningún ejecutable — solo prepara los ficheros que `electron-builder` empaquetará vía `extraResources` (bloque `"build"` de `package.json`).
+En GitHub, añade ambos valores como Actions secrets y crea un tag `v<versión>`. `.github/workflows/release-windows.yml` compila, firma, verifica y publica.
 
-### 2. Exclusión de `electron`/`electron-store` del standalone
+## Certificado
 
-`next build` (con `outputFileTracingRoot` apuntando a la raíz del proyecto) arrastraba `electron`/`electron-store` completos (~350MB) al `.next/standalone`, aunque ningún route handler los importa — solo los usa `electron/main.js`, fuera del árbol que Next traza. `next.config.js` los excluye explícitamente con `experimental.outputFileTracingExcludes`. Sin esto, el bundle standalone pasa de ~27MB a ~370MB.
+Para usuarios generales se necesita un certificado de firma de código emitido por una CA reconocida o Azure Trusted Signing. Para entornos corporativos, coordina además la inclusión del editor/hash en la política EDR. Un PFX autofirmado no construye reputación en SmartScreen/SAC.
 
-### 3. `electron-builder`
+## NAS/SMB
 
-Configurado en el bloque `"build"` de `package.json`: genera un instalador NSIS (`oneClick: false`, permite elegir carpeta) y una versión portable, ambos para `win` x64. `extraResources` copia `build/standalone-bundle/` a `resources/standalone-bundle/` dentro del paquete; en tiempo de ejecución, `electron/main.js` (vía `standaloneDir()`) lo localiza con `process.resourcesPath` cuando `app.isPackaged` es `true`. No hay icono propio configurado todavía (`electron-builder` usa el de Electron por defecto) — pendiente cosmético.
+Si el repositorio vive en red, copia el código a NTFS, ejecuta allí `npm ci` y el build, y publica los artefactos resultantes. No copies `.env`, perfiles de navegador ni diagnósticos.
 
-### 4. Firma y Smart App Control
+## Checklist de release
 
-Igual que con `dashboard.exe`/`DashboardTray.exe`, el instalador y el portable no llevan firma con reputación en la nube de Microsoft. Además del aviso clásico de SmartScreen, si el PC tiene **Smart App Control** activado (`HKLM:\SYSTEM\CurrentControlSet\Control\CI\Policy!VerifiedAndReputablePolicyState = 1`), Windows puede **bloquear la ejecución por completo** (no solo avisar) — el error visible es "Una directiva de Control de aplicaciones bloqueó este archivo". `scripts/sign-exe.ps1` (firma autofirmada) no lo soluciona: SAC solo confía en firmantes con reputación en la nube, nunca en un certificado autofirmado. Para evitarlo de verdad hace falta un certificado de una CA reconocida (EV code signing).
+- [ ] Tag y `package.json` tienen la misma versión.
+- [ ] `npm audit --audit-level=high` correcto.
+- [ ] lint, tipos, tests y build correctos.
+- [ ] instalador y portable firmados; timestamp válido.
+- [ ] SHA-256 publicado.
+- [ ] instalación limpia y desinstalación probadas.
+- [ ] una sola instancia; bandeja y cierre completos.
+- [ ] HTTP 200 en `127.0.0.1:3000`.
+- [ ] panel de configuración y una integración real probados.
+- [ ] ningún secreto o artefacto aparece en Git.
 
-### Validación del widget
+## Ruta heredada
 
-- `npm test` (`node --test`) pasa: módulos puros de `electron/lib/` y `lib/cred-broker-client.js` (34 pruebas tras la entrega del 11/08 tarde).
-- `npm run electron:dev` arranca con instancia única, broker de credenciales, servidor Next.js y widget con datos reales.
-- `credentials.enc` en `userData` empieza por el prefijo DPAPI `v10` (no es JSON/Base64 legible).
-- `npx electron-builder --win --dir` genera `dist/win-unpacked/` sin arrastrar `electron` dentro de `resources/standalone-bundle/`.
-- `npm run electron:build` genera el instalador y el portable sin errores. Regenerado el 11 de agosto de 2026 por la tarde con los fixes de fiabilidad de DeepSeek, el bug de caché del broker y la personalización del widget (opacidad, visibilidad por proveedor, iconos, reset).
-- **Pendiente de validar en un equipo sin Smart App Control activo (o con la app ya aprobada):** que el `.exe` final generado arranca de verdad al hacer doble clic. En la máquina donde se implementó este empaquetado, Smart App Control bloqueó la ejecución directa del binario recién compilado (confirmado de nuevo tras este repaquetado, mismo bloqueo, sin cambios) — la lógica de la app ya está verificada a fondo en modo `electron:dev` (mismo binario de Electron, mismo código), pero el paso final de "doble clic y funciona" no se pudo confirmar ahí.
+`npm run exe` aún genera `dashboard.exe` y `DashboardTray.exe` para compatibilidad. No es la release recomendada y su `.env` no ofrece cifrado en reposo gestionado por la aplicación.

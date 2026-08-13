@@ -2,81 +2,59 @@
 
 ## Operación diaria
 
-1. Ejecuta `DashboardTray.exe`.
-2. Espera al icono verde.
-3. Abre el panel con doble clic.
-4. Usa **Actualizar** en una tarjeta cuando necesites una lectura nueva.
-5. Para cerrar realmente el servidor, usa clic derecho → **Salir**. Cerrar la pestaña del navegador no detiene la aplicación.
+- Engranaje: configuración del widget.
+- Botón expandir: dashboard completo en `http://127.0.0.1:3000`.
+- Cerrar: oculta el widget; la aplicación sigue en la bandeja.
+- Bandeja → **Salir**: cierra widget, servidor y proceso principal.
 
-## El icono no aparece
+## El widget o icono no aparece
 
-- Abre el menú `^` de iconos ocultos.
-- Comprueba que `DashboardTray.exe` sigue en el Administrador de tareas.
-- Verifica que el archivo está junto a `dashboard.exe`.
-- Revisa políticas corporativas de ejecución desde unidades de red.
+1. Revisa el menú `^` de iconos ocultos.
+2. Ejecuta una sola vez la aplicación; la segunda instancia activa la primera.
+3. Comprueba en Administrador de tareas que no haya una instancia bloqueada.
+4. Si es una instalación corporativa, pide a TI el evento del EDR usando hash y editor; no desactives el antivirus.
 
-## Icono rojo o dashboard inaccesible
+## Servidor no disponible
 
-1. Clic derecho → **Reiniciar servidor**.
-2. Comprueba `http://127.0.0.1:3000`.
-3. Revisa si otro proceso usa el puerto:
+Usa bandeja → **Reiniciar servidor** y abre `http://127.0.0.1:3000`. Comprueba el puerto:
 
-   ```powershell
-   Get-NetTCPConnection -State Listen -LocalPort 3000
-   ```
+```powershell
+Get-NetTCPConnection -State Listen -LocalPort 3000
+```
 
-4. Si el puerto pertenece a otra aplicación, ciérrala o ajusta la configuración. El lanzador de bandeja actual espera específicamente `127.0.0.1:3000`.
+El widget reintenta a los 15 segundos tras un fallo puntual. Otro proceso en el puerto debe cerrarse antes de iniciar.
 
-## Se abre una consola
+## Chromium
 
-El usuario final debe ejecutar `DashboardTray.exe`, no `dashboard.exe`, `npm run dev` ni `server-entry.js`.
-
-## Faltan logos o la página está incompleta
-
-La carpeta `dist/standalone/public/` y `dist/standalone/.next/static/` deben existir. Vuelve a copiar `dist/` completa o regenera con `npm run exe`.
-
-## Falta `standalone/server.js`
-
-Se copió sólo el ejecutable. Recupera la carpeta `dist/` completa.
-
-## Chromium no está instalado
-
-La primera conexión de Claude o DeepSeek intenta instalarlo automáticamente. Si falla en un entorno de desarrollo:
+El primer login puede descargar Chromium. En desarrollo:
 
 ```powershell
 npx playwright install chromium
 ```
 
-En un PC sin npm, revisa acceso a Internet/proxy y ejecuta nuevamente la conexión desde el paquete; el paquete incluye la CLI de Playwright.
-
-## Desarrollo en NAS: Watchpack, EPERM o servidor que no responde
-
-Síntomas:
-
-- puerto 3000 escuchando pero peticiones bloqueadas;
-- `Watchpack Error ... unknown error, watch`;
-- `EPERM ... .next/package.json`;
-- acceso denegado a `.next/trace`.
-
-Solución: mueve el checkout a un disco local NTFS para `npm run dev` o `npm run build`. El ejecutable standalone sí puede residir en la unidad compartida si tiene permisos de lectura/escritura.
+En redes con proxy, configura la salida de Node/Playwright según la política corporativa. No descargues binarios de fuentes no oficiales.
 
 ## Errores por proveedor
 
 | Mensaje | Acción |
 |---|---|
-| 401/403 OpenAI | Usa Admin API Key o login web; una Project Key no lee costes. |
-| 401/403 Anthropic | Usa Admin API Key o sesión Claude. |
-| Sesión DeepSeek caducada | Pulsa **Iniciar sesión web**; mientras tanto puede mostrarse el snapshot guardado. |
-| No se encontró organización Claude | Reconecta Claude y confirma que la cuenta tiene organización/plan accesible. |
-| Cloudflare / reto JS | Reintenta más tarde desde una red y sesión legítimas. |
-| Gemini sin métricas | Una API key sólo valida acceso; usa login web para límites de la suscripción. |
+| 401/403 OpenAI | Comprueba permisos; una Project Key normalmente no lee costes globales. |
+| Cloudflare OpenAI | El proveedor ha bloqueado automatización; usa una vía oficial/manual disponible. |
+| 401/403 Anthropic | Usa una Admin API Key o reconecta la sesión correcta. |
+| Sesión DeepSeek caducada | Inicia sesión web de nuevo. |
+| Organización Claude ausente | Reconecta y confirma organización/plan accesible. |
+| Gemini sin métricas | Una API key puede validar acceso sin exponer límites de suscripción. |
 
-## El navegador no se abre
+## Credenciales
 
-- Doble clic en el icono verde o usa **Abrir dashboard**.
-- Comprueba que Windows tenga navegador predeterminado.
-- Abre manualmente `http://127.0.0.1:3000`.
+En Electron, si `credentials.enc` se pierde o DPAPI deja de poder descifrarlo, vuelve a conectar proveedores. No copies el fichero entre equipos: está ligado al usuario/máquina.
 
-## Recuperación de credenciales
+Si sospechas exposición, cierra la app, revoca todas las credenciales afectadas y genera otras nuevas. Nunca adjuntes `.env`, `credentials.enc`, volcados de DeepSeek o capturas con tokens a un issue.
 
-Si `dist/.env` se pierde no hay recuperación automática. Restaura una copia privada o vuelve a conectar cada proveedor. Si se expone, revoca todas las claves/sesiones antes de crear un archivo nuevo.
+## NAS/SMB
+
+Watchpack, `EPERM` o bloqueos de `.next` indican que el build debe trasladarse a NTFS local. El paquete instalado puede ejecutarse desde su ubicación normal; el problema afecta principalmente a desarrollo y compilación.
+
+## Ruta heredada
+
+`DashboardTray.exe` requiere la antigua carpeta `dist/` completa y guarda secretos en `.env` sin cifrado gestionado. Solo se mantiene para compatibilidad y no debe usarse como distribución nueva.

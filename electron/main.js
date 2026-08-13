@@ -1,6 +1,6 @@
 'use strict';
 
-const { app, BrowserWindow, safeStorage, shell } = require('electron');
+const { app, dialog, safeStorage, shell, utilityProcess } = require('electron');
 const path = require('path');
 // electron-store >=9 es ESM puro; require() en CommonJS devuelve el módulo
 // namespace, no la clase directamente — hay que tirar de .default.
@@ -45,12 +45,6 @@ if (!gotLock) {
       : path.join(__dirname, '..', '.env');
   }
 
-  function browserProfileDir() {
-    return app.isPackaged
-      ? path.join(app.getPath('userData'), 'browser-profiles')
-      : path.join(__dirname, '..', '.browser-profiles');
-  }
-
   async function startServer(broker) {
     console.log('[widget] Arrancando servidor en ' + SERVER_URL);
     serverChild = spawnServer({
@@ -58,8 +52,7 @@ if (!gotLock) {
       port: PORT,
       host: HOST,
       envFile: envFilePath(),
-      browserProfileDir: browserProfileDir(),
-      execPath: process.execPath,
+      forkProcess: utilityProcess.fork,
       brokerUrl: broker.url,
       brokerToken: broker.token,
       onExit: (code) => {
@@ -93,6 +86,7 @@ if (!gotLock) {
       safeStorage,
       filePath: path.join(app.getPath('userData'), 'credentials.enc'),
       legacyEnvPath: envFilePath(),
+      configStore: store,
     });
     console.log('[widget] Broker de credenciales escuchando en ' + broker.url);
 
@@ -127,6 +121,11 @@ if (!gotLock) {
         }
       },
     });
+  }).catch((error) => {
+    const message = error instanceof Error ? error.message : String(error);
+    console.error('[widget] Error fatal durante el arranque:', message);
+    dialog.showErrorBox('Dashboard Uso APIs no pudo iniciarse', `${message}\n\nNo se ha guardado ninguna credencial sin cifrar.`);
+    app.quit();
   });
 
   app.on('window-all-closed', () => {

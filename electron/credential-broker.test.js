@@ -19,6 +19,14 @@ function tmpDir() {
   return fs.mkdtempSync(path.join(os.tmpdir(), 'broker-'));
 }
 
+function fakeConfigStore() {
+  const values = new Map();
+  return {
+    get: (key, fallback) => values.has(key) ? values.get(key) : fallback,
+    set: (key, value) => values.set(key, value),
+  };
+}
+
 function request(url, { method = 'GET', token, body } = {}) {
   return new Promise((resolve, reject) => {
     const req = http.request(url, {
@@ -62,6 +70,7 @@ test('imports a legacy .env DASHBOARD_PROVIDER_KEYS once when the encrypted stor
   const broker = await startCredentialBroker({ safeStorage: fakeSafeStorage(), filePath: path.join(dir, 'c.enc'), legacyEnvPath: envPath });
   const get = await request(`${broker.url}/credentials`, { token: broker.token });
   assert.deepEqual(JSON.parse(get.body), { deepseek: 'sess-legacy' });
+  assert.doesNotMatch(fs.readFileSync(envPath, 'utf8'), /DASHBOARD_PROVIDER_KEYS/);
   await broker.close();
 });
 
@@ -69,5 +78,26 @@ test('unknown path returns 404', async () => {
   const broker = await startCredentialBroker({ safeStorage: fakeSafeStorage(), filePath: path.join(tmpDir(), 'c.enc') });
   const res = await request(`${broker.url}/other`, { token: broker.token });
   assert.equal(res.status, 404);
+  await broker.close();
+});
+
+test('PUT then GET /config persists non-sensitive dashboard state', async () => {
+  const broker = await startCredentialBroker({
+    safeStorage: fakeSafeStorage(),
+    filePath: path.join(tmpDir(), 'c.enc'),
+    configStore: fakeConfigStore(),
+  });
+  const value = { preferences: { widgetOpacity: 85 } };
+  const put = await request(`${broker.url}/config`, { method: 'PUT', token: broker.token, body: value });
+  assert.equal(put.status, 200);
+  const get = await request(`${broker.url}/config`, { token: broker.token });
+  assert.deepEqual(JSON.parse(get.body), { providers: null, preferences: { widgetOpacity: 85 } });
+  await broker.close();
+});
+
+test('rejects invalid credential payloads at the broker boundary', async () => {
+  const broker = await startCredentialBroker({ safeStorage: fakeSafeStorage(), filePath: path.join(tmpDir(), 'c.enc') });
+  const put = await request(`${broker.url}/credentials`, { method: 'PUT', token: broker.token, body: { '../bad': 'secret' } });
+  assert.equal(put.status, 400);
   await broker.close();
 });

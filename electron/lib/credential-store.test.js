@@ -34,13 +34,22 @@ test('save() then load() round-trips through safeStorage when encryption is avai
   assert.ok(onDisk.startsWith('ENC:'), 'expected the file on disk to have gone through "encryption"');
 });
 
-test('falls back to plain JSON when safeStorage.isEncryptionAvailable() is false', () => {
+test('save() replaces an existing encrypted store atomically', () => {
+  const dir = tmpDir();
+  const filePath = path.join(dir, 'credentials.enc');
+  const store = createCredentialStore({ safeStorage: fakeSafeStorage(true), filePath });
+  store.save({ openai: 'first' });
+  store.save({ openai: 'second', gemini: 'another' });
+  assert.deepEqual(store.load(), { openai: 'second', gemini: 'another' });
+  assert.equal(fs.existsSync(`${filePath}.tmp`), false);
+});
+
+test('fails closed instead of writing plain JSON when safeStorage is unavailable', () => {
   const dir = tmpDir();
   const filePath = path.join(dir, 'credentials.enc');
   const store = createCredentialStore({ safeStorage: fakeSafeStorage(false), filePath });
-  store.save({ deepseek: 'sess-abc' });
-  const onDisk = fs.readFileSync(filePath, 'utf8');
-  assert.deepEqual(JSON.parse(onDisk), { deepseek: 'sess-abc' });
+  assert.throws(() => store.save({ deepseek: 'sess-abc' }), /no está disponible/);
+  assert.equal(fs.existsSync(filePath), false);
 });
 
 test('migrateFromLegacyEnv() decodes the base64 DASHBOARD_PROVIDER_KEYS line', () => {

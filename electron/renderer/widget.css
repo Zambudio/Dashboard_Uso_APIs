@@ -73,6 +73,7 @@ body {
 }
 
 #open-dashboard,
+#widget-settings,
 #toggle-collapse,
 #widget-minimize,
 #widget-close {
@@ -84,6 +85,13 @@ body {
   width: 26px;
   height: 26px;
   cursor: pointer;
+}
+
+button:focus-visible,
+select:focus-visible,
+input:focus-visible {
+  outline: 2px solid var(--accent-1);
+  outline-offset: 2px;
 }
 
 #widget-close:hover {
@@ -112,6 +120,12 @@ body.server-down #cards {
 }
 
 body.collapsed #cards {
+  display: none;
+}
+
+body.settings-open #cards,
+body.settings-open #hidden-panel,
+body.settings-open #banner {
   display: none;
 }
 
@@ -298,3 +312,86 @@ body.collapsed #cards {
   color: #94a3b8;
   text-align: center;
 }
+
+#settings-overlay {
+  -webkit-app-region: no-drag;
+  padding: 0 12px 12px;
+}
+
+#settings-overlay[hidden] { display: none; }
+
+#settings-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-height: 610px;
+  overflow-y: auto;
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 12px;
+  background: rgba(8, 10, 18, 0.76);
+  padding: 14px;
+}
+
+.settings-heading,
+.settings-actions,
+.field,
+.check {
+  display: flex;
+  align-items: center;
+}
+
+.settings-heading { justify-content: space-between; }
+.settings-heading h2 { font-size: 18px; color: #f8fafc; }
+.settings-kicker { color: var(--accent-1); font-size: 10px; text-transform: uppercase; letter-spacing: .18em; }
+
+#settings-close {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  border: 1px solid rgba(255,255,255,.12);
+  background: rgba(255,255,255,.06);
+  color: #cbd5e1;
+  cursor: pointer;
+}
+
+.field {
+  justify-content: space-between;
+  gap: 10px;
+  color: #cbd5e1;
+  font-size: 12px;
+}
+
+.field select {
+  min-width: 132px;
+}
+
+.field select,
+#settings-form button {
+  min-height: 32px;
+  border: 1px solid rgba(255,255,255,.12);
+  border-radius: 8px;
+  background: #202332;
+  color: #e2e8f0;
+  padding: 5px 9px;
+}
+
+.field input[type="range"] { width: 150px; accent-color: var(--accent-1); }
+.field output { margin-left: auto; color: var(--accent-1); }
+
+#settings-form fieldset {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  border: 1px solid rgba(255,255,255,.09);
+  border-radius: 10px;
+  padding: 10px;
+}
+
+#settings-form legend { padding: 0 5px; color: #94a3b8; font-size: 11px; }
+.check { gap: 8px; min-height: 26px; color: #cbd5e1; font-size: 12px; }
+.check input { width: 16px; height: 16px; accent-color: var(--accent-1); }
+
+#settings-status { min-height: 16px; color: #fda4af; font-size: 11px; }
+.settings-actions { justify-content: flex-end; gap: 8px; }
+#settings-form button { cursor: pointer; }
+#settings-save { border-color: color-mix(in srgb, var(--accent-1) 55%, transparent) !important; color: var(--accent-1) !important; }

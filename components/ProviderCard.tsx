@@ -119,7 +119,7 @@ export function ProviderCard({
     unconfigured: 'bg-slate-500',
   } as const;
 
-  const connected = Boolean(provider.apiKey);
+  const connected = Boolean(provider.connected);
   const hidden = provider.visibility === 'hidden';
   const usage = provider.usage;
   const unavailable = new Set(usage?.unavailable ?? []);

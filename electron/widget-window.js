@@ -1,8 +1,8 @@
 'use strict';
 
-const { BrowserWindow, screen, ipcMain, shell } = require('electron');
+const { app, BrowserWindow, screen, ipcMain, shell } = require('electron');
 const path = require('path');
-const { setProviderHidden } = require('./usage-poller');
+const { setProviderHidden, updatePreferences } = require('./usage-poller');
 
 const WIDGET_WIDTH = 340;
 const HEADER_HEIGHT = 56;
@@ -30,6 +30,7 @@ function createWidgetWindow({ store, serverUrl }) {
     savedPosition = null;
   }
 
+  const nativeSettings = store.get('widgetSettings', { alwaysOnTop: true, openAtLogin: false });
   const win = new BrowserWindow({
     width: WIDGET_WIDTH,
     height: initialHeight,
@@ -48,12 +49,14 @@ function createWidgetWindow({ store, serverUrl }) {
     // esquinas redondeadas por CSS, pero esa sombra cuadrada asomando por
     // detrás hace que se vea como si no lo estuviera.
     hasShadow: false,
-    alwaysOnTop: true,
+    alwaysOnTop: nativeSettings.alwaysOnTop !== false,
     resizable: false,
     skipTaskbar: false,
+    icon: path.join(__dirname, '..', 'assets', 'app-icon.png'),
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
+      sandbox: true,
       preload: path.join(__dirname, 'preload.js'),
     },
   });
@@ -64,6 +67,8 @@ function createWidgetWindow({ store, serverUrl }) {
   }
 
   win.loadFile(path.join(__dirname, 'renderer', 'widget.html'));
+  win.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
+  win.webContents.on('will-navigate', (event) => event.preventDefault());
 
   // Reenvía la consola del renderer (file://, sin DevTools abiertas por
   // defecto) a la consola del proceso principal: sin esto, un error de JS en
@@ -97,7 +102,9 @@ function createWidgetWindow({ store, serverUrl }) {
     // El suelo es solo la cabecera, no initialHeight (cabecera+tarjeta):
     // con la ventana colapsada, el contenido real es más bajo que
     // initialHeight y debe poder encoger hasta ahí.
-    win.setContentSize(width, Math.max(HEADER_HEIGHT, Math.round(height)));
+    const maxHeight = screen.getDisplayMatching(win.getBounds()).workArea.height;
+    const safeHeight = Number.isFinite(height) ? Math.round(height) : HEADER_HEIGHT;
+    win.setContentSize(width, Math.min(maxHeight, Math.max(HEADER_HEIGHT, safeHeight)));
   });
 
   ipcMain.on('widget-open-dashboard', () => {
@@ -121,6 +128,49 @@ function createWidgetWindow({ store, serverUrl }) {
     setProviderHidden(serverUrl, id, Boolean(hidden)).catch((err) => {
       console.error('[widget] Error al cambiar la visibilidad de un proveedor:', err.message);
     });
+  });
+
+  ipcMain.handle('widget-get-settings', (event) => {
+    if (event.sender !== win.webContents) throw new Error('Origen IPC no autorizado.');
+    const current = store.get('widgetSettings', { alwaysOnTop: true, openAtLogin: false });
+    return {
+      alwaysOnTop: current.alwaysOnTop !== false,
+      openAtLogin: app.isPackaged ? app.getLoginItemSettings().openAtLogin : Boolean(current.openAtLogin),
+      collapsed: Boolean(store.get('widgetCollapsed', false)),
+    };
+  });
+
+  ipcMain.handle('widget-set-collapsed', (event, collapsed) => {
+    if (event.sender !== win.webContents) throw new Error('Origen IPC no autorizado.');
+    store.set('widgetCollapsed', Boolean(collapsed));
+    return { ok: true };
+  });
+
+  ipcMain.handle('widget-save-settings', async (event, payload) => {
+    if (event.sender !== win.webContents) throw new Error('Origen IPC no autorizado.');
+    if (!payload || typeof payload !== 'object') throw new Error('ConfiguraciÃ³n invÃ¡lida.');
+
+    const themes = new Set(['aurora', 'esmeralda', 'ambar', 'violeta', 'mono']);
+    const opacity = Math.min(100, Math.max(30, Number(payload.widgetOpacity) || 92));
+    const refresh = Math.min(86400, Math.max(15, Number(payload.refreshWidgetSeconds) || 300));
+    const hiddenIds = Array.isArray(payload.widgetHiddenProviderIds)
+      ? payload.widgetHiddenProviderIds.filter((id) => typeof id === 'string' && /^[a-z0-9][a-z0-9-]{0,127}$/i.test(id))
+      : [];
+    const preferences = await updatePreferences(serverUrl, {
+      widgetOpacity: opacity,
+      refreshWidgetSeconds: refresh,
+      widgetTheme: themes.has(payload.widgetTheme) ? payload.widgetTheme : 'aurora',
+      widgetHiddenProviderIds: hiddenIds,
+    });
+
+    const nextNativeSettings = {
+      alwaysOnTop: payload.alwaysOnTop !== false,
+      openAtLogin: Boolean(payload.openAtLogin),
+    };
+    store.set('widgetSettings', nextNativeSettings);
+    win.setAlwaysOnTop(nextNativeSettings.alwaysOnTop);
+    if (app.isPackaged) app.setLoginItemSettings({ openAtLogin: nextNativeSettings.openAtLogin });
+    return { ok: true, preferences, ...nextNativeSettings };
   });
 
   return win;

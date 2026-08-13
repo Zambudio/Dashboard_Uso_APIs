@@ -13,4 +13,7 @@ contextBridge.exposeInMainWorld('widgetAPI', {
   minimize: () => ipcRenderer.send('widget-minimize'),
   close: () => ipcRenderer.send('widget-close'),
   setProviderHidden: (id, hidden) => ipcRenderer.send('widget-set-provider-hidden', { id, hidden }),
+  getSettings: () => ipcRenderer.invoke('widget-get-settings'),
+  saveSettings: (settings) => ipcRenderer.invoke('widget-save-settings', settings),
+  setCollapsed: (collapsed) => ipcRenderer.invoke('widget-set-collapsed', Boolean(collapsed)),
 });

@@ -1,0 +1,34 @@
+name: Informe de error
+description: Comunica un fallo reproducible sin incluir credenciales.
+title: "[Bug]: "
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: "No adjuntes `.env`, cookies, tokens ni volcados de sesión. Para vulnerabilidades usa Security Advisories."
+  - type: input
+    id: version
+    attributes:
+      label: Versión
+      placeholder: 0.2.0
+    validations:
+      required: true
+  - type: dropdown
+    id: mode
+    attributes:
+      label: Modo de ejecución
+      options: [Instalador Electron, Portable Electron, Desarrollo, DashboardTray heredado]
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Pasos para reproducir
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Resultado esperado y resultado real
+    validations:
+      required: true

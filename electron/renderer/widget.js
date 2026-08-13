@@ -5,8 +5,21 @@ const openBtn = document.getElementById('open-dashboard');
 const collapseBtn = document.getElementById('toggle-collapse');
 const minimizeBtn = document.getElementById('widget-minimize');
 const closeBtn = document.getElementById('widget-close');
+const settingsBtn = document.getElementById('widget-settings');
 const hiddenCountBtn = document.getElementById('hidden-count');
 const hiddenPanelEl = document.getElementById('hidden-panel');
+const settingsOverlay = document.getElementById('settings-overlay');
+const settingsForm = document.getElementById('settings-form');
+const settingsCloseBtn = document.getElementById('settings-close');
+const settingsCancelBtn = document.getElementById('settings-cancel');
+const settingsStatus = document.getElementById('settings-status');
+const themeInput = document.getElementById('setting-theme');
+const opacityInput = document.getElementById('setting-opacity');
+const opacityValue = document.getElementById('opacity-value');
+const refreshInput = document.getElementById('setting-refresh');
+const alwaysOnTopInput = document.getElementById('setting-always-on-top');
+const openAtLoginInput = document.getElementById('setting-open-at-login');
+const settingsProviders = document.getElementById('settings-providers');
 
 openBtn.addEventListener('click', () => window.widgetAPI.openDashboard());
 minimizeBtn.addEventListener('click', () => window.widgetAPI.minimize());
@@ -33,22 +46,119 @@ hiddenCountBtn.addEventListener('click', () => {
   renderProviders(lastProviders, lastPreferences);
 });
 
-// Estado de colapsado persistido en localStorage del propio renderer (no
-// necesita pasar por electron-store: solo afecta a esta ventana y no hace
-// falta compartirlo con el proceso principal).
 function applyCollapsed(collapsed) {
   document.body.classList.toggle('collapsed', collapsed);
   collapseBtn.textContent = collapsed ? '▸' : '▾';
+  collapseBtn.setAttribute('aria-label', collapsed ? 'Expandir widget' : 'Colapsar widget');
   requestAnimationFrame(() => window.widgetAPI.resize(document.body.scrollHeight));
 }
 
-let collapsed = localStorage.getItem('widgetCollapsed') === '1';
+let collapsed = false;
 applyCollapsed(collapsed);
+
+window.widgetAPI.getSettings().then((settings) => {
+  collapsed = Boolean(settings.collapsed);
+  applyCollapsed(collapsed);
+}).catch(() => {});
 
 collapseBtn.addEventListener('click', () => {
   collapsed = !collapsed;
-  localStorage.setItem('widgetCollapsed', collapsed ? '1' : '0');
   applyCollapsed(collapsed);
+  window.widgetAPI.setCollapsed(collapsed).catch(() => {});
+});
+
+function resizeToContent() {
+  requestAnimationFrame(() => window.widgetAPI.resize(document.body.scrollHeight));
+}
+
+function closeSettings() {
+  settingsOverlay.hidden = true;
+  document.body.classList.remove('settings-open');
+  settingsStatus.textContent = '';
+  resizeToContent();
+  settingsBtn.focus();
+}
+
+function renderSettingsProviders() {
+  const hidden = new Set(lastPreferences.widgetHiddenProviderIds || []);
+  settingsProviders.replaceChildren();
+  lastProviders.forEach((provider) => {
+    const label = document.createElement('label');
+    label.className = 'check';
+    const input = document.createElement('input');
+    input.type = 'checkbox';
+    input.dataset.providerId = provider.id;
+    input.checked = !hidden.has(provider.id);
+    const text = document.createElement('span');
+    text.textContent = provider.name;
+    label.append(input, text);
+    settingsProviders.appendChild(label);
+  });
+}
+
+async function openSettings() {
+  settingsStatus.textContent = '';
+  themeInput.value = VALID_THEMES.has(lastPreferences.widgetTheme) ? lastPreferences.widgetTheme : 'aurora';
+  opacityInput.value = String(lastPreferences.widgetOpacity || 92);
+  opacityValue.value = `${opacityInput.value}%`;
+  refreshInput.value = String(lastPreferences.refreshWidgetSeconds || 300);
+  renderSettingsProviders();
+  try {
+    const nativeSettings = await window.widgetAPI.getSettings();
+    alwaysOnTopInput.checked = nativeSettings.alwaysOnTop !== false;
+    openAtLoginInput.checked = Boolean(nativeSettings.openAtLogin);
+  } catch {
+    settingsStatus.textContent = 'No se pudieron leer los ajustes del sistema.';
+  }
+  settingsOverlay.hidden = false;
+  document.body.classList.add('settings-open');
+  resizeToContent();
+  themeInput.focus();
+}
+
+settingsBtn.addEventListener('click', openSettings);
+settingsCloseBtn.addEventListener('click', closeSettings);
+settingsCancelBtn.addEventListener('click', closeSettings);
+opacityInput.addEventListener('input', () => { opacityValue.value = `${opacityInput.value}%`; });
+
+settingsForm.addEventListener('submit', async (event) => {
+  event.preventDefault();
+  settingsStatus.textContent = 'Guardando…';
+  const hiddenIds = Array.from(settingsProviders.querySelectorAll('input[data-provider-id]'))
+    .filter((input) => !input.checked)
+    .map((input) => input.dataset.providerId);
+  try {
+    const result = await window.widgetAPI.saveSettings({
+      widgetTheme: themeInput.value,
+      widgetOpacity: Number(opacityInput.value),
+      refreshWidgetSeconds: Number(refreshInput.value),
+      widgetHiddenProviderIds: hiddenIds,
+      alwaysOnTop: alwaysOnTopInput.checked,
+      openAtLogin: openAtLoginInput.checked,
+    });
+    lastPreferences = result.preferences;
+    applyOpacity(lastPreferences);
+    applyTheme(lastPreferences);
+    renderProviders(lastProviders, lastPreferences);
+    closeSettings();
+  } catch (error) {
+    settingsStatus.textContent = error instanceof Error ? error.message : 'No se pudo guardar la configuraciÃ³n.';
+  }
+});
+
+settingsOverlay.addEventListener('keydown', (event) => {
+  if (event.key === 'Escape') {
+    event.preventDefault();
+    closeSettings();
+    return;
+  }
+  if (event.key !== 'Tab') return;
+  const focusable = Array.from(settingsOverlay.querySelectorAll('button, input, select')).filter((item) => !item.disabled);
+  if (!focusable.length) return;
+  const first = focusable[0];
+  const last = focusable[focusable.length - 1];
+  if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
+  if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
 });
 
 window.widgetAPI.onServerStatus((status) => {
@@ -210,7 +320,9 @@ function renderProviders(providers, preferences) {
       name.className = 'name';
       name.textContent = provider.name;
       const showBtn = document.createElement('button');
+      showBtn.type = 'button';
       showBtn.textContent = 'Mostrar';
+      showBtn.setAttribute('aria-label', `Mostrar ${provider.name} en el widget`);
       showBtn.addEventListener('click', (event) => {
         event.stopPropagation();
         setProviderHidden(provider.id, false);
@@ -254,8 +366,10 @@ function renderProviders(providers, preferences) {
       dot.style.background = STATUS_COLORS[provider.status] || STATUS_COLORS.unconfigured;
       const hideBtn = document.createElement('button');
       hideBtn.className = 'card-hide-btn';
+      hideBtn.type = 'button';
       hideBtn.textContent = '✕';
       hideBtn.title = 'Ocultar en el widget';
+      hideBtn.setAttribute('aria-label', `Ocultar ${provider.name} en el widget`);
       hideBtn.addEventListener('click', (event) => {
         event.stopPropagation();
         setProviderHidden(provider.id, true);

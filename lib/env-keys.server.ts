@@ -1,6 +1,6 @@
 import fs from 'fs';
 import path from 'path';
-import { resolveBrokerConfig, readKeysFromBroker, writeKeysToBroker } from './cred-broker-client';
+import { resolveBrokerConfig, readKeysFromBroker, writeKeysToBroker, readConfigFromBroker, writeConfigToBroker } from './cred-broker-client';
 
 const KEYS_VAR = 'DASHBOARD_PROVIDER_KEYS';
 
@@ -10,9 +10,9 @@ function resolveEnvFile(): string {
 
 export function readEnvVar<T>(varName: string, defaultValue: T): T {
   const envFile = resolveEnvFile();
-  if (!fs.existsSync(envFile)) return defaultValue;
+  if (!fs.existsSync(/* turbopackIgnore: true */ envFile)) return defaultValue;
 
-  const raw = fs.readFileSync(envFile, 'utf8');
+  const raw = fs.readFileSync(/* turbopackIgnore: true */ envFile, 'utf8');
   const regex = new RegExp(`^\\s*${varName}\\s*=\\s*"?([^"\\r\\n]*)"?\\s*$`);
   for (const line of raw.split(/\r?\n/)) {
     const match = line.match(regex);
@@ -31,13 +31,13 @@ export function writeEnvVar<T>(varName: string, value: T): void {
   const encoded = Buffer.from(JSON.stringify(value)).toString('base64');
   const newLine = `${varName}=${encoded}`;
 
-  if (!fs.existsSync(envFile)) {
+  if (!fs.existsSync(/* turbopackIgnore: true */ envFile)) {
     fs.mkdirSync(path.dirname(envFile), { recursive: true });
     fs.writeFileSync(envFile, `${newLine}\n`, 'utf8');
     return;
   }
 
-  const raw = fs.readFileSync(envFile, 'utf8');
+  const raw = fs.readFileSync(/* turbopackIgnore: true */ envFile, 'utf8');
   const lines = raw.split(/\r?\n/);
   let replaced = false;
 
@@ -73,4 +73,23 @@ export async function deleteEnvKeys(ids: string[]): Promise<void> {
   const existing = await readEnvKeys();
   for (const id of ids) delete existing[id];
   await writeEnvKeys(existing);
+}
+
+export async function readDashboardState<T>(): Promise<T> {
+  const broker = resolveBrokerConfig(process.env);
+  if (broker) return readConfigFromBroker(broker) as Promise<T>;
+  return {
+    providers: readEnvVar('DASHBOARD_CONFIG', null),
+    preferences: readEnvVar('DASHBOARD_PREFERENCES', null),
+  } as T;
+}
+
+export async function writeDashboardState(value: { providers?: unknown; preferences?: unknown }): Promise<void> {
+  const broker = resolveBrokerConfig(process.env);
+  if (broker) {
+    await writeConfigToBroker(broker, value);
+    return;
+  }
+  if (value.providers !== undefined) writeEnvVar('DASHBOARD_CONFIG', value.providers);
+  if (value.preferences !== undefined) writeEnvVar('DASHBOARD_PREFERENCES', value.preferences);
 }

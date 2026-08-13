@@ -1,84 +1,53 @@
-# Instalación y ejecución en Windows
+# Instalación en Windows
 
-## Opción recomendada: paquete ya compilado
+## Requisitos
 
-### Requisitos del PC de destino
+- Windows 10/11 de 64 bits.
+- Puerto local 3000 disponible.
+- Internet para consultar proveedores y descargar Chromium la primera vez que sea necesario.
 
-- Windows 10 u 11 de 64 bits.
-- Acceso de escritura a la carpeta de la aplicación.
-- Puerto TCP local `3000` libre.
-- Navegador predeterminado.
-- Conexión a Internet para los proveedores y la descarga inicial de Chromium.
+## Instalador firmado
 
-No se necesita Node.js, npm, Git, Visual Studio ni PowerShell.
+1. Descarga el instalador desde [GitHub Releases](https://github.com/Zambudio/Dashboard_Uso_APIs/releases).
+2. Comprueba Propiedades → Firmas digitales y verifica que Windows muestre una firma válida del editor esperado.
+3. Calcula el hash y compáralo con `SHA256SUMS.txt`:
 
-### Instalación limpia
-
-1. Copia **toda** la carpeta `dist/` al PC.
-2. Evita `C:\Program Files` si el usuario no tiene permisos de escritura. Una ubicación práctica es:
-
-   ```text
-   C:\Aplicaciones\Dashboard_Uso_APIs\dist\
+   ```powershell
+   Get-FileHash '.\Dashboard Uso APIs-0.2.0-Setup.exe' -Algorithm SHA256
    ```
 
-3. Comprueba que existen `DashboardTray.exe`, `dashboard.exe`, `server-entry.js`, `inspector-shim.js` y `standalone/`.
-4. Ejecuta `DashboardTray.exe`.
-5. El icono aparecerá en la bandeja, posiblemente dentro del menú `^` de iconos ocultos.
-6. Cuando esté verde, el panel estará disponible en `http://127.0.0.1:3000`.
+4. Ejecuta el instalador y abre **Dashboard Uso APIs**.
+5. El widget y el icono aparecerán; el dashboard completo está en `http://127.0.0.1:3000`.
 
-```mermaid
-flowchart LR
-    A[DashboardTray.exe] --> B[dashboard.exe oculto]
-    B --> C[Servidor Next.js standalone]
-    C --> D[127.0.0.1:3000]
-    A --> E[Navegador predeterminado]
-    E --> D
-```
+La variante `portable.exe` no requiere instalación, pero conserva datos cifrados en el perfil de usuario de Windows, no junto al ejecutable.
 
-### Primera conexión
+## Configuración
 
-1. Abre una tarjeta y pulsa **Configurar** o **Iniciar sesión web**.
-2. Completa la autenticación en la ventana interactiva de Chromium si corresponde.
-3. La aplicación crea o actualiza `dist/.env`.
-4. Pulsa **Actualizar** si una métrica no se refresca automáticamente.
+El botón de engranaje del widget permite cambiar tema, opacidad, intervalo, inicio con Windows, modo siempre visible y proveedores mostrados. **Abrir dashboard** permite crear y editar integraciones.
 
-La primera operación que necesite Playwright puede descargar aproximadamente 300 MB en `%LOCALAPPDATA%\ms-playwright`.
+Las credenciales quedan en `%APPDATA%\Dashboard Uso APIs\credentials.enc`, ligadas al usuario/máquina mediante DPAPI. No copies ese fichero como método de migración; revoca o vuelve a conectar las cuentas en el equipo nuevo.
 
-## Migrar una instalación existente
+## Actualizar
 
-1. En el PC antiguo, clic derecho en el icono → **Salir**.
-2. Copia la carpeta `dist/` completa o, como mínimo, el nuevo paquete más el `dist/.env` antiguo.
-3. Transporta `.env` por un canal privado.
-4. Ejecuta `DashboardTray.exe` en el nuevo PC.
-5. Repite el inicio de sesión web si el proveedor ha invalidado la sesión por cambio de equipo.
+1. Sal de la aplicación desde la bandeja.
+2. Verifica firma y hash de la nueva release.
+3. Instala encima de la anterior.
+4. Las preferencias y credenciales del perfil de usuario se conservan.
 
-## Inicio automático con Windows
+## Antivirus corporativo
 
-1. Pulsa `Win + R`.
-2. Escribe `shell:startup` y pulsa Intro.
-3. Crea allí un acceso directo a `DashboardTray.exe`.
-4. No muevas sólo el ejecutable: el acceso directo debe apuntar al archivo dentro de la carpeta `dist/` completa.
+No desactives Defender ni crees exclusiones generales. Si un EDR bloquea una release correctamente firmada, entrega a TI el nombre del editor, versión, hash SHA-256 y enlace a la release para su proceso de allowlisting. Los binarios nuevos pueden necesitar reputación adicional incluso con firma válida.
 
-Para desactivarlo, elimina únicamente ese acceso directo.
+Una build local o una release sin firma reconocida no se considera distribuible. La firma autofirmada no resuelve Smart App Control.
 
-## Windows SmartScreen y seguridad
-
-Los ejecutables generados localmente no reciben la marca de descarga de Internet. Si se descargan como ZIP desde Internet o se copian desde un origen que Windows considere no confiable, SmartScreen puede advertir porque los binarios no tienen una firma de una autoridad pública.
-
-- No se requiere desactivar Defender ni la política de PowerShell.
-- No añadas exclusiones globales de antivirus.
-- Para distribución corporativa sin avisos se necesita firma de código con un certificado reconocido o una política de confianza administrada.
-- El certificado autofirmado de `scripts/sign-exe.ps1` sólo es útil en equipos donde se instale explícitamente como confiable; no evita Smart App Control.
-
-## Instalación desde código fuente
-
-Para desarrollo, clona o copia el repositorio a un disco NTFS local y ejecuta:
+## Desde código fuente
 
 ```powershell
+git clone https://github.com/Zambudio/Dashboard_Uso_APIs.git
+cd Dashboard_Uso_APIs
 npm ci
-npm run dev
+npm run check
+npm run electron:dev
 ```
 
-Abre `http://localhost:3000`. El `.env` de desarrollo vive en la raíz del repositorio.
-
-> No se recomienda ejecutar `npm run dev` desde una unidad SMB/NAS. El watcher de Next.js puede quedar escuchando el puerto sin llegar a responder.
+Usa Node.js 22.12+ y una unidad NTFS. `npm run dev` abre solo el dashboard y mantiene compatibilidad heredada con `.env`; no es la modalidad segura recomendada para usuarios finales.

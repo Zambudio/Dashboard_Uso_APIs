@@ -6,7 +6,7 @@ import { BrowserLoginModal } from '@/components/BrowserLoginModal';
 import { DashboardSettingsPanel } from '@/components/DashboardSettingsPanel';
 import { ProviderCard } from '@/components/ProviderCard';
 import { ProviderSettingsPanel } from '@/components/ProviderSettingsPanel';
-import { deleteEnvKeys, fetchProviderUsage, fetchServerConfig, loadEnvKeys, loadPreferences, loadProviders, savePreferences, saveProviders } from '@/lib/storage';
+import { deleteProviderCredentials, fetchCredentialStatus, fetchProviderUsage, fetchServerConfig, savePreferences, saveProviderCredential, saveProviders } from '@/lib/storage';
 import { getProviderDefinition } from '@/lib/providers';
 import { ApiProviderConfig, ApiUsageSnapshot, DashboardPreferences, ProviderKey, ProviderVisibility } from '@/types/api';
 
@@ -67,23 +67,17 @@ export default function HomePage() {
   useEffect(() => {
     async function loadData() {
       // 1. Get configs from server & local
-      const [serverConfig, envKeys] = await Promise.all([
+      const [serverConfig, configuredIds] = await Promise.all([
         fetchServerConfig(),
-        loadEnvKeys()
+        fetchCredentialStatus()
       ]);
 
-      const localProviders = loadProviders();
-      const localPrefs = loadPreferences();
-
       // 2. Resolve preferences
-      const effectivePrefs = serverConfig.preferences || localPrefs || defaultPreferences;
-      if (!serverConfig.preferences && localPrefs) {
-        savePreferences(localPrefs);
-      }
+      const effectivePrefs = serverConfig.preferences || defaultPreferences;
       setPreferences(effectivePrefs);
 
       // 3. Resolve providers
-      const effectiveProviders = serverConfig.providers || localProviders;
+      const effectiveProviders = serverConfig.providers || [];
       let baseProviders = effectiveProviders.length > 0 ? effectiveProviders : initialProviders;
       
       const storedIds = new Set(baseProviders.map((p) => p.id));
@@ -91,22 +85,23 @@ export default function HomePage() {
       const missingDefaults = initialProviders.filter((p) => !storedIds.has(p.id) && !deletedDefaultIds.has(p.id));
       baseProviders = [...baseProviders, ...missingDefaults];
 
-      if (effectiveProviders.length === 0 || (!serverConfig.providers && localProviders.length > 0)) {
+      if (effectiveProviders.length === 0) {
         saveProviders(baseProviders);
       }
 
-      // 4. Merge API keys
-      const mergedWithKeys = baseProviders.map((provider) => ({
+      // 4. Merge credential presence without exposing credential values.
+      const providersWithStatus = baseProviders.map((provider) => ({
         ...provider,
-        apiKey: envKeys[provider.id] ?? provider.apiKey ?? ''
+        apiKey: '',
+        connected: configuredIds.has(provider.id),
       }));
 
       // 5. Fetch usage
-      const toRefresh = mergedWithKeys.filter((provider) => provider.apiKey && getProviderDefinition(provider.provider).usageImplemented);
+      const toRefresh = providersWithStatus.filter((provider) => provider.connected && getProviderDefinition(provider.provider).usageImplemented);
 
       if (toRefresh.length) {
         setInitialLoadingIds(new Set(toRefresh.map((p) => p.id)));
-        if (!providersEditedRef.current) setProviders(mergedWithKeys); // Update state immediately before fetch
+        if (!providersEditedRef.current) setProviders(providersWithStatus); // Update state immediately before fetch
         const results = await Promise.all(
           toRefresh.map((provider) =>
             fetchProviderUsage(provider.id, provider.provider).then((snapshot) => ({ id: provider.id, snapshot }))
@@ -128,7 +123,7 @@ export default function HomePage() {
             return next;
           });
         } else {
-          const finalProviders = mergedWithKeys.map((provider) => {
+          const finalProviders = providersWithStatus.map((provider) => {
             const snapshot = byId.get(provider.id);
             if (!snapshot) return provider;
             return { ...provider, usage: snapshot, status: snapshot.error ? ('error' as const) : ('online' as const) };
@@ -138,18 +133,18 @@ export default function HomePage() {
         }
         setInitialLoadingIds(new Set());
       } else if (!providersEditedRef.current) {
-        setProviders(mergedWithKeys);
+        setProviders(providersWithStatus);
       }
     }
 
     loadData();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const saveAllProviders = useCallback((updated: ApiProviderConfig[]) => {
+    const normalized = updated.map((provider) => ({ ...provider, apiKey: '' }));
     providersEditedRef.current = true;
-    setProviders(updated);
-    saveProviders(updated);
+    setProviders(normalized);
+    return saveProviders(normalized);
   }, []);
 
   // Refresco individual (botón "Actualizar" de una tarjeta, alta de proveedor, etc.):
@@ -157,7 +152,7 @@ export default function HomePage() {
   const refreshProvider = useCallback(async (id: string) => {
     setProviders((current) => {
       const target = current.find((provider) => provider.id === id);
-      if (!target || !target.apiKey) return current;
+      if (!target || !target.connected) return current;
 
       fetchProviderUsage(id, target.provider).then((snapshot) => {
         setProviders((latest) => {
@@ -179,7 +174,7 @@ export default function HomePage() {
   const totalCost = useMemo(() => providers.reduce((sum, item) => sum + (item.usage?.accumulatedCost ?? 0), 0), [providers]);
   const visibleCount = useMemo(() => providers.filter((provider) => provider.visibility !== 'hidden').length, [providers]);
   const hiddenCount = useMemo(() => providers.filter((provider) => provider.visibility === 'hidden').length, [providers]);
-  const connectedCount = useMemo(() => providers.filter((provider) => provider.apiKey && provider.visibility !== 'hidden').length, [providers]);
+  const connectedCount = useMemo(() => providers.filter((provider) => provider.connected && provider.visibility !== 'hidden').length, [providers]);
 
   const visibleProviders = useMemo(() => {
     const filtered = providers.filter((provider) => preferences.showHiddenProviders || provider.visibility !== 'hidden');
@@ -257,7 +252,6 @@ export default function HomePage() {
       window.removeEventListener('pointerup', stopDragging);
       window.removeEventListener('pointercancel', stopDragging);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dragId, baseOrder, commitOrder]);
 
   const startDrag = (id: string) => (event: ReactPointerEvent<HTMLButtonElement>) => {
@@ -273,19 +267,21 @@ export default function HomePage() {
     savePreferences(updated);
   };
 
-  const addProvider = (name: string, provider: ProviderKey, apiKey: string) => {
+  const addProvider = async (name: string, provider: ProviderKey, apiKey: string) => {
     const definition = getProviderDefinition(provider);
     const nextProvider: ApiProviderConfig = {
       id: `${provider}-${Date.now()}`,
       name,
       provider,
       kind: definition.kind,
-      apiKey,
+      apiKey: '',
+      connected: Boolean(apiKey),
       status: apiKey ? 'online' : 'unconfigured',
       visibility: 'visible',
     };
 
-    saveAllProviders([nextProvider, ...providers]);
+    if (apiKey) await saveProviderCredential(nextProvider.id, apiKey);
+    await saveAllProviders([nextProvider, ...providers]);
     setShowForm(false);
     if (apiKey && definition.usageImplemented) {
       refreshProvider(nextProvider.id);
@@ -309,29 +305,27 @@ export default function HomePage() {
     setBrowserLoginProvider(nextProvider);
   };
 
-  const updateProvider = (updated: ApiProviderConfig) => {
-    const nextProviders = providers.map((provider) => (provider.id === updated.id ? updated : provider));
-    saveAllProviders(nextProviders);
+  const updateProvider = async (updated: ApiProviderConfig) => {
+    const newSecret = updated.apiKey.trim();
+    if (newSecret) await saveProviderCredential(updated.id, newSecret);
+    const safeUpdated = { ...updated, apiKey: '', connected: newSecret ? true : updated.connected };
+    const nextProviders = providers.map((provider) => (provider.id === safeUpdated.id ? safeUpdated : provider));
+    await saveAllProviders(nextProviders);
     setSelectedProvider(null);
-    if (updated.apiKey && getProviderDefinition(updated.provider).usageImplemented) {
-      refreshProvider(updated.id);
+    if (safeUpdated.connected && getProviderDefinition(safeUpdated.provider).usageImplemented) {
+      refreshProvider(safeUpdated.id);
     }
   };
 
-  const handleBrowserLoginSuccess = async (providerId: string, snapshot: ApiUsageSnapshot, secret?: string) => {
-    let actualSecret = secret;
-    if (!actualSecret) {
-      const envKeys = await loadEnvKeys();
-      actualSecret = envKeys[providerId];
-    }
-
+  const handleBrowserLoginSuccess = async (providerId: string, snapshot: ApiUsageSnapshot) => {
     providersEditedRef.current = true;
     setProviders((current) => {
       const next = current.map((p) => {
         if (p.id === providerId) {
           return {
             ...p,
-            apiKey: actualSecret || 'connected-session',
+            apiKey: '',
+            connected: true,
             status: 'online' as const,
             usage: snapshot,
           };
@@ -369,7 +363,7 @@ export default function HomePage() {
       saveAllPreferences(nextPrefs);
     }
 
-    void deleteEnvKeys([id]);
+    void deleteProviderCredentials([id]);
     setSelectedProvider(null);
   };
 

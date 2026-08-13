@@ -1,109 +1,70 @@
 # Referencia de la API local
 
-Base URL predeterminada: `http://127.0.0.1:3000`.
+Base predeterminada: `http://127.0.0.1:3000`. Es una API interna de una aplicación monousuario, no un servicio público. Las rutas de configuración, credenciales, uso y login son `force-dynamic`.
 
-Las rutas son internas a la aplicación, no una API pública multiusuario. Todas usan `force-dynamic` para evitar que Next.js congele respuestas o métodos durante el build standalone.
+## `GET /api/config`
+
+Devuelve proveedores sanitizados y preferencias. Nunca incluye secretos.
+
+```json
+{
+  "providers": [{ "id": "openai", "provider": "openai", "apiKey": "", "connected": true }],
+  "preferences": { "widgetOpacity": 92, "refreshWidgetSeconds": 300 }
+}
+```
+
+## `PUT /api/config`
+
+Acepta `providers`, `preferences` o ambos. Valida cantidad, IDs, nombres, proveedor, opacidad e intervalo. Fuerza `apiKey: ""` antes de persistir.
 
 ## `GET /api/keys`
 
-Devuelve el mapa `id → secreto` leído desde `.env`.
+Devuelve solo presencia de credenciales:
 
 ```json
-{
-  "openai": "<secreto>",
-  "deepseek": "<secreto o JSON de sesión>"
-}
+{ "configuredIds": ["claude-pro", "openai"] }
 ```
 
-La UI usa este endpoint para hidratar conexiones. No debe exponerse fuera de localhost.
+El valor cifrado nunca se devuelve al dashboard ni al widget.
 
 ## `PUT /api/keys`
 
-Fusiona los valores recibidos con el mapa existente.
-
 ```json
-{
-  "data": {
-    "provider-id": "<secreto>"
-  }
-}
+{ "data": { "provider-id": "<secreto>" } }
 ```
 
-Respuesta correcta: `{ "ok": true }`. Payload inválido: HTTP 400.
+Fusiona credenciales tras validar ID, tipo y tamaño. En Electron, el broker vuelve a validar y cifra mediante DPAPI.
+
+## `DELETE /api/keys`
+
+```json
+{ "ids": ["provider-id"] }
+```
+
+Elimina las credenciales indicadas.
 
 ## `POST /api/usage`
 
 ```json
-{
-  "id": "openai",
-  "provider": "openai"
-}
+{ "id": "openai", "provider": "openai" }
 ```
 
-Flujo:
+La ruta comprueba que la integración exista y que el ID corresponda al proveedor solicitado antes de recuperar el secreto. Devuelve `ApiUsageSnapshot` o un error en español.
 
-1. valida `id` y `provider`;
-2. comprueba que el proveedor implemente consulta;
-3. lee el secreto por `id`;
-4. ejecuta el fetcher correspondiente;
-5. devuelve `ApiUsageSnapshot`.
-
-Errores habituales:
-
-- `400`: payload o secreto ausente;
-- `501`: proveedor personalizado no implementado;
+- `400`: payload, integración o credencial inválida/ausente.
+- `501`: proveedor sin consulta implementada.
 - `502`: error del proveedor, autenticación, timeout o scraping.
 
-## `POST /api/auth/browser-login`
+## Login web
 
-### Iniciar
+`POST /api/auth/browser-login` admite `start`, `force_check` y `cancel`. `GET /api/auth/browser-login?sessionId=...` devuelve estado, mensaje, snapshot y error. Nunca devuelve el secreto capturado.
 
-```json
-{
-  "action": "start",
-  "providerId": "claude-pro",
-  "provider": "claude-pro"
-}
-```
+Estados: `starting`, `waiting_user_login`, `extracting`, `completed`, `cancelled`, `error`.
 
-Devuelve `{ "sessionId": "..." }`.
+## Seguridad
 
-### Forzar detección
-
-```json
-{
-  "action": "force_check",
-  "sessionId": "..."
-}
-```
-
-### Cancelar
-
-```json
-{
-  "action": "cancel",
-  "sessionId": "..."
-}
-```
-
-## `GET /api/auth/browser-login?sessionId=...`
-
-Devuelve:
-
-```json
-{
-  "status": "waiting_user_login",
-  "statusMessage": "...",
-  "usageSnapshot": null,
-  "error": null
-}
-```
-
-Estados: `starting`, `waiting_user_login`, `extracting`, `completed`, `cancelled` y `error`.
-
-## Consideraciones de seguridad
-
-- El servidor escucha sólo en `127.0.0.1` por defecto.
-- No existe autenticación adicional en la API local.
-- No cambies `DASHBOARD_HOST` a una interfaz de red sin añadir primero autenticación y protección CSRF/origen.
-- No registres cuerpos de `/api/keys` ni secretos de `/api/usage`.
+- Solo loopback.
+- Sin CORS abierto.
+- Cuerpos secretos no se registran.
+- Fetches internos y respuestas sensibles usan `no-store`.
+- No cambies el host a una interfaz de red sin autenticación, protección de origen/CSRF y revisión específica.

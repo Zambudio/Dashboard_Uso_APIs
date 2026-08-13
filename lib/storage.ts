@@ -2,30 +2,9 @@
 
 import { ApiProviderConfig, ApiUsageSnapshot, DashboardPreferences, ProviderKey } from '@/types/api';
 
-const STORAGE_KEY = 'ai-api-dashboard-config';
-const PREFS_KEY = 'ai-api-dashboard-preferences';
+const CONFIG_ENDPOINT = '/api/config';
 const KEYS_ENDPOINT = '/api/keys';
 const USAGE_ENDPOINT = '/api/usage';
-
-/**
- * btoa()/atob() solo soportan Latin1: revientan con InvalidCharacterError ante
- * cualquier carácter fuera de ese rango (tildes con code point >255, rayas "—",
- * texto capturado de páginas de proveedores, etc.). Codificamos a UTF-8 primero.
- */
-function toBase64(value: string): string {
-  const bytes = new TextEncoder().encode(value);
-  let binary = '';
-  bytes.forEach((byte) => {
-    binary += String.fromCharCode(byte);
-  });
-  return btoa(binary);
-}
-
-function fromBase64(value: string): string {
-  const binary = atob(value);
-  const bytes = Uint8Array.from(binary, (char) => char.charCodeAt(0));
-  return new TextDecoder().decode(bytes);
-}
 
 export async function fetchProviderUsage(id: string, provider: ProviderKey): Promise<ApiUsageSnapshot> {
   try {
@@ -44,50 +23,45 @@ export async function fetchProviderUsage(id: string, provider: ProviderKey): Pro
   }
 }
 
-async function fetchEnvKeys(): Promise<Record<string, string>> {
+/** Devuelve solo presencia/ausencia. Los valores secretos nunca salen del servidor. */
+export async function fetchCredentialStatus(): Promise<Set<string>> {
   try {
     const res = await fetch(KEYS_ENDPOINT, { cache: 'no-store' });
-    if (!res.ok) return {};
-    const data = await res.json();
-    return data && typeof data === 'object' ? (data as Record<string, string>) : {};
+    if (!res.ok) return new Set();
+    const data = (await res.json()) as { configuredIds?: unknown };
+    const ids = Array.isArray(data.configuredIds)
+      ? data.configuredIds.filter((id): id is string => typeof id === 'string')
+      : [];
+    return new Set(ids);
   } catch {
-    return {};
+    return new Set();
   }
 }
 
-async function saveEnvKeys(keys: Record<string, string>): Promise<void> {
-  try {
-    await fetch(KEYS_ENDPOINT, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ data: keys }),
-    });
-  } catch {
-    // Ignore: the local .env stays untouched if the server is unavailable.
-  }
+export async function saveProviderCredential(id: string, secret: string): Promise<void> {
+  const res = await fetch(KEYS_ENDPOINT, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ data: { [id]: secret } }),
+  });
+  if (!res.ok) throw new Error('No se pudo guardar la credencial en el almacÃ©n seguro.');
 }
 
-export async function loadEnvKeys(): Promise<Record<string, string>> {
-  return fetchEnvKeys();
+export async function deleteProviderCredentials(ids: string[]): Promise<void> {
+  const res = await fetch(KEYS_ENDPOINT, {
+    method: 'DELETE',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ ids }),
+  });
+  if (!res.ok) throw new Error('No se pudo eliminar la credencial del almacÃ©n seguro.');
 }
 
-export async function deleteEnvKeys(ids: string[]): Promise<void> {
+export async function fetchServerConfig(): Promise<{
+  providers: ApiProviderConfig[] | null;
+  preferences: DashboardPreferences | null;
+}> {
   try {
-    await fetch(KEYS_ENDPOINT, {
-      method: 'DELETE',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ids }),
-    });
-  } catch {
-    // Ignore: the local .env stays untouched if the server is unavailable.
-  }
-}
-
-const CONFIG_ENDPOINT = '/api/config';
-
-export async function fetchServerConfig(): Promise<{ providers: ApiProviderConfig[] | null, preferences: DashboardPreferences | null }> {
-  try {
-    const res = await fetch(CONFIG_ENDPOINT);
+    const res = await fetch(CONFIG_ENDPOINT, { cache: 'no-store' });
     if (!res.ok) return { providers: null, preferences: null };
     return await res.json();
   } catch {
@@ -95,56 +69,25 @@ export async function fetchServerConfig(): Promise<{ providers: ApiProviderConfi
   }
 }
 
-async function saveServerConfig(data: { providers?: ApiProviderConfig[], preferences?: DashboardPreferences }) {
-  try {
-    await fetch(CONFIG_ENDPOINT, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data)
-    });
-  } catch {}
-}
-
-export function saveProviders(providers: ApiProviderConfig[]) {
-  if (typeof window === 'undefined') return;
-
-  const keys: Record<string, string> = {};
-  const sanitized = providers.map((provider) => {
-    if (provider.apiKey) {
-      keys[provider.id] = provider.apiKey;
-    }
-    return { ...provider, apiKey: '' };
+async function saveServerConfig(data: {
+  providers?: ApiProviderConfig[];
+  preferences?: DashboardPreferences;
+}): Promise<void> {
+  const res = await fetch(CONFIG_ENDPOINT, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
   });
-
-  window.localStorage.setItem(STORAGE_KEY, toBase64(JSON.stringify(sanitized)));
-  void saveEnvKeys(keys);
-  void saveServerConfig({ providers: sanitized });
+  if (!res.ok) throw new Error('No se pudo guardar la configuraciÃ³n local.');
 }
 
-export function loadProviders(): ApiProviderConfig[] {
-  if (typeof window === 'undefined') return [];
-  const raw = window.localStorage.getItem(STORAGE_KEY);
-  if (!raw) return [];
-  try {
-    return JSON.parse(fromBase64(raw)) as ApiProviderConfig[];
-  } catch {
-    return [];
-  }
+export function saveProviders(providers: ApiProviderConfig[]): Promise<void> {
+  if (typeof window === 'undefined') return Promise.resolve();
+  const sanitized = providers.map((provider) => ({ ...provider, apiKey: '' }));
+  return saveServerConfig({ providers: sanitized });
 }
 
-export function savePreferences(preferences: DashboardPreferences) {
-  if (typeof window === 'undefined') return;
-  window.localStorage.setItem(PREFS_KEY, toBase64(JSON.stringify(preferences)));
-  void saveServerConfig({ preferences });
-}
-
-export function loadPreferences(): DashboardPreferences | null {
-  if (typeof window === 'undefined') return null;
-  const raw = window.localStorage.getItem(PREFS_KEY);
-  if (!raw) return null;
-  try {
-    return JSON.parse(fromBase64(raw)) as DashboardPreferences;
-  } catch {
-    return null;
-  }
+export function savePreferences(preferences: DashboardPreferences): Promise<void> {
+  if (typeof window === 'undefined') return Promise.resolve();
+  return saveServerConfig({ preferences });
 }

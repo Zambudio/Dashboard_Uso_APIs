@@ -1,6 +1,7 @@
 /node_modules/
 .next/
 out/
+/dist/
 
 .env
 .env.local
@@ -45,3 +46,11 @@ Thumbs.db
 dist/win-unpacked/
 dist/builder-debug.yml
 dist/latest.yml
+
+# DiagnÃ³sticos locales que pueden contener tokens, cookies o respuestas reales.
+/deepseek-dump.json
+/ds-login.html
+/test-deepseek.js
+
+coverage/
+*.blockmap

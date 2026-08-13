@@ -34,7 +34,10 @@ export interface ApiProviderConfig {
   provider: ProviderKey;
   kind: ProviderKind;
   /** 'api': API key del proveedor. 'subscription': cookie de sesión. Nunca datos falsos. */
+  /** Valor transitorio introducido por el usuario. Nunca se persiste ni se devuelve al cliente. */
   apiKey: string;
+  /** Indica que existe una credencial cifrada en el proceso principal, sin exponer su valor. */
+  connected?: boolean;
   status: ProviderStatus;
   visibility?: ProviderVisibility;
   usage?: ApiUsageSnapshot;

@@ -1,6 +1,6 @@
 # AGENTS.md
 
-Dashboard Next.js 14 App Router para uso, coste y límites reales de OpenAI/ChatGPT, Anthropic/Claude, Google Gemini y DeepSeek. Interfaz en español, ejecución local Windows y paquete standalone con icono de bandeja.
+Dashboard Next.js 16 App Router y Electron para uso, coste y límites reales de OpenAI/ChatGPT, Anthropic/Claude, Google Gemini y DeepSeek. Interfaz en español, ejecución local Windows y paquete standalone con icono de bandeja.
 
 ## Lectura obligatoria
 
@@ -20,28 +20,31 @@ La documentación forma parte del cambio. Actualizar el documento especializado 
 - Modelos: `types/api.ts`.
 - Catálogo de proveedores: `lib/providers.ts`.
 - Persistencia cliente y llamadas locales: `lib/storage.ts`.
-- Secretos: `lib/env-keys.server.ts` → `.env`.
+- Secretos: broker Electron + `safeStorage`/DPAPI; `.env` solo como compatibilidad de desarrollo.
+- Configuración no sensible: `electron-store` a través del broker.
 - API local:
   - `app/api/keys/route.ts`
   - `app/api/usage/route.ts`
   - `app/api/auth/browser-login/route.ts`
 - Fetchers: `lib/usage/*.server.ts`.
 - Login interactivo: `lib/browser-login.server.ts`.
-- Empaquetado: `launcher.js`, `server-entry.js`, `inspector-shim.js`, `scripts/build-exe.js`.
+- Empaquetado recomendado: `electron/`, `server-entry.js`, `inspector-shim.js`, `scripts/prepare-standalone.js` y `electron-builder`.
 - Bandeja Windows: `scripts/tray-launcher.cs` → `dist/DashboardTray.exe`.
 
 ## Reglas permanentes
 
 - Sin datos simulados.
 - No almacenar secretos en `localStorage` ni Git.
+- No devolver valores secretos al renderer ni a `GET /api/keys`.
+- Fallar de forma segura si `safeStorage` no está disponible.
 - Base64 no se considera cifrado.
 - Mantener `force-dynamic` en rutas de credenciales y uso.
 - Representar datos no expuestos con `unavailable`.
 - Mantener mensajes de error accionables en español.
 - No exponer el servidor fuera de localhost sin autenticación y revisión de seguridad.
-- No editar manualmente artefactos compilados para sustituir cambios de fuente; regenerar con `npm run exe`.
+- No editar ni versionar artefactos compilados; regenerarlos con `npm run electron:build`.
 - No usar `require.resolve('playwright')` en código empaquetado por Next para construir la ruta de su CLI.
-- Preservar `.env` al reemplazar `dist/`.
+- Las releases públicas requieren firma reconocida y SHA-256.
 
 ## Desarrollo y build
 
@@ -49,8 +52,10 @@ La documentación forma parte del cambio. Actualizar el documento especializado 
 npm ci
 npm run dev
 npm run lint
+npm run typecheck
+npm test
 npm run build
-npm run exe
+npm run electron:build
 ```
 
 No ejecutar build o desarrollo desde SMB/NAS si aparecen Watchpack, EPERM o bloqueos de `.next`; usar una copia NTFS local y desplegar después `dist/`.
@@ -59,7 +64,8 @@ No ejecutar build o desarrollo desde SMB/NAS si aparecen Watchpack, EPERM o bloq
 
 - lint y build correctos;
 - `git diff --check` correcto;
-- ambos ejecutables generados;
+- instalador y portable generados;
+- firma válida para releases públicas;
 - una instancia del tray, sin ventana;
 - HTTP 200 en `127.0.0.1:3000`;
 - interacción básica de UI;

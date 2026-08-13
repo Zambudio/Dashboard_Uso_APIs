@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { ApiUsageSnapshot, ProviderKey } from '@/types/api';
-import { readEnvKeys } from '@/lib/env-keys.server';
+import { readDashboardState, readEnvKeys } from '@/lib/env-keys.server';
 import { getProviderDefinition } from '@/lib/providers';
 import { fetchDeepSeekUsage } from '@/lib/usage/deepseek.server';
 import { fetchOpenAIUsage } from '@/lib/usage/openai.server';
@@ -26,6 +26,12 @@ export async function POST(request: NextRequest) {
   const definition = getProviderDefinition(provider);
   if (!definition.usageImplemented) {
     return NextResponse.json({ error: `La consulta de uso todavía no está implementada para ${definition.label}.` }, { status: 501 });
+  }
+
+  const state = await readDashboardState<{ providers?: Array<{ id: string; provider: ProviderKey }> }>();
+  const configuredProvider = state.providers?.find((item) => item.id === id);
+  if (!configuredProvider || configuredProvider.provider !== provider) {
+    return NextResponse.json({ error: 'La integraciÃ³n solicitada no existe o no coincide con el proveedor.' }, { status: 400 });
   }
 
   const keys = await readEnvKeys();

@@ -147,9 +147,10 @@ async function scrapeLiveDeepSeekUsage(
 
     await context.addInitScript(() => {
       try {
-        delete (navigator as any).__proto__.webdriver;
+        const navigatorPrototype = Object.getPrototypeOf(navigator) as { webdriver?: unknown };
+        delete navigatorPrototype.webdriver;
         Object.defineProperty(navigator, 'webdriver', { get: () => undefined });
-        (window as any).chrome = {
+        (window as Window & { chrome?: Record<string, unknown> }).chrome = {
           runtime: {},
           loadTimes: () => {},
           csi: () => {},

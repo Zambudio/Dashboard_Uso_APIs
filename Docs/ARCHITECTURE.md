@@ -1,131 +1,87 @@
-# Arquitectura y flujos
+# Arquitectura
 
 ## Visión general
 
-Dashboard_Uso_APIs es una aplicación Next.js 14 App Router de una sola página. La interfaz corre principalmente en el cliente; las credenciales y las llamadas a proveedores pasan por rutas locales del servidor.
+La aplicación combina un proceso principal Electron con un servidor Next.js standalone ligado a `127.0.0.1`. El renderer del widget no hace peticiones a proveedores ni maneja credenciales.
 
 ```mermaid
-flowchart TD
-    UI[app/page.tsx y components] --> STORAGE[lib/storage.ts]
-    STORAGE --> CONFIG[/api/config]
-    STORAGE --> KEYS[/api/keys]
-    STORAGE --> USAGE[/api/usage]
-    UI --> LOGIN[/api/auth/browser-login]
-    CONFIG --> ENV[.env local]
-    KEYS --> ENV
-    USAGE --> FETCHERS[lib/usage/*.server.ts]
-    LOGIN --> PLAYWRIGHT[Chromium interactivo]
-    FETCHERS --> PROVIDERS[APIs y consolas oficiales]
-    PLAYWRIGHT --> PROVIDERS
+flowchart LR
+  R[Renderer del widget] -->|IPC validado| E[Proceso principal Electron]
+  E --> P[Poller local]
+  E --> B[Broker loopback con token efímero]
+  E --> N[Servidor Next.js]
+  P --> N
+  N -->|configuración| B
+  N -->|credenciales| B
+  B --> C[credentials.enc / DPAPI]
+  B --> S[electron-store / configuración]
+  N --> F[Fetchers de proveedores]
+  F --> X[Servicios oficiales]
 ```
 
-## Capas
+## Límites de confianza
 
-| Capa | Archivos principales | Responsabilidad |
-|---|---|---|
-| Presentación | `app/page.tsx`, `components/` | Tarjetas, resúmenes, ajustes, orden manual y estados. |
-| Modelo | `types/api.ts`, `lib/providers.ts` | Tipos y capacidades declaradas por proveedor. |
-| Persistencia cliente | `lib/storage.ts` | Configuración y preferencias, consultando a la API local. |
-| API local | `app/api/**/route.ts` | Configuración, credenciales, uso y sesiones de navegador. |
-| Integraciones | `lib/usage/*.server.ts` | Consultas reales, normalización y errores por proveedor. |
-| Automatización web | `lib/browser-login.server.ts` | Login interactivo, captura de sesión y snapshots. |
-| Empaquetado | `launcher.js`, `server-entry.js`, `inspector-shim.js`, `scripts/` | Servidor standalone, compatibilidad pkg y bandeja Windows. |
+| Zona | Puede conocer secretos | Persistencia |
+|---|---:|---|
+| Renderer del widget | No | Ninguna |
+| Dashboard web | No; solo presencia de conexión | Ninguna en navegador |
+| Servidor Next.js | Sí, durante la llamada necesaria | No |
+| Broker Electron | Sí | `safeStorage`/DPAPI |
+| Configuración Electron | No contiene secretos | JSON de `electron-store` |
 
-## Arranque con bandeja
+El broker escucha en un puerto aleatorio de loopback y exige un bearer token aleatorio transmitido al proceso hijo mediante variables de entorno. `/api/keys` nunca devuelve el mapa real: `GET` responde únicamente `configuredIds`.
 
-```mermaid
-sequenceDiagram
-    participant U as Usuario
-    participant T as DashboardTray.exe
-    participant L as dashboard.exe
-    participant N as Next.js
-    participant B as Navegador
-    U->>T: Doble clic
-    T->>T: Mutex de instancia única
-    T->>L: Arranque oculto con DASHBOARD_NO_BROWSER=1
-    L->>N: server-entry.js
-    T->>N: Sondeo HTTP cada segundo
-    N-->>T: HTTP 200
-    T->>B: Abrir 127.0.0.1:3000 una vez
-    T->>T: Icono verde
-```
+## Flujo de configuración
 
-`DashboardTray.exe` es el propietario del proceso `dashboard.exe`. Al pulsar **Salir**, utiliza `taskkill /T` sobre ese proceso para cerrar también el servidor hijo. Si ya había un servidor externo en el puerto, el icono puede utilizarlo, pero no debe cerrar procesos que no haya iniciado.
+1. El renderer solicita ajustes mediante `ipcRenderer.invoke` a través del preload aislado.
+2. El proceso principal valida rangos, temas, booleanos e IDs.
+3. Las preferencias compartidas se guardan mediante `/api/config` y el broker.
+4. Ajustes nativos como `alwaysOnTop`, `openAtLogin` y el estado colapsado se guardan directamente en `electron-store`.
+5. El proceso principal aplica el cambio a la ventana y devuelve el estado normalizado.
 
-## Carga y refresco de datos
+## Flujo de credenciales
 
-1. `app/page.tsx` carga configuración visual y secreta combinando `/api/config` y `/api/keys` (ambos en `.env`).
-2. Las integraciones configuradas se refrescan en paralelo con `POST /api/usage`.
-4. Cada fetcher devuelve `ApiUsageSnapshot` con sólo los campos realmente disponibles.
-4. Los snapshots visibles y preferencias se guardan en `.env` (vía `/api/config`), asegurando que las sesiones se mantengan independientemente del navegador o equipo usado.
+1. Una clave manual viaja por HTTPS hacia el proveedor solo desde el servidor; localmente entra por `PUT /api/keys`.
+2. La ruta valida ID, tipo y tamaño, y actualiza el broker.
+3. El broker vuelve a validar y cifra el mapa completo con DPAPI mediante una escritura temporal/renombrado.
+4. El renderer conserva únicamente `connected: true`.
 
-## Inicio de sesión web
+Si DPAPI no está disponible, el almacén rechaza lectura y escritura. No existe fallback a JSON plano.
+
+## Login web
 
 ```mermaid
 sequenceDiagram
-    participant UI as BrowserLoginModal
-    participant API as /api/auth/browser-login
-    participant S as browser-login.server
-    participant C as Chromium
-    participant P as Proveedor
-    UI->>API: POST action=start
-    API->>S: Crear sesión (máximo 5 min)
-    S->>C: Abrir ventana interactiva
-    C->>P: Usuario inicia sesión
-    UI->>API: GET estado cada 1 s
-    S->>C: Detectar cookies, token, DOM o localStorage
-    S->>S: Guardar secreto y snapshot en .env
-    API-->>UI: completed + snapshot
-    S->>C: Cerrar ventana
+  participant U as Usuario
+  participant UI as Dashboard
+  participant N as Next.js
+  participant P as Playwright efímero
+  participant B as Broker cifrado
+  U->>UI: Iniciar sesión web
+  UI->>N: Crear sesión temporal
+  N->>P: Abrir contexto sin perfil persistente
+  U->>P: Autenticarse en el proveedor
+  P->>N: Token/cookies/estado requerido
+  N->>B: Guardar bloque opaco cifrado
+  N-->>UI: Conectado + snapshot, sin secreto
+  N->>P: Cerrar y eliminar contexto
 ```
 
-El mapa de sesiones vive en `globalThis.__browserLoginSessions` para sobrevivir a recargas de módulos del servidor. Cada sesión tiene temporizador de cinco minutos y limpieza posterior.
+Algunos proveedores autentican su propia web mediante cookies o `localStorage`. Esos valores pueden formar parte del bloque cifrado porque son necesarios para reproducir una sesión, pero no se guardan en cookies del widget ni en un perfil persistente de Playwright.
 
-## Persistencia
+## Dashboard web
 
-| Ubicación | Contenido | Sensible |
-|---|---|---|
-| `.env` o `dist/.env` | Configuración completa: API keys bajo `DASHBOARD_PROVIDER_KEYS`, proveedores bajo `DASHBOARD_CONFIG`, y preferencias bajo `DASHBOARD_PREFERENCES`. Todo serializado en Base64. | Sí (claves y sesiones) |
-| `localStorage: ai-api-dashboard-*` | Respaldo y migración local. Utilizado solo como fallback inicial. | No |
+- `app/page.tsx`: estado visual y coordinación.
+- `lib/storage.ts`: cliente de la API local, sin `localStorage`.
+- `app/api/config`: configuración no sensible.
+- `app/api/keys`: escritura/borrado de credenciales y lectura de presencia.
+- `app/api/usage`: valida que ID y proveedor coincidan antes de recuperar el secreto.
+- `lib/usage/*.server.ts`: integración y normalización por proveedor.
+
+Las rutas sensibles mantienen `force-dynamic` y el cliente usa `cache: 'no-store'`.
 
 ## Empaquetado
 
-Next.js genera `output: 'standalone'`. `dashboard.exe` contiene el runtime Node de `pkg`, pero carga `standalone/server.js` desde disco. `server-entry.js` instala primero `inspector-shim.js` porque el runtime empaquetado no expone `inspector` y Next lo requiere para su trazador.
+`next build` produce `.next/standalone`. `scripts/prepare-standalone.js` añade `public`, estáticos y Playwright. Electron arranca ese servidor con `ELECTRON_RUN_AS_NODE=1`. Los artefactos se generan fuera de Git y se publican mediante GitHub Releases.
 
-Playwright se copia completo dentro de `standalone/node_modules`. Su CLI se resuelve desde `process.cwd()`; no se usa `require.resolve('playwright')` porque Webpack lo convertiría en un identificador numérico del bundle.
-
-## Widget de escritorio (Electron)
-
-Vía alternativa a `DashboardTray.exe`, en `electron/`. No toca ninguna de las capas anteriores (proveedores, login web, rutas API) — solo cambia el *shell* que arranca el servidor y añade una interfaz nativa.
-
-```mermaid
-flowchart TD
-    MAIN[electron/main.js] --> BROKER[credential-broker.js]
-    MAIN --> SM[server-manager.js: spawnServer]
-    SM --> SERVER[standalone/server.js]
-    MAIN --> WIN[widget-window.js]
-    MAIN --> TRAY[tray.js]
-    MAIN --> POLL[usage-poller.js]
-    POLL -->|fetch, no-store| SERVER
-    WIN -->|IPC usage-update / server-status| RENDERER[renderer/widget.js]
-    BROKER -->|HTTP loopback + token| ENVKEYS[lib/env-keys.server.ts]
-    ENVKEYS -.->|sin broker: npm run dev| ENVFILE[.env]
-```
-
-- **`server-manager.js`** spawnea `standalone/server.js` con `ELECTRON_RUN_AS_NODE=1` (reutiliza el propio binario de Electron como runtime Node, sin depender de `pkg` ni de que el usuario tenga Node instalado). `waitForServer()` sondea `/api/config` (no `/`) porque en el standalone de Next, `/` está pre-renderizada y responde antes de que las rutas dinámicas terminen de inicializarse.
-- **`credential-broker.js`** cifra `DASHBOARD_PROVIDER_KEYS` con `safeStorage` (DPAPI) en `credentials.enc`, dentro de `app.getPath('userData')`. Como el servidor Next.js sigue siendo un proceso Node aparte (no puede llamar a `safeStorage` directamente), expone un HTTP en loopback con un token aleatorio por arranque; `lib/env-keys.server.ts` habla con él si detecta `DASHBOARD_CRED_BROKER_URL`/`_TOKEN` en su entorno, y si no, sigue leyendo `.env` en Base64 exactamente igual que antes (así `npm run dev` sin Electron no cambia). `DASHBOARD_CONFIG` y `DASHBOARD_PREFERENCES` (no sensibles) siguen en `.env` sin pasar por el broker.
-  - **`lib/cred-broker-client.js`** hace el `fetch()` real hacia el broker desde dentro de una ruta de Next.js (`app/api/keys/route.ts`) — con `cache: 'no-store'` obligatorio. Sin ese flag, el `fetch` global instrumentado por Next.js cachea la respuesta del `GET /credentials` en la primera lectura del proceso y la sirve congelada para siempre, sin importar cuántas veces se escriba después (bug real encontrado y corregido el 11 de agosto de 2026: cualquier ruta que primero "lee todo + fusiona + escribe todo" — como el guardado de una clave o el refresco de la sesión de DeepSeek — podía revertir en silencio cambios recientes de otros proveedores porque fusionaba contra esa foto congelada, no contra el estado real en disco).
-- **`usage-poller.js`** hace todo el sondeo a `/api/config`/`/api/usage` desde el proceso principal, nunca desde el renderer: la ventana del widget se carga con `loadFile()` (origen `file://`), y un `fetch()` cross-origin desde ahí sería bloqueado por CORS. Usa `cache: 'no-store'` porque el `fetch()` del proceso principal de Electron pasa por la caché HTTP de Chromium, persistida en `userData/Cache` entre reinicios.
-- **`widget-window.js`** / **`renderer/`** son la ventana flotante (sin bordes, siempre visible, colapsable) — reciben los datos por IPC (`usage-update`, `server-status`), nunca por `fetch()` directo. Cada tarjeta pinta el icono real del proveedor (`renderer/logos/`, mismo mapeo que `components/ProviderLogo.tsx`), el tiempo hasta el próximo reset si el proveedor lo expone (`usage.sessionResetsAt`/`weeklyResetsAt`), y la opacidad del panel se controla desde `preferences.widgetOpacity` (aplicado como `rgba()` en el `background` del `<body>`, no con `BrowserWindow.setOpacity()`, para que el texto siga siendo legible aunque el fondo sea muy transparente). `preferences.widgetHiddenProviderIds` filtra qué tarjetas se muestran, independiente del "Ocultar" del dashboard web.
-- **`tray.js`** pinta un único icono de bandeja (color según el peor estado entre proveedores, mismos tonos que `ProviderCard.tsx`) con menú Mostrar widget / Abrir en navegador / Reiniciar servidor / Salir.
-
-### Fiabilidad del scraping de DeepSeek (`lib/usage/deepseek.server.ts`)
-
-DeepSeek no expone coste/tokens/peticiones por API pública; la única fuente es reabrir `platform.deepseek.com/usage` con la sesión guardada (cookies + `localStorage`, DeepSeek autentica su SPA con un token ahí, no con cookie propia) en un Chromium headless. Dos bugs reales causaban que se reportara "sesión caducada" con una sesión perfectamente válida:
-
-1. La condición de espera (`page.waitForFunction`) comprobaba solo que apareciera la etiqueta "Topped-up balance" en el texto de la página. Esa etiqueta forma parte del esqueleto estático del SPA y aparece casi al instante, **antes** de que el importe real termine de hidratar (mientras tanto se ve "Profile" en vez del nombre de usuario real) — el scraping se disparaba sobre una página a medio cargar y siempre encontraba `undefined`. Ahora se exige un símbolo de moneda (`$`/`¥`/`€`) cerca de la etiqueta, señal real de que el valor ya se pintó.
-2. Cada refresco en vivo con éxito ahora persiste las cookies/`localStorage` resultantes (`persistRefreshedSession`) en vez de depender para siempre de la sesión capturada en el login original — la plataforma va detrás de AWS WAF, que rota tokens en cada visita.
-
-Además: un reintento automático (`scrapeLiveDeepSeekUsageWithRetry`) si el primer intento no encuentra datos, timeouts más generosos y `console.warn` de diagnóstico (sin secretos) en cada rama de fallo, para que un fallo futuro sea depurable desde los logs del proceso en vez de una caja negra.
-
-Detalles de diseño y alternativas descartadas: [Docs/superpowers/specs/2026-08-11-electron-widget-design.md](./superpowers/specs/2026-08-11-electron-widget-design.md).
+La ruta `DashboardTray.exe`/`dashboard.exe` permanece como compatibilidad heredada, pero Electron es la arquitectura recomendada porque es la única que proporciona el broker DPAPI.

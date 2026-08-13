@@ -43,24 +43,6 @@ interface OpenAIDashboardCreditGrants {
   grants?: { data?: { grant_amount?: number; used_amount?: number; expires_at?: number }[] };
 }
 
-interface OpenAIDashboardSubscription {
-  plan?: { title?: string; id?: string };
-  hard_limit_usd?: number;
-  soft_limit_usd?: number;
-  has_payment_method?: boolean;
-  account_name?: string;
-}
-
-interface OpenAIDashboardDailyCost {
-  timestamp?: number;
-  line_items?: { name?: string; cost?: number }[];
-}
-
-interface OpenAIDashboardUsage {
-  total_usage?: number;
-  daily_costs?: OpenAIDashboardDailyCost[];
-}
-
 const SEVEN_DAYS_SECONDS = 7 * 24 * 60 * 60;
 
 async function openaiGet<T>(url: string, token: string, extraHeaders?: Record<string, string>): Promise<T> {
@@ -188,7 +170,7 @@ export async function fetchOpenAIUsage(secret: string): Promise<ApiUsageSnapshot
     let currency = 'USD';
     let tokensUsed: number | undefined;
     let requestCount: number | undefined;
-    let planType = 'OpenAI Platform';
+    const planType = 'OpenAI Platform';
 
     // Try modern organization costs
     try {

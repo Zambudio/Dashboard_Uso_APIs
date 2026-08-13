@@ -2,23 +2,75 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self'; connect-src 'none'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Dashboard de uso de APIs</title>
   <link rel="stylesheet" href="widget.css" />
 </head>
 <body>
   <header id="header">
     <span id="title">Uso de APIs</span>
-    <button id="hidden-count" title="Proveedores ocultos en el widget" hidden>0 ocultos</button>
+    <button type="button" id="hidden-count" aria-label="Mostrar proveedores ocultos" title="Proveedores ocultos en el widget" hidden>0 ocultos</button>
     <div id="header-actions">
-      <button id="toggle-collapse" title="Colapsar/expandir">▾</button>
-      <button id="open-dashboard" title="Abrir dashboard completo">⤢</button>
-      <button id="widget-minimize" title="Minimizar">─</button>
-      <button id="widget-close" title="Cerrar (sigue en la bandeja del sistema)">✕</button>
+      <button type="button" id="widget-settings" aria-label="Abrir configuraciÃ³n" title="ConfiguraciÃ³n">⚙</button>
+      <button type="button" id="toggle-collapse" aria-label="Colapsar widget" title="Colapsar/expandir">▾</button>
+      <button type="button" id="open-dashboard" aria-label="Abrir dashboard completo" title="Abrir dashboard completo">⤢</button>
+      <button type="button" id="widget-minimize" aria-label="Minimizar widget" title="Minimizar">─</button>
+      <button type="button" id="widget-close" aria-label="Ocultar widget" title="Cerrar (sigue en la bandeja del sistema)">✕</button>
     </div>
   </header>
   <div id="banner">El servidor no responde</div>
   <div id="hidden-panel"></div>
   <main id="cards"></main>
+  <section id="settings-overlay" role="dialog" aria-modal="true" aria-labelledby="settings-title" hidden>
+    <form id="settings-form">
+      <div class="settings-heading">
+        <div>
+          <p class="settings-kicker">Widget</p>
+          <h2 id="settings-title">ConfiguraciÃ³n</h2>
+        </div>
+        <button type="button" id="settings-close" aria-label="Cerrar configuraciÃ³n">✕</button>
+      </div>
+
+      <label class="field">Tema
+        <select id="setting-theme">
+          <option value="aurora">Aurora</option>
+          <option value="esmeralda">Esmeralda</option>
+          <option value="ambar">Ãmbar</option>
+          <option value="violeta">Violeta</option>
+          <option value="mono">Monocromo</option>
+        </select>
+      </label>
+      <label class="field">Transparencia <output id="opacity-value">92%</output>
+        <input id="setting-opacity" type="range" min="30" max="100" step="1" value="92" />
+      </label>
+      <label class="field">Actualizar cada
+        <select id="setting-refresh">
+          <option value="60">1 minuto</option>
+          <option value="300">5 minutos</option>
+          <option value="900">15 minutos</option>
+          <option value="1800">30 minutos</option>
+          <option value="3600">1 hora</option>
+        </select>
+      </label>
+
+      <fieldset>
+        <legend>Comportamiento</legend>
+        <label class="check"><input id="setting-always-on-top" type="checkbox" /> Siempre visible</label>
+        <label class="check"><input id="setting-open-at-login" type="checkbox" /> Iniciar con Windows</label>
+      </fieldset>
+      <fieldset>
+        <legend>Proveedores visibles</legend>
+        <div id="settings-providers"></div>
+      </fieldset>
+
+      <p id="settings-status" role="status" aria-live="polite"></p>
+      <div class="settings-actions">
+        <button type="button" id="settings-cancel">Cancelar</button>
+        <button type="submit" id="settings-save">Guardar</button>
+      </div>
+    </form>
+  </section>
   <script src="widget.js"></script>
 </body>
 </html>

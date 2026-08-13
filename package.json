@@ -1,43 +1,57 @@
 {
   "name": "dashboard-uso-apis",
-  "version": "0.1.0",
+  "version": "0.2.0",
+  "description": "Dashboard local para supervisar uso, costes y lÃ­mites reales de proveedores de IA.",
   "private": true,
+  "license": "MIT",
+  "author": "Pedro Zambudio",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Zambudio/Dashboard_Uso_APIs.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Zambudio/Dashboard_Uso_APIs/issues"
+  },
+  "homepage": "https://github.com/Zambudio/Dashboard_Uso_APIs#readme",
+  "engines": {
+    "node": ">=22.12.0",
+    "npm": ">=10"
+  },
   "main": "electron/main.js",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint",
-    "test": "node --test",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit --incremental false",
+    "test": "node --test electron/*.test.js electron/lib/*.test.js lib/*.test.js",
+    "check": "npm run lint && npm run typecheck && npm test",
+    "icons": "node scripts/generate-icons.js",
     "exe": "npm run build && node scripts/build-exe.js",
-    "electron:dev": "node scripts/prepare-standalone.js && electron .",
-    "electron:build": "node scripts/prepare-standalone.js && electron-builder --win"
+    "electron:dev": "npm run build && node scripts/prepare-standalone.js && electron .",
+    "electron:build": "npm run icons && npm run build && node scripts/prepare-standalone.js && electron-builder --win --publish never",
+    "release:windows": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/build-signed-release.ps1"
   },
   "dependencies": {
-    "electron-store": "^11.0.2",
-    "next": "14.2.15",
-    "playwright": "^1.62.1",
-    "react": "18.3.1",
-    "react-dom": "18.3.1"
+    "electron-store": "11.0.2",
+    "next": "16.3.0",
+    "playwright": "1.62.1",
+    "react": "19.2.8",
+    "react-dom": "19.2.8"
   },
   "devDependencies": {
     "@types/node": "20.16.11",
-    "@types/react": "18.3.3",
-    "@types/react-dom": "18.3.1",
+    "@types/react": "19.2.18",
+    "@types/react-dom": "19.2.4",
     "@yao-pkg/pkg": "^6.22.0",
-    "autoprefixer": "10.4.20",
-    "electron": "^43.3.0",
-    "electron-builder": "^26.15.3",
-    "eslint": "8.57.1",
-    "eslint-config-next": "14.2.15",
-    "postcss": "8.4.49",
+    "autoprefixer": "10.5.4",
+    "electron": "43.4.0",
+    "electron-builder": "26.15.3",
+    "eslint": "9.39.2",
+    "eslint-config-next": "16.3.0",
+    "postcss": "8.5.26",
     "tailwindcss": "3.4.14",
     "typescript": "5.6.3"
-  },
-  "eslintConfig": {
-    "extends": [
-      "next/core-web-vitals"
-    ]
   },
   "pkg": {
     "targets": [
@@ -52,9 +66,34 @@
     "directories": {
       "output": "dist"
     },
+    "asar": true,
+    "electronFuses": {
+      "runAsNode": false,
+      "enableCookieEncryption": true,
+      "enableNodeOptionsEnvironmentVariable": false,
+      "enableNodeCliInspectArguments": false,
+      "enableEmbeddedAsarIntegrityValidation": true,
+      "onlyLoadAppFromAsar": true,
+      "loadBrowserProcessSpecificV8Snapshot": false,
+      "grantFileProtocolExtraPrivileges": false
+    },
     "files": [
       "electron/**/*",
-      "!electron/**/*.test.js"
+      "assets/app-icon.png",
+      "assets/app-icon.ico",
+      "!electron/**/*.test.js",
+      "!node_modules/next/**/*",
+      "!node_modules/@next/**/*",
+      "!node_modules/@img/**/*",
+      "!node_modules/@swc/**/*",
+      "!node_modules/playwright/**/*",
+      "!node_modules/playwright-core/**/*",
+      "!node_modules/react/**/*",
+      "!node_modules/react-dom/**/*",
+      "!node_modules/scheduler/**/*",
+      "!node_modules/sharp/**/*",
+      "!node_modules/styled-jsx/**/*",
+      "!node_modules/caniuse-lite/**/*"
     ],
     "extraResources": [
       {
@@ -63,9 +102,16 @@
       }
     ],
     "win": {
+      "icon": "assets/app-icon.ico",
       "target": [
-        "nsis",
-        "portable"
+        {
+          "target": "nsis",
+          "arch": ["x64"]
+        },
+        {
+          "target": "portable",
+          "arch": ["x64"]
+        }
       ]
     },
     "portable": {

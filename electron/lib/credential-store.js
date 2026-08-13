@@ -27,6 +27,16 @@ function migrateFromLegacyEnv(envFilePath, fsImpl = fs) {
   return parseLegacyEnvKeys(raw);
 }
 
+function removeLegacyEnvKeys(envFilePath, fsImpl = fs) {
+  if (!fsImpl.existsSync(envFilePath)) return;
+  const raw = fsImpl.readFileSync(envFilePath, 'utf8');
+  const next = raw
+    .split(/\r?\n/)
+    .filter((line) => !new RegExp(`^\\s*${KEYS_VAR}\\s*=`).test(line))
+    .join('\n');
+  if (next !== raw) fsImpl.writeFileSync(envFilePath, next, 'utf8');
+}
+
 // safeStorage se inyecta (no se importa 'electron' aquí) para que este
 // módulo se pueda probar con `node --test` sin que Electron esté corriendo.
 function createCredentialStore({ safeStorage, filePath, fsImpl = fs }) {
@@ -34,28 +44,29 @@ function createCredentialStore({ safeStorage, filePath, fsImpl = fs }) {
     if (!fsImpl.existsSync(filePath)) return {};
     const raw = fsImpl.readFileSync(filePath);
     if (raw.length === 0) return {};
-    try {
-      if (safeStorage.isEncryptionAvailable()) {
-        return JSON.parse(safeStorage.decryptString(raw));
-      }
-      return JSON.parse(raw.toString('utf8'));
-    } catch {
-      return {};
+    if (!safeStorage.isEncryptionAvailable()) {
+      throw new Error('El cifrado seguro del sistema operativo no está disponible; no se leerán credenciales.');
     }
+    const parsed = JSON.parse(safeStorage.decryptString(raw));
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+      throw new Error('El almacén cifrado de credenciales tiene un formato inválido.');
+    }
+    return parsed;
   }
 
   function save(keys) {
+    if (!safeStorage.isEncryptionAvailable()) {
+      throw new Error('El cifrado seguro del sistema operativo no está disponible; no se guardarán credenciales en texto plano.');
+    }
     const json = JSON.stringify(keys);
     const dir = path.dirname(filePath);
     if (!fsImpl.existsSync(dir)) fsImpl.mkdirSync(dir, { recursive: true });
-    if (safeStorage.isEncryptionAvailable()) {
-      fsImpl.writeFileSync(filePath, safeStorage.encryptString(json));
-    } else {
-      fsImpl.writeFileSync(filePath, json, 'utf8');
-    }
+    const temporaryPath = `${filePath}.tmp`;
+    fsImpl.writeFileSync(temporaryPath, safeStorage.encryptString(json));
+    fsImpl.renameSync(temporaryPath, filePath);
   }
 
   return { load, save };
 }
 
-module.exports = { createCredentialStore, migrateFromLegacyEnv, parseLegacyEnvKeys };
+module.exports = { createCredentialStore, migrateFromLegacyEnv, parseLegacyEnvKeys, removeLegacyEnvKeys };

@@ -14,8 +14,8 @@ interface ProviderSettingsPanelProps {
 }
 
 export function ProviderSettingsPanel({ provider, onSave, onClose, onDelete, onBrowserLogin }: ProviderSettingsPanelProps) {
-  const [form, setForm] = useState(provider);
-  const hasApiKey = Boolean(form.apiKey);
+  const [form, setForm] = useState({ ...provider, apiKey: '' });
+  const hasApiKey = Boolean(provider.connected);
   const definition = getProviderDefinition(form.provider);
 
   const handleDelete = () => {
@@ -100,7 +100,7 @@ export function ProviderSettingsPanel({ provider, onSave, onClose, onDelete, onB
           value={form.apiKey}
           onChange={(event) => setForm({ ...form, apiKey: event.target.value })}
           className="w-full rounded-xl border border-white/10 bg-[#1f1f2b] px-3 py-2 text-white"
-          placeholder={hasApiKey ? 'Guardada en el .env local — escribe para reemplazarla' : definition.secretPlaceholder}
+          placeholder={hasApiKey ? 'Guardada de forma cifrada — escribe para reemplazarla' : definition.secretPlaceholder}
         />
       </label>
 
@@ -117,7 +117,7 @@ export function ProviderSettingsPanel({ provider, onSave, onClose, onDelete, onB
       </div>
 
       <div className="mt-3 rounded-2xl border border-white/10 bg-white/5 p-3 text-sm text-slate-400">
-        <p>La clave se guarda en el archivo .env local junto al ejecutable, no en el navegador ni en ningún servidor externo.</p>
+        <p>La credencial se guarda cifrada con la protección del sistema operativo. El navegador solo conoce si está configurada, nunca su valor.</p>
       </div>
 
       <div className="mt-5 flex items-center justify-between gap-3">
