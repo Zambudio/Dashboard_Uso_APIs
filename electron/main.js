@@ -1,6 +1,6 @@
 'use strict';
 
-const { app, dialog, safeStorage, shell, utilityProcess } = require('electron');
+const { app, dialog, net, protocol, safeStorage, shell, utilityProcess } = require('electron');
 const path = require('path');
 // electron-store >=9 es ESM puro; require() en CommonJS devuelve el módulo
 // namespace, no la clase directamente — hay que tirar de .default.
@@ -10,6 +10,18 @@ const { waitForServer, spawnServer } = require('./server-manager');
 const { createTray } = require('./tray');
 const { createWidgetWindow, revealWidgetWindow } = require('./widget-window');
 const { startUsagePolling } = require('./usage-poller');
+const { WIDGET_SCHEME, registerWidgetProtocol } = require('./lib/widget-protocol');
+
+protocol.registerSchemesAsPrivileged([
+  {
+    scheme: WIDGET_SCHEME,
+    privileges: {
+      standard: true,
+      secure: true,
+      supportFetchAPI: true,
+    },
+  },
+]);
 
 const PORT = Number(process.env.DASHBOARD_PORT) || 3000;
 const HOST = '127.0.0.1';
@@ -85,6 +97,12 @@ if (!gotLock) {
   }
 
   app.whenReady().then(async () => {
+    await registerWidgetProtocol({
+      protocol,
+      net,
+      rendererRoot: path.join(__dirname, 'renderer'),
+    });
+
     const broker = await startCredentialBroker({
       safeStorage,
       filePath: path.join(app.getPath('userData'), 'credentials.enc'),
@@ -96,7 +114,7 @@ if (!gotLock) {
     const ok = await startServer(broker);
     if (!ok) return;
 
-    widgetWindow = createWidgetWindow({ store, serverUrl: SERVER_URL });
+    widgetWindow = await createWidgetWindow({ store, serverUrl: SERVER_URL });
 
     tray = createTray({
       onShowWidget: () => revealWidgetWindow(widgetWindow),

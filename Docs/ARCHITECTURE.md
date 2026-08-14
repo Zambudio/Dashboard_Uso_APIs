@@ -43,6 +43,19 @@ La posición se persiste, pero solo se acepta si queda una zona útil visible. A
 pulsar el tray, el widget se restaura y, si estaba en otro monitor, se centra en
 la pantalla donde se realizó la acción.
 
+## Origen del renderer
+
+El widget se carga desde `dashboard-widget://app/widget.html`, registrado como
+esquema estándar y seguro antes de que Electron esté listo. El handler únicamente
+publica una lista cerrada de HTML, CSS, JavaScript e imágenes bajo
+`electron/renderer`; cualquier host, consulta, ruta manipulada o recurso no
+declarado responde `404`.
+
+Así se conservan deshabilitados los privilegios adicionales de `file://`. La
+ventana permanece oculta hasta que `loadURL()` termina correctamente; si la carga
+falla, se destruye y el arranque muestra un error accionable en vez de dejar una
+ventana transparente.
+
 ## Flujo de credenciales
 
 1. Una clave manual viaja por HTTPS hacia el proveedor solo desde el servidor; localmente entra por `PUT /api/keys`.

@@ -12,6 +12,7 @@ Aplicación local para Windows que reúne en un solo panel el uso, los costes, s
 - Consultas paralelas a proveedores y errores accionables en español.
 - Panel del widget para tema, opacidad, refresco, inicio con Windows, posición superior y proveedores visibles.
 - El icono de bandeja restaura el widget en el monitor donde se pulsa, incluso si quedó minimizado o en otra pantalla.
+- Los recursos visuales del widget se sirven desde un protocolo interno seguro y limitado, sin conceder privilegios generales a `file://`.
 - Credenciales cifradas con `safeStorage`/DPAPI en Windows.
 - El renderer nunca recibe claves, cookies ni tokens: solo conoce si una conexión está configurada.
 - Contextos de login efímeros; no quedan perfiles de navegador persistentes.

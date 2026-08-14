@@ -2,7 +2,7 @@
 
 ## Versión en preparación
 
-`0.2.1` — corrección de recuperación del widget en configuraciones multimonitor.
+`0.2.2` — corrección de carga del renderer del widget en el paquete endurecido.
 
 ## Implementado
 
@@ -26,6 +26,7 @@
 - Navegador de producción resuelto mediante Edge/Chrome sin reactivar `runAsNode`.
 - Staging NTFS compatible con borrados pendientes del árbol de trabajo.
 - Recuperación desde bandeja: restaura ventanas minimizadas y las trae al monitor activo.
+- Renderer servido por un protocolo interno con lista cerrada de recursos; `file://` continúa sin privilegios adicionales.
 
 ## Validación de esta entrega
 
@@ -33,18 +34,18 @@
 |---|---|
 | ESLint 9 | Correcto |
 | TypeScript estricto y sin caché incremental | Correcto |
-| Tests unitarios dirigidos | 47/47 correctos |
+| Tests unitarios dirigidos | 50/50 correctos |
 | Auditoría del lockfile actualizado | 0 vulnerabilidades |
 | `npm run check` con dependencias nuevas | Correcto en copia NTFS limpia |
 | `npm run build` con Next.js 16 | Correcto en copia NTFS limpia |
-| Paquete Electron `0.2.1` | Setup (110.980.948 bytes) y portable (110.760.505 bytes) generados desde NTFS |
+| Paquete Electron `0.2.2` | Setup (110.981.533 bytes) y portable (110.761.113 bytes) generados desde NTFS |
 | Arranque del paquete previo al sellado de fuses | HTTP 200 en `127.0.0.1:31873` con perfil aislado |
-| Arranque del paquete final endurecido `0.2.0` | Instalado; servidor HTTP 200, tray y sondeo de proveedores correctos |
+| Arranque del paquete final endurecido `0.2.2` | Instalado sobre `0.2.1`; servidor HTTP 200, ventana visible y cuatro proveedores renderizados |
 | Configuración de fuses del EXE final | Verificada con `@electron/fuses read` |
 | Navegador del sistema | Microsoft Edge 151 iniciado correctamente mediante Playwright |
 | `electron:dev` invocado desde NAS | Correcto mediante staging NTFS; HTTP 200 en `127.0.0.1:32123` |
-| Firma de los artefactos `0.2.1` locales | `NotSigned`; requieren certificado del mantenedor antes de distribuir |
-| Recuperación visual `0.2.1` | Caso real reproducido y corregido; nueva instalación pendiente de prueba manual |
+| Firma de los artefactos `0.2.2` locales | `NotSigned`; requieren certificado del mantenedor antes de distribuir |
+| Carga visual del renderer `0.2.2` | Validada en la instalación final: URL interna, título, DOM, fondo, datos reales y panel de configuración correctos |
 
 ## Limitaciones reales
 

@@ -14,7 +14,7 @@
 3. Calcula el hash y compáralo con `SHA256SUMS.txt`:
 
    ```powershell
-   Get-FileHash '.\Dashboard Uso APIs-0.2.1-Setup.exe' -Algorithm SHA256
+   Get-FileHash '.\Dashboard Uso APIs-0.2.2-Setup.exe' -Algorithm SHA256
    ```
 
 4. Ejecuta el instalador y abre **Dashboard Uso APIs**.

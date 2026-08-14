@@ -11,6 +11,11 @@
 
 1. Revisa el menú `^` de iconos ocultos.
 2. Pulsa el icono de bandeja o **Mostrar widget**: se restaura y se mueve al monitor donde está el cursor.
+
+Desde `0.2.2`, el renderer se carga mediante el protocolo interno
+`dashboard-widget://`. Si esa carga falla, la aplicación muestra un error de
+arranque en vez de dejar una ventana transparente. Una ventana vacía en una
+versión anterior requiere actualizar el instalador, no borrar las credenciales.
 3. Ejecuta una sola vez la aplicación; la segunda instancia activa la primera y aplica la misma recuperación.
 4. Comprueba en Administrador de tareas que no haya una instancia bloqueada.
 5. Si es una instalación corporativa, pide a TI el evento del EDR usando hash y editor; no desactives el antivirus.

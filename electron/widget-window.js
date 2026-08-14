@@ -4,6 +4,7 @@ const { app, BrowserWindow, screen, ipcMain, shell } = require('electron');
 const path = require('path');
 const { setProviderHidden, updatePreferences } = require('./usage-poller');
 const { centeredPosition, isBoundsUsable, revealWindowOnDisplay } = require('./lib/window-placement');
+const { WIDGET_URL } = require('./lib/widget-protocol');
 
 const WIDGET_WIDTH = 340;
 const HEADER_HEIGHT = 56;
@@ -25,7 +26,7 @@ function revealWidgetWindow(win) {
   revealWindowOnDisplay(win, cursorDisplay.workArea);
 }
 
-function createWidgetWindow({ store, serverUrl }) {
+async function createWidgetWindow({ store, serverUrl }) {
   const initialHeight = HEADER_HEIGHT + CARD_HEIGHT;
   let savedPosition = store.get('windowPosition');
   if (savedPosition && !isPositionOnScreen(savedPosition.x, savedPosition.y, WIDGET_WIDTH, initialHeight)) {
@@ -55,6 +56,7 @@ function createWidgetWindow({ store, serverUrl }) {
     resizable: false,
     skipTaskbar: false,
     icon: path.join(__dirname, '..', 'assets', 'app-icon.png'),
+    show: false,
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
@@ -68,7 +70,6 @@ function createWidgetWindow({ store, serverUrl }) {
     win.setPosition(x, y);
   }
 
-  win.loadFile(path.join(__dirname, 'renderer', 'widget.html'));
   win.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
   win.webContents.on('will-navigate', (event) => event.preventDefault());
 
@@ -175,6 +176,13 @@ function createWidgetWindow({ store, serverUrl }) {
     return { ok: true, preferences, ...nextNativeSettings };
   });
 
+  try {
+    await win.loadURL(WIDGET_URL);
+  } catch (error) {
+    win.destroy();
+    throw new Error(`No se pudo cargar la interfaz del widget: ${error.message}`);
+  }
+  win.show();
   return win;
 }
 

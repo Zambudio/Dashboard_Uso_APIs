@@ -30,6 +30,7 @@ Este proyecto sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) 
 
 ### Corregido
 
+- El widget empaquetado ya no queda transparente: sus recursos se cargan mediante un protocolo interno seguro y el arranque falla de forma visible si el renderer no puede cargarse.
 - El widget ya no queda inaccesible en otra pantalla: la bandeja lo restaura y lo centra en el monitor activo.
 - Las posiciones que dejan solo una franja mínima visible se descartan al arrancar.
 - `electron:dev` ya no intenta compilar sobre NAS/SMB: usa staging NTFS sin copiar secretos.
