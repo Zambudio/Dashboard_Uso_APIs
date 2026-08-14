@@ -14,7 +14,7 @@
 3. Calcula el hash y compáralo con `SHA256SUMS.txt`:
 
    ```powershell
-   Get-FileHash '.\Dashboard Uso APIs-0.2.0-Setup.exe' -Algorithm SHA256
+   Get-FileHash '.\Dashboard Uso APIs-0.2.1-Setup.exe' -Algorithm SHA256
    ```
 
 4. Ejecuta el instalador y abre **Dashboard Uso APIs**.
@@ -26,7 +26,7 @@ La variante `portable.exe` no requiere instalación, pero conserva datos cifrado
 
 El botón de engranaje del widget permite cambiar tema, opacidad, intervalo, inicio con Windows, modo siempre visible y proveedores mostrados. **Abrir dashboard** permite crear y editar integraciones.
 
-Las credenciales quedan en `%APPDATA%\Dashboard Uso APIs\credentials.enc`, ligadas al usuario/máquina mediante DPAPI. No copies ese fichero como método de migración; revoca o vuelve a conectar las cuentas en el equipo nuevo.
+Las credenciales quedan en `%APPDATA%\dashboard-uso-apis\credentials.enc`, ligadas al usuario/máquina mediante DPAPI. No copies ese fichero como método de migración; revoca o vuelve a conectar las cuentas en el equipo nuevo.
 
 ## Actualizar
 

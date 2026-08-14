@@ -30,6 +30,8 @@ Mantener una aplicación local Windows, en español y sin datos simulados, que a
 - La app empaquetada reutiliza Microsoft Edge o Google Chrome si no existe un
   Chromium de Playwright. La descarga mediante CLI queda limitada al desarrollo,
   porque los fuses de producción impiden ejecutar el EXE como Node.
+- Mostrar el widget desde la bandeja lo restaura y lo lleva al monitor donde se
+  encuentra el cursor; las posiciones guardadas exigen una zona útil visible.
 
 ## Validación mínima
 
@@ -42,7 +44,7 @@ git diff --check
 
 Para una release: `npm run release:windows`, comprobación de firma, instalación limpia, una sola instancia, HTTP 200 en `127.0.0.1:3000` e interacción básica del widget.
 
-La build local validada de `0.2.0` sigue sin firma porque no están configurados
+La build local validada de `0.2.1` sigue sin firma porque no están configurados
 `WIN_CSC_LINK`/`WIN_CSC_KEY_PASSWORD`. No subir sus EXE a Releases ni pedir al
 usuario que ignore el EDR; el código fuente y CI sí pueden publicarse.
 

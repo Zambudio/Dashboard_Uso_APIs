@@ -8,7 +8,7 @@ const Store = require('electron-store').default;
 const { startCredentialBroker } = require('./credential-broker');
 const { waitForServer, spawnServer } = require('./server-manager');
 const { createTray } = require('./tray');
-const { createWidgetWindow } = require('./widget-window');
+const { createWidgetWindow, revealWidgetWindow } = require('./widget-window');
 const { startUsagePolling } = require('./usage-poller');
 
 const PORT = Number(process.env.DASHBOARD_PORT) || 3000;
@@ -32,9 +32,7 @@ if (!gotLock) {
 
   app.on('second-instance', () => {
     if (widgetWindow) {
-      if (widgetWindow.isMinimized()) widgetWindow.restore();
-      widgetWindow.show();
-      widgetWindow.focus();
+      revealWidgetWindow(widgetWindow);
     }
   });
 
@@ -101,7 +99,7 @@ if (!gotLock) {
     widgetWindow = createWidgetWindow({ store, serverUrl: SERVER_URL });
 
     tray = createTray({
-      onShowWidget: () => { widgetWindow.show(); widgetWindow.focus(); },
+      onShowWidget: () => revealWidgetWindow(widgetWindow),
       onOpenBrowser: () => shell.openExternal(SERVER_URL),
       onRestartServer: () => restartServer(broker),
       onQuit: () => app.quit(),

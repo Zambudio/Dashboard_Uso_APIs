@@ -2,7 +2,7 @@
 
 ## Versión en preparación
 
-`0.2.0` — endurecimiento de seguridad, panel de configuración del widget y preparación de repositorio/release profesional.
+`0.2.1` — corrección de recuperación del widget en configuraciones multimonitor.
 
 ## Implementado
 
@@ -25,6 +25,7 @@
 - Empaquetado antiguo `pkg` + tray C# retirado; `npm run exe` es alias de Electron Builder.
 - Navegador de producción resuelto mediante Edge/Chrome sin reactivar `runAsNode`.
 - Staging NTFS compatible con borrados pendientes del árbol de trabajo.
+- Recuperación desde bandeja: restaura ventanas minimizadas y las trae al monitor activo.
 
 ## Validación de esta entrega
 
@@ -32,18 +33,18 @@
 |---|---|
 | ESLint 9 | Correcto |
 | TypeScript estricto y sin caché incremental | Correcto |
-| Tests unitarios dirigidos | 43/43 correctos |
+| Tests unitarios dirigidos | 47/47 correctos |
 | Auditoría del lockfile actualizado | 0 vulnerabilidades |
 | `npm run check` con dependencias nuevas | Correcto en copia NTFS limpia |
 | `npm run build` con Next.js 16 | Correcto en copia NTFS limpia |
-| Paquete Electron `0.2.0` | Setup (110.980.553 bytes) y portable (110.760.117 bytes) generados desde NTFS |
+| Paquete Electron `0.2.1` | Setup (110.980.948 bytes) y portable (110.760.505 bytes) generados desde NTFS |
 | Arranque del paquete previo al sellado de fuses | HTTP 200 en `127.0.0.1:31873` con perfil aislado |
-| Arranque del paquete final endurecido | Bloqueado antes de ejecutar por App Control corporativo; requiere firma/allowlisting |
+| Arranque del paquete final endurecido `0.2.0` | Instalado; servidor HTTP 200, tray y sondeo de proveedores correctos |
 | Configuración de fuses del EXE final | Verificada con `@electron/fuses read` |
 | Navegador del sistema | Microsoft Edge 151 iniciado correctamente mediante Playwright |
 | `electron:dev` invocado desde NAS | Correcto mediante staging NTFS; HTTP 200 en `127.0.0.1:32123` |
-| Firma de los artefactos `0.2.0` locales | `NotSigned`; requieren certificado del mantenedor antes de distribuir |
-| Prueba visual/instalación en equipo corporativo | Bloqueada hasta firmar o autorizar el editor/hash |
+| Firma de los artefactos `0.2.1` locales | `NotSigned`; requieren certificado del mantenedor antes de distribuir |
+| Recuperación visual `0.2.1` | Caso real reproducido y corregido; nueva instalación pendiente de prueba manual |
 
 ## Limitaciones reales
 

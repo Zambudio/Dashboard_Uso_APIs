@@ -30,6 +30,8 @@ Este proyecto sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) 
 
 ### Corregido
 
+- El widget ya no queda inaccesible en otra pantalla: la bandeja lo restaura y lo centra en el monitor activo.
+- Las posiciones que dejan solo una franja mínima visible se descartan al arrancar.
 - `electron:dev` ya no intenta compilar sobre NAS/SMB: usa staging NTFS sin copiar secretos.
 - El widget de desarrollo usa puerto, configuración y bloqueo de instancia separados de la aplicación instalada.
 - Se retiran los artefactos y scripts que podían volver a generar la versión `0.1.0` sin firma.

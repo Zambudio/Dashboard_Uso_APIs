@@ -39,6 +39,10 @@ El broker escucha en un puerto aleatorio de loopback y exige un bearer token ale
 4. Ajustes nativos como `alwaysOnTop`, `openAtLogin` y el estado colapsado se guardan directamente en `electron-store`.
 5. El proceso principal aplica el cambio a la ventana y devuelve el estado normalizado.
 
+La posición se persiste, pero solo se acepta si queda una zona útil visible. Al
+pulsar el tray, el widget se restaura y, si estaba en otro monitor, se centra en
+la pantalla donde se realizó la acción.
+
 ## Flujo de credenciales
 
 1. Una clave manual viaja por HTTPS hacia el proveedor solo desde el servidor; localmente entra por `PUT /api/keys`.

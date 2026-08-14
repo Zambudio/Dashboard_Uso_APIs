@@ -11,6 +11,7 @@ Aplicación local para Windows que reúne en un solo panel el uso, los costes, s
 - Dashboard completo en el navegador local.
 - Consultas paralelas a proveedores y errores accionables en español.
 - Panel del widget para tema, opacidad, refresco, inicio con Windows, posición superior y proveedores visibles.
+- El icono de bandeja restaura el widget en el monitor donde se pulsa, incluso si quedó minimizado o en otra pantalla.
 - Credenciales cifradas con `safeStorage`/DPAPI en Windows.
 - El renderer nunca recibe claves, cookies ni tokens: solo conoce si una conexión está configurada.
 - Contextos de login efímeros; no quedan perfiles de navegador persistentes.
@@ -66,7 +67,7 @@ Abre `http://127.0.0.1:3000`. En desarrollo sin Electron, las credenciales usan 
 
 - Todo se procesa en el equipo del usuario.
 - El servidor escucha en `127.0.0.1`, nunca en todas las interfaces.
-- En Electron, los secretos viven en `%APPDATA%\Dashboard Uso APIs\credentials.enc`, cifrados por DPAPI y ligados al usuario de Windows.
+- En Electron, los secretos viven en `%APPDATA%\dashboard-uso-apis\credentials.enc`, cifrados por DPAPI y ligados al usuario de Windows.
 - Las preferencias viven en el almacén local no sensible de Electron.
 - No se usa `localStorage` ni cookies de la aplicación para persistir sesiones.
 - Algunos proveedores autentican sus propias páginas mediante cookies o tokens web. Cuando son imprescindibles, se capturan como un bloque opaco, se cifran y no se instalan como cookies persistentes del widget.

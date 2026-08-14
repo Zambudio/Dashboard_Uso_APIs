@@ -3,24 +3,26 @@
 const { app, BrowserWindow, screen, ipcMain, shell } = require('electron');
 const path = require('path');
 const { setProviderHidden, updatePreferences } = require('./usage-poller');
+const { centeredPosition, isBoundsUsable, revealWindowOnDisplay } = require('./lib/window-placement');
 
 const WIDGET_WIDTH = 340;
 const HEADER_HEIGHT = 56;
 const CARD_HEIGHT = 92;
 
 function isPositionOnScreen(x, y, width, height) {
-  return screen.getAllDisplays().some((display) => {
-    const area = display.workArea;
-    return x < area.x + area.width && x + width > area.x && y < area.y + area.height && y + height > area.y;
-  });
+  return isBoundsUsable(
+    { x, y, width, height },
+    screen.getAllDisplays().map((display) => display.workArea)
+  );
 }
 
 function getCenteredPosition(width, height) {
-  const area = screen.getPrimaryDisplay().workArea;
-  return {
-    x: Math.round(area.x + (area.width - width) / 2),
-    y: Math.round(area.y + (area.height - height) / 2),
-  };
+  return centeredPosition(screen.getPrimaryDisplay().workArea, width, height);
+}
+
+function revealWidgetWindow(win) {
+  const cursorDisplay = screen.getDisplayNearestPoint(screen.getCursorScreenPoint());
+  revealWindowOnDisplay(win, cursorDisplay.workArea);
 }
 
 function createWidgetWindow({ store, serverUrl }) {
@@ -176,4 +178,4 @@ function createWidgetWindow({ store, serverUrl }) {
   return win;
 }
 
-module.exports = { createWidgetWindow, isPositionOnScreen, getCenteredPosition };
+module.exports = { createWidgetWindow, getCenteredPosition, isPositionOnScreen, revealWidgetWindow };

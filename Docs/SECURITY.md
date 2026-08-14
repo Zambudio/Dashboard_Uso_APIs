@@ -12,7 +12,7 @@
 
 | Dato | Ubicación Electron | Protección |
 |---|---|---|
-| Claves, tokens y sesiones | `%APPDATA%\Dashboard Uso APIs\credentials.enc` | `safeStorage`/DPAPI |
+| Claves, tokens y sesiones | `%APPDATA%\dashboard-uso-apis\credentials.enc` | `safeStorage`/DPAPI |
 | Proveedores y preferencias | configuración de `electron-store` | No sensible |
 | Posición, colapsado y ajustes nativos | configuración de `electron-store` | No sensible |
 | Perfil de navegador | No persistido | Contexto efímero |
