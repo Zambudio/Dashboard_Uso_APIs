@@ -7,7 +7,14 @@
 - Internet para consultar proveedores.
 - Microsoft Edge o Google Chrome para los inicios de sesión web automatizados.
 
-## Instalador firmado
+## Estado actual
+
+La versión local `0.2.2` está funcionalmente validada, pero su Setup y portable
+no tienen firma Authenticode. No existe todavía una release pública que este
+proyecto considere instalable universalmente. Consulta el
+[cierre temporal y la deuda del certificado](./PROJECT_CLOSURE.md).
+
+## Cuando exista un instalador firmado
 
 1. Descarga el instalador desde [GitHub Releases](https://github.com/Zambudio/Dashboard_Uso_APIs/releases).
 2. Comprueba Propiedades → Firmas digitales y verifica que Windows muestre una firma válida del editor esperado.

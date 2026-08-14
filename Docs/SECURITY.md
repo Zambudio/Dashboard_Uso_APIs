@@ -51,6 +51,12 @@ El modelo sigue confiando en el usuario local: un proceso con capacidad de inspe
 
 SmartScreen, Smart App Control y muchos EDR valoran firma, reputación del editor, prevalencia y comportamiento. No hay un cambio de código que garantice la aceptación de un binario nuevo y sin reputación.
 
+**Estado al cerrar `0.2.2`:** el Setup y el portable locales muestran
+`Authenticode: NotSigned`. Son válidos para la prueba ya realizada en el equipo
+de referencia, pero no constituyen una release pública ni deben anunciarse como
+instalables en cualquier PC. La deuda, su alcance y las condiciones para
+resolverla están registradas en [PROJECT_CLOSURE.md](./PROJECT_CLOSURE.md).
+
 Una release pública debe:
 
 1. compilarse en CI desde un tag;

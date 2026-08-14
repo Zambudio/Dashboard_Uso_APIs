@@ -4,6 +4,14 @@
 
 Mantener una aplicación local Windows, en español y sin datos simulados, que agregue uso, coste y límites reales de proveedores de IA mediante un widget Electron y un dashboard web local.
 
+## Estado de continuidad
+
+Desarrollo funcional cerrado temporalmente en `0.2.2` el 14 de agosto de 2026.
+No iniciar nuevas iteraciones salvo reapertura explícita, corrección de seguridad
+o rotura causada por un proveedor. La única deuda bloqueante para una release
+pública es la firma Authenticode con certificado reconocido y su validación
+corporativa, descrita en `Docs/PROJECT_CLOSURE.md`.
+
 ## Lectura obligatoria
 
 1. [`README.md`](./README.md)
@@ -11,6 +19,7 @@ Mantener una aplicación local Windows, en español y sin datos simulados, que a
 3. [`Docs/README.md`](./Docs/README.md)
 4. [`Docs/PROJECT_STATUS.md`](./Docs/PROJECT_STATUS.md)
 5. [`Docs/ARCHITECTURE.md`](./Docs/ARCHITECTURE.md)
+6. [`Docs/PROJECT_CLOSURE.md`](./Docs/PROJECT_CLOSURE.md)
 
 ## Decisiones vigentes
 
@@ -46,7 +55,7 @@ git diff --check
 
 Para una release: `npm run release:windows`, comprobación de firma, instalación limpia, una sola instancia, HTTP 200 en `127.0.0.1:3000` e interacción básica del widget.
 
-La build local de `0.2.2` sigue sin firma porque no están configurados
+La build local validada de `0.2.2` sigue sin firma porque no están configurados
 `WIN_CSC_LINK`/`WIN_CSC_KEY_PASSWORD`. No subir sus EXE a Releases ni pedir al
 usuario que ignore el EDR; el código fuente y CI sí pueden publicarse.
 

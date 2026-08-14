@@ -12,6 +12,7 @@ Este proyecto sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) 
 
 ### Cambiado
 
+- La versión `0.2.2` queda como línea base funcional de cierre temporal; la firma reconocida se documenta como deuda bloqueante para distribución pública.
 - Una sola fuente de verdad para preferencias y proveedores en Electron.
 - El renderer solo conoce si existe una credencial; nunca recibe su contenido.
 - Las sesiones de navegador se capturan en contextos efímeros y se conservan únicamente en el almacén cifrado.

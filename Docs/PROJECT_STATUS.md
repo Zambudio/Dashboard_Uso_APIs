@@ -1,8 +1,13 @@
 # Estado del proyecto
 
-## Versión en preparación
+## Línea base de cierre
 
 `0.2.2` — corrección de carga del renderer del widget en el paquete endurecido.
+
+Estado: **desarrollo funcional cerrado temporalmente el 14 de agosto de 2026**.
+La aplicación está validada en el equipo de referencia. La publicación para
+cualquier PC sigue bloqueada por la firma de código pendiente; véase
+[PROJECT_CLOSURE.md](./PROJECT_CLOSURE.md).
 
 ## Implementado
 
@@ -56,6 +61,14 @@
 - El proveedor `custom` no consulta uso automáticamente.
 - Una build local sin certificado seguirá pudiendo activar SmartScreen/EDR. El código no puede sustituir la reputación y firma del editor.
 - Los artefactos locales `0.1.0`, `dashboard.exe` y `DashboardTray.exe` están retirados y no deben distribuirse.
+
+## Deuda pendiente
+
+Solo queda una deuda bloqueante para distribución: adquirir/configurar un
+certificado de firma de código reconocido (o Azure Trusted Signing), generar la
+release desde CI, verificar Authenticode y completar la prueba/allowlisting en
+un equipo corporativo. Los binarios locales `0.2.2` son `NotSigned` y no deben
+subirse a Releases ni describirse como instalables universalmente.
 
 ## Criterio de terminado
 

@@ -72,6 +72,19 @@ En GitHub, añade ambos valores como Actions secrets y crea un tag `v<versión>`
 
 Para usuarios generales se necesita un certificado de firma de código emitido por una CA reconocida o Azure Trusted Signing. Para entornos corporativos, coordina además la inclusión del editor/hash en la política EDR. Un PFX autofirmado no construye reputación en SmartScreen/SAC.
 
+### Deuda de distribución al cerrar `0.2.2`
+
+La aplicación `0.2.2` está funcionalmente validada, pero sus artefactos locales
+siguen mostrando `Authenticode: NotSigned`. Por tanto, la firma es una deuda
+**bloqueante para distribución pública**, aunque no impide usar la instalación
+ya probada en el equipo de referencia.
+
+El proyecto no se considerará distribuible «en cualquier PC» hasta completar el
+checklist de [cierre y reapertura](./PROJECT_CLOSURE.md). En particular, no debe
+publicarse `SHA256SUMS-UNSIGNED.txt` como si sustituyera una firma: el hash
+demuestra integridad respecto a un valor conocido, pero no la identidad del
+editor.
+
 ## NAS/SMB
 
 Si el repositorio vive en red, copia el código a NTFS, ejecuta allí `npm ci` y el build, y publica los artefactos resultantes. No copies `.env`, perfiles de navegador ni diagnósticos.

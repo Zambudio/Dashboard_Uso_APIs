@@ -10,6 +10,7 @@ Antes de modificar comportamiento o arquitectura, leer:
 - [PROJECT_CONTEXT.md](./PROJECT_CONTEXT.md)
 - [Docs/README.md](./Docs/README.md)
 - [Docs/PROJECT_STATUS.md](./Docs/PROJECT_STATUS.md)
+- [Docs/PROJECT_CLOSURE.md](./Docs/PROJECT_CLOSURE.md)
 
 La documentación forma parte del cambio. Actualizar el documento especializado y el estado en el mismo commit.
 
@@ -45,6 +46,8 @@ La documentación forma parte del cambio. Actualizar el documento especializado 
 - No editar ni versionar artefactos compilados; regenerarlos con `npm run electron:build`.
 - No usar `require.resolve('playwright')` en código empaquetado por Next para construir la ruta de su CLI.
 - Las releases públicas requieren firma reconocida y SHA-256.
+- Respetar el cierre temporal de `0.2.2`: no iniciar nuevas iteraciones salvo
+  reapertura explícita, corrección de seguridad o rotura de un proveedor.
 
 ## Desarrollo y build
 
