@@ -61,6 +61,19 @@ Una release pública debe:
 
 La firma autofirmada sirve para laboratorio, no para reputación pública.
 
+### Incidente del instalador 0.1.0
+
+El 13 de agosto de 2026 Kaspersky registró el instalador interno sin firma
+`Dashboard Uso APIs-0.1.0-Setup.exe` como `PDM.Win32.Generic`. El SHA-256 del
+aviso (`0EF8AD1399EBBF9E4D0558FAC432C5467766F8289CF89BEFEDBE4AA9DDBEBFE6`)
+coincidía exactamente con el artefacto local. `PDM` es una clasificación
+proactiva por comportamiento; no basta para afirmar malware ni para declarar
+por cuenta propia un falso positivo.
+
+La versión `0.1.0` queda retirada y no debe recibir excepciones generales. La
+respuesta correcta es generar una versión vigente desde CI, firmarla, verificar
+su hash y facilitarla al equipo EDR para análisis o allowlisting por editor.
+
 ## Respuesta ante incidente
 
 1. Cierra la aplicación desde la bandeja.

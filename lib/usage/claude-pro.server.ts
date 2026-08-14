@@ -1,44 +1,8 @@
-import { chromium } from 'playwright';
-import { spawnSync } from 'child_process';
-import path from 'path';
 import { ApiUsageSnapshot } from '@/types/api';
-
-// El Chromium de Playwright pesa ~300MB: no va empaquetado dentro del .exe
-// ni del repo (rompería un `git push` normal en GitHub). Se descarga una
-// sola vez, bajo demanda, al cache estandar de Playwright en este equipo
-// (necesita internet la primera vez que se usa la tarjeta de Claude Pro).
-function installChromium(): void {
-  // Next rewrites require.resolve('playwright') to a numeric webpack module id.
-  // The full package is copied next to the standalone server, and this path
-  // also exists at the repository root during development.
-  const cliPath = path.join(process.cwd(), 'node_modules', 'playwright', 'cli.js');
-  const result = spawnSync(process.execPath, [cliPath, 'install', 'chromium'], {
-    stdio: 'inherit',
-    env: {
-      ...process.env,
-      // Truco de pkg: si process.execPath es el propio dashboard.exe
-      // empaquetado, esta variable hace que se comporte como `node <script>`
-      // normal en vez de relanzar el snapshot del launcher. No-op si ya es
-      // un node.exe real (desarrollo).
-      PKG_EXECPATH: 'PKG_INVOKE_NODEJS',
-    },
-  });
-  if (result.status !== 0) {
-    throw new Error(
-      'No se pudo descargar Chromium automáticamente. Ejecuta manualmente "npx playwright install chromium" y vuelve a intentarlo.'
-    );
-  }
-}
+import { launchAvailableChromium } from '@/lib/playwright-browser.server';
 
 async function launchChromium() {
-  try {
-    return await chromium.launch({ headless: true });
-  } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
-    if (!message.includes('Executable doesn')) throw err;
-    installChromium();
-    return chromium.launch({ headless: true });
-  }
+  return launchAvailableChromium({ headless: true });
 }
 
 const CHROME_USER_AGENT =

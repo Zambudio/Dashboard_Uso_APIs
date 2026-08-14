@@ -27,7 +27,7 @@
     "test": "node --test electron/*.test.js electron/lib/*.test.js lib/*.test.js scripts/*.test.js",
     "check": "npm run lint && npm run typecheck && npm test",
     "icons": "node scripts/generate-icons.js",
-    "exe": "npm run build && node scripts/build-exe.js",
+    "exe": "npm run electron:build",
     "electron:dev": "node scripts/run-electron-dev.js",
     "electron:build": "npm run icons && npm run build && node scripts/prepare-standalone.js && electron-builder --win --publish never",
     "release:windows": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/build-signed-release.ps1"
@@ -43,7 +43,6 @@
     "@types/node": "20.19.43",
     "@types/react": "19.2.18",
     "@types/react-dom": "19.2.4",
-    "@yao-pkg/pkg": "^6.22.0",
     "autoprefixer": "10.5.4",
     "electron": "43.4.0",
     "electron-builder": "26.15.3",
@@ -52,12 +51,6 @@
     "postcss": "8.5.26",
     "tailwindcss": "3.4.19",
     "typescript": "5.9.3"
-  },
-  "pkg": {
-    "targets": [
-      "node22-win-x64"
-    ],
-    "outputPath": "dist"
   },
   "build": {
     "appId": "com.zambudio.dashboard-uso-apis",

@@ -23,6 +23,7 @@ npm run dev
 | `npm run build` | Standalone de producción. |
 | `npm run electron:dev` | Copia fuentes versionadas a NTFS, prepara standalone y abre un Electron aislado. |
 | `npm run electron:build` | Instalador y portable locales. |
+| `npm run exe` | Alias compatible de `electron:build`. |
 | `npm run release:windows` | Release firmada y SHA-256. |
 
 ## Estructura

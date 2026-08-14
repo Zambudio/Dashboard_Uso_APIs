@@ -25,6 +25,11 @@ Mantener una aplicación local Windows, en español y sin datos simulados, que a
 - `dist/` es un artefacto, no código fuente, y se publica mediante GitHub Releases.
 - Una release pública Windows debe estar firmada con certificado reconocido y acompañada de SHA-256.
 - Playwright se copia completo al standalone y su CLI se resuelve desde `process.cwd()`.
+- La distribución tiene un único empaquetador: Electron Builder. `npm run exe`
+  es alias de `electron:build`; se retiraron `pkg` y el lanzador C#.
+- La app empaquetada reutiliza Microsoft Edge o Google Chrome si no existe un
+  Chromium de Playwright. La descarga mediante CLI queda limitada al desarrollo,
+  porque los fuses de producción impiden ejecutar el EXE como Node.
 
 ## Validación mínima
 
@@ -36,6 +41,10 @@ git diff --check
 ```
 
 Para una release: `npm run release:windows`, comprobación de firma, instalación limpia, una sola instancia, HTTP 200 en `127.0.0.1:3000` e interacción básica del widget.
+
+La build local validada de `0.2.0` sigue sin firma porque no están configurados
+`WIN_CSC_LINK`/`WIN_CSC_KEY_PASSWORD`. No subir sus EXE a Releases ni pedir al
+usuario que ignore el EDR; el código fuente y CI sí pueden publicarse.
 
 `npm run electron:dev` crea automáticamente una copia NTFS sin secretos en
 `%LOCALAPPDATA%\DashboardUsoAPIs\dev-worktree`, usa el puerto `32123` y datos de

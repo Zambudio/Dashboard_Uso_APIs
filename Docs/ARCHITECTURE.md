@@ -82,6 +82,16 @@ Las rutas sensibles mantienen `force-dynamic` y el cliente usa `cache: 'no-store
 
 ## Empaquetado
 
-`next build` produce `.next/standalone`. `scripts/prepare-standalone.js` añade `public`, estáticos y Playwright. Electron arranca ese servidor con `ELECTRON_RUN_AS_NODE=1`. Los artefactos se generan fuera de Git y se publican mediante GitHub Releases.
+`next build` produce `.next/standalone`. `scripts/prepare-standalone.js` añade
+`public`, estáticos y Playwright. Electron arranca `server-entry.js` mediante
+`utilityProcess.fork`; no activa `ELECTRON_RUN_AS_NODE` y el fuse `runAsNode`
+permanece deshabilitado. Los artefactos se generan fuera de Git y se publican
+mediante GitHub Releases.
 
-La ruta `DashboardTray.exe`/`dashboard.exe` permanece como compatibilidad heredada, pero Electron es la arquitectura recomendada porque es la única que proporciona el broker DPAPI.
+Electron Builder es el único empaquetador. El antiguo launcher basado en `pkg`,
+`dashboard.exe` y el tray C# se retiró para evitar dos distribuciones con
+propiedades de seguridad diferentes.
+
+Los navegadores de Playwright no se incorporan al instalador. En desarrollo se
+puede descargar Chromium con su CLI; en la app empaquetada se reutiliza Edge o
+Chrome del sistema para no relajar los fuses ni ejecutar el EXE como Node.

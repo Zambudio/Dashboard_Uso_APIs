@@ -1,22 +1,5 @@
-import { chromium, Browser, Page } from 'playwright';
-import { spawnSync } from 'child_process';
-import path from 'path';
-
-function installChromium(): void {
-  // Ver el comentario equivalente en claude-pro.server.ts: evitamos
-  // require.resolve(), que Next convertiría en un id numérico del bundle.
-  const cliPath = path.join(process.cwd(), 'node_modules', 'playwright', 'cli.js');
-  const result = spawnSync(process.execPath, [cliPath, 'install', 'chromium'], {
-    stdio: 'inherit',
-    env: {
-      ...process.env,
-      PKG_EXECPATH: 'PKG_INVOKE_NODEJS',
-    },
-  });
-  if (result.status !== 0) {
-    throw new Error('No se pudo descargar Chromium automáticamente. Ejecuta "npx playwright install chromium" y vuelve a intentarlo.');
-  }
-}
+import { Browser, Page } from 'playwright';
+import { launchAvailableChromium } from '@/lib/playwright-browser.server';
 
 // Flags estándar de Chromium para evitar que trate esta página como "en
 // segundo plano" y le recorte el reloj de JS/temporizadores. Sin esto, el SPA
@@ -31,14 +14,7 @@ const ANTI_THROTTLE_ARGS = [
 ];
 
 export async function launchDeepSeekChromium(): Promise<Browser> {
-  try {
-    return await chromium.launch({ headless: true, args: ANTI_THROTTLE_ARGS });
-  } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
-    if (!message.includes('Executable doesn')) throw err;
-    installChromium();
-    return chromium.launch({ headless: true, args: ANTI_THROTTLE_ARGS });
-  }
+  return launchAvailableChromium({ headless: true, args: ANTI_THROTTLE_ARGS });
 }
 
 export interface DeepSeekScrapedUsage {

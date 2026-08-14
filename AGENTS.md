@@ -29,7 +29,7 @@ La documentación forma parte del cambio. Actualizar el documento especializado 
 - Fetchers: `lib/usage/*.server.ts`.
 - Login interactivo: `lib/browser-login.server.ts`.
 - Empaquetado recomendado: `electron/`, `server-entry.js`, `inspector-shim.js`, `scripts/prepare-standalone.js` y `electron-builder`.
-- Bandeja Windows: `scripts/tray-launcher.cs` → `dist/DashboardTray.exe`.
+- Bandeja Windows: proceso principal y `Tray` nativo de Electron.
 
 ## Reglas permanentes
 
@@ -57,6 +57,9 @@ npm test
 npm run build
 npm run electron:build
 ```
+
+`npm run exe` es un alias compatible de `npm run electron:build`; no existe un
+segundo empaquetador ni una ruta de distribución heredada.
 
 `npm run electron:dev` usa staging NTFS automático. Para otros builds desde
 SMB/NAS, si aparecen Watchpack, EPERM, error 4390 o bloqueos de `.next`, usar una

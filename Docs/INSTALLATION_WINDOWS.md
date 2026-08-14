@@ -4,7 +4,8 @@
 
 - Windows 10/11 de 64 bits.
 - Puerto local 3000 disponible.
-- Internet para consultar proveedores y descargar Chromium la primera vez que sea necesario.
+- Internet para consultar proveedores.
+- Microsoft Edge o Google Chrome para los inicios de sesión web automatizados.
 
 ## Instalador firmado
 
@@ -39,6 +40,10 @@ Las credenciales quedan en `%APPDATA%\Dashboard Uso APIs\credentials.enc`, ligad
 No desactives Defender ni crees exclusiones generales. Si un EDR bloquea una release correctamente firmada, entrega a TI el nombre del editor, versión, hash SHA-256 y enlace a la release para su proceso de allowlisting. Los binarios nuevos pueden necesitar reputación adicional incluso con firma válida.
 
 Una build local o una release sin firma reconocida no se considera distribuible. La firma autofirmada no resuelve Smart App Control.
+
+No ejecutes artefactos antiguos `0.1.0`, `dashboard.exe` o
+`DashboardTray.exe`: pertenecen al empaquetado retirado y no tienen firma ni el
+modelo actual de credenciales.
 
 ## Desde código fuente
 

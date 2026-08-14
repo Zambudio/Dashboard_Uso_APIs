@@ -5,11 +5,13 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
+const { spawnSync } = require('node:child_process');
 
 const {
   assertSafeTarget,
   copyTrackedFiles,
   createElectronEnvironment,
+  gitManifest,
   resolveLocalWorktree,
 } = require('./run-electron-dev');
 
@@ -34,6 +36,17 @@ test('copyTrackedFiles copies only the explicit Git manifest and removes stale t
   assert.equal(fs.readFileSync(path.join(target, 'app', 'page.tsx'), 'utf8'), 'export default 1;');
   assert.equal(fs.existsSync(path.join(target, '.env')), false);
   assert.equal(fs.existsSync(path.join(target, 'obsolete.js')), false);
+});
+
+test('gitManifest excludes tracked files deleted in the current worktree', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'dashboard-dev-git-'));
+  spawnSync('git', ['init', '--quiet'], { cwd: root });
+  fs.writeFileSync(path.join(root, 'kept.txt'), 'kept');
+  fs.writeFileSync(path.join(root, 'deleted.txt'), 'deleted');
+  spawnSync('git', ['add', 'kept.txt', 'deleted.txt'], { cwd: root });
+  fs.rmSync(path.join(root, 'deleted.txt'));
+
+  assert.deepEqual(gitManifest(root), ['kept.txt']);
 });
 
 test('createElectronEnvironment isolates dev user data and port from an installed instance', () => {

@@ -18,6 +18,8 @@ Este proyecto sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) 
 - Actualización a Next.js 16.3, React 19.2, Electron 43.4, TypeScript 5.9 y ESLint 9.39.
 - El servidor Next se ejecuta como proceso auxiliar de Electron y el paquete evita duplicar dependencias web.
 - Dependabot evita saltos semánticos mayores automáticos y los workflows usan las Actions vigentes.
+- `npm run exe` usa el único empaquetador vigente, Electron Builder; se retiran `pkg` y el tray C#.
+- La app empaquetada reutiliza Edge o Chrome para los flujos Playwright sin habilitar `runAsNode`.
 
 ### Seguridad
 
@@ -30,3 +32,6 @@ Este proyecto sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) 
 
 - `electron:dev` ya no intenta compilar sobre NAS/SMB: usa staging NTFS sin copiar secretos.
 - El widget de desarrollo usa puerto, configuración y bloqueo de instancia separados de la aplicación instalada.
+- Se retiran los artefactos y scripts que podían volver a generar la versión `0.1.0` sin firma.
+- El staging NTFS ignora correctamente archivos versionados eliminados antes de compilar.
+- Se documenta el aviso corporativo de Kaspersky del instalador interno `0.1.0` y su retirada.

@@ -1,8 +1,7 @@
-import { chromium, Browser, BrowserContext, Page } from 'playwright';
-import { spawnSync } from 'child_process';
-import path from 'path';
+import { Browser, BrowserContext, Page } from 'playwright';
 import { ApiUsageSnapshot, ProviderKey } from '@/types/api';
 import { readEnvKeys, writeEnvKeys } from '@/lib/env-keys.server';
+import { launchAvailableChromium } from '@/lib/playwright-browser.server';
 import { fetchClaudeProUsage } from '@/lib/usage/claude-pro.server';
 import { fetchOpenAIUsage } from '@/lib/usage/openai.server';
 import { parseDeepSeekUsageText } from '@/lib/usage/deepseek-scrape.server';
@@ -34,22 +33,6 @@ declare global {
 const activeSessions: Map<string, BrowserLoginSession> =
   globalThis.__browserLoginSessions ?? (globalThis.__browserLoginSessions = new Map<string, BrowserLoginSession>());
 
-function installChromium(): void {
-  // Next rewrites require.resolve('playwright') to a numeric webpack module id;
-  // the full package lives under node_modules of the standalone server.
-  const cliPath = path.join(process.cwd(), 'node_modules', 'playwright', 'cli.js');
-  const result = spawnSync(process.execPath, [cliPath, 'install', 'chromium'], {
-    stdio: 'inherit',
-    env: {
-      ...process.env,
-      PKG_EXECPATH: 'PKG_INVOKE_NODEJS',
-    },
-  });
-  if (result.status !== 0) {
-    throw new Error('No se pudo descargar Chromium automáticamente. Ejecuta "npx playwright install chromium".');
-  }
-}
-
 async function launchInteractiveChromium() {
   const launchOptions = {
     headless: false,
@@ -62,14 +45,7 @@ async function launchInteractiveChromium() {
     ],
   };
 
-  try {
-    return await chromium.launch(launchOptions);
-  } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
-    if (!message.includes('Executable doesn')) throw err;
-    installChromium();
-    return chromium.launch(launchOptions);
-  }
+  return launchAvailableChromium(launchOptions);
 }
 
 async function saveSecretForProvider(providerId: string, secret: string) {

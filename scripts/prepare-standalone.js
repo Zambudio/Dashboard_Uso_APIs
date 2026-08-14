@@ -28,7 +28,7 @@ fs.mkdirSync(bundleDir, { recursive: true });
 
 copyDir(nextStandalone, bundleStandalone);
 // `next build` con output:'standalone' no copia assets estáticos ni public/
-// — es un paso manual documentado, igual que en el antiguo build-exe.js.
+// — electron-builder necesita que los añadamos al bundle preparado.
 copyDir(path.join(root, '.next', 'static'), path.join(bundleStandalone, '.next', 'static'));
 copyDir(path.join(root, 'public'), path.join(bundleStandalone, 'public'));
 
@@ -36,7 +36,7 @@ copyDir(path.join(root, 'public'), path.join(bundleStandalone, 'public'));
 // pierde playwright/cli.js (referenciado con una ruta construida en
 // runtime, usada para instalar Chromium en el primer login de Claude
 // Pro/DeepSeek). Se copian los paquetes completos en vez de confiar en el
-// tracing parcial — igual razonamiento que el antiguo build-exe.js.
+// tracing parcial; por eso se copian explícitamente estos dos paquetes.
 copyDir(path.join(root, 'node_modules', 'playwright'), path.join(bundleStandalone, 'node_modules', 'playwright'));
 copyDir(path.join(root, 'node_modules', 'playwright-core'), path.join(bundleStandalone, 'node_modules', 'playwright-core'));
 

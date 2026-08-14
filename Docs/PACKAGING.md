@@ -47,6 +47,10 @@ npm run electron:build
 
 Este build puede quedar sin firma y activar controles de Windows. Es adecuado para desarrollo, no para una release pública.
 
+`npm run exe` es un alias de `electron:build`. La ruta histórica basada en
+`@yao-pkg/pkg`, `dashboard.exe` y un tray C# se eliminó; mantener un único
+empaquetador evita que se distribuya accidentalmente una variante sin DPAPI.
+
 ## Release firmada
 
 Exporta el certificado reconocido como PFX/Base64 y configura:
@@ -85,6 +89,9 @@ Si el repositorio vive en red, copia el código a NTFS, ejecuta allí `npm ci` y
 - [ ] panel de configuración y una integración real probados.
 - [ ] ningún secreto o artefacto aparece en Git.
 
-## Ruta heredada
+## Navegador de automatización
 
-`npm run exe` aún genera `dashboard.exe` y `DashboardTray.exe` para compatibilidad. No es la release recomendada y su `.env` no ofrece cifrado en reposo gestionado por la aplicación.
+El paquete incluye las bibliotecas de Playwright, pero no una copia de Chromium
+de cientos de megabytes. En producción usa Edge o Chrome instalado en Windows.
+La descarga por CLI se permite solo al ejecutar desde Node en desarrollo; no se
+reactiva `runAsNode` en el binario Electron.

@@ -94,6 +94,9 @@ npm run electron:build       # build local, puede quedar sin firma
 npm run release:windows      # exige certificado y verifica la firma
 ```
 
+`npm run exe` se conserva únicamente como alias de `electron:build`; ya no
+genera los antiguos `dashboard.exe`/`DashboardTray.exe`.
+
 ## Documentación
 
 - [Instalación Windows](./Docs/INSTALLATION_WINDOWS.md)

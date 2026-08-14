@@ -81,7 +81,13 @@ function gitManifest(source) {
   if (result.status !== 0) {
     throw new Error(`No se pudo obtener el manifiesto de Git: ${result.stderr || result.error?.message || 'error desconocido'}`);
   }
-  return result.stdout.split('\0').filter(Boolean);
+  return result.stdout
+    .split('\0')
+    .filter(Boolean)
+    .filter((file) => {
+      const relative = safeRelativePath(file);
+      return relative !== null && fs.existsSync(resolveInside(source, relative));
+    });
 }
 
 function fileHash(file) {
@@ -167,5 +173,6 @@ module.exports = {
   assertSafeTarget,
   copyTrackedFiles,
   createElectronEnvironment,
+  gitManifest,
   resolveLocalWorktree,
 };

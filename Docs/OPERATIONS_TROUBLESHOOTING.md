@@ -26,7 +26,8 @@ El widget reintenta a los 15 segundos tras un fallo puntual. Otro proceso en el 
 
 ## Chromium
 
-El primer login puede descargar Chromium. En desarrollo:
+La aplicación empaquetada usa Microsoft Edge y, como alternativa, Google Chrome.
+En desarrollo también puede usar el Chromium administrado por Playwright:
 
 ```powershell
 npx playwright install chromium
@@ -63,6 +64,8 @@ Si el comando termina sin mostrar ventana, comprueba la bandeja. El modo de
 desarrollo tiene un bloqueo de instancia y almacén propios, así que una versión
 instalada en el puerto `3000` no debería impedir ya su arranque.
 
-## Ruta heredada
+## Artefactos antiguos
 
-`DashboardTray.exe` requiere la antigua carpeta `dist/` completa y guarda secretos en `.env` sin cifrado gestionado. Solo se mantiene para compatibilidad y no debe usarse como distribución nueva.
+Los ejecutables `0.1.0`, `dashboard.exe` y `DashboardTray.exe` están retirados.
+Si aún aparecen en una copia local de `dist/`, no los ejecutes ni los entregues:
+regenera la versión vigente con `npm run electron:build`.
