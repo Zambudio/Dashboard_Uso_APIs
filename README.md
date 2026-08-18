@@ -49,7 +49,7 @@ El widget puede iniciarse con Windows, permanecer siempre visible y recordar sus
 | OpenAI / ChatGPT | API y sesión web, cuando el proveedor lo permite | Uso, costes, plan y saldo según los permisos reales |
 | Anthropic API | API oficial | Uso y costes según los permisos de la organización |
 | Claude Pro / Code | Sesión web | Límites de sesión y semanales |
-| Google Gemini | API o sesión web | Disponibilidad, cuota y plan cuando se exponen |
+| Google Gemini | API, sesión web o Antigravity IDE | Cuota en tiempo real (restante y resets de sesión/semanal), plan y disponibilidad |
 | DeepSeek | API y consola web | Saldo y métricas visibles en la cuenta |
 
 Los endpoints internos y las medidas anti-bot de los proveedores pueden cambiar. Cuando una métrica no existe, no está autorizada o no puede consultarse de forma fiable, la aplicación la representa como `unavailable`.

@@ -5,6 +5,7 @@ import { launchAvailableChromium } from '@/lib/playwright-browser.server';
 import { fetchClaudeProUsage } from '@/lib/usage/claude-pro.server';
 import { fetchOpenAIUsage } from '@/lib/usage/openai.server';
 import { parseDeepSeekUsageText } from '@/lib/usage/deepseek-scrape.server';
+import { fetchAntigravityUsage } from '@/lib/usage/antigravity.server';
 
 export type BrowserLoginState = 'starting' | 'waiting_user_login' | 'extracting' | 'completed' | 'cancelled' | 'error';
 
@@ -25,7 +26,6 @@ export interface BrowserLoginSession {
   capturedBearer?: string;
   isProcessing?: boolean;
 }
-
 declare global {
   var __browserLoginSessions: Map<string, BrowserLoginSession> | undefined;
 }
@@ -562,6 +562,35 @@ async function setupOpenAILogin(session: BrowserLoginSession) {
 async function setupGeminiLogin(session: BrowserLoginSession) {
   const page = session.page!;
   const context = session.context!;
+
+  // 1. Detección automática instantánea si Antigravity IDE está abierto
+  try {
+    const antigravitySnapshot = await fetchAntigravityUsage();
+    if (antigravitySnapshot) {
+      session.isProcessing = true;
+      session.status = 'extracting';
+      session.statusMessage = 'Detectado Antigravity en ejecución. Extrayendo cuotas...';
+
+      const secretPayload = JSON.stringify({
+        antigravity: true,
+        planType: antigravitySnapshot.planType,
+        cachedSnapshot: antigravitySnapshot,
+      });
+
+      await saveSecretForProvider(session.providerId, secretPayload);
+
+      session.usageSnapshot = antigravitySnapshot;
+      session.status = 'completed';
+      session.statusMessage = '¡Límites de Antigravity / Google Gemini vinculados correctamente!';
+
+      setTimeout(() => {
+        cleanupSession(session.id, true);
+      }, 1200);
+      return;
+    }
+  } catch (err) {
+    console.warn('[gemini-login] Antigravity auto-check warning:', err);
+  }
 
   session.status = 'waiting_user_login';
   session.statusMessage = 'Inicia sesión con tu cuenta de Google en Gemini (o abre tus "Límites de uso")...';

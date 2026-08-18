@@ -7,7 +7,7 @@
 | OpenAI / ChatGPT | Admin API Key o sesión web | API de organización y endpoints autenticados de ChatGPT | Coste, tokens, peticiones o porcentaje semanal según credencial | Una `sk-proj-*` no puede leer costes de organización. |
 | Anthropic Claude API | Admin API Key o sesión Claude | Usage/Cost Report API o sesión Claude | Tokens, coste o límites de sesión/semanales | Las claves estándar `sk-ant-api*` no tienen permisos de informes. |
 | Claude Pro / Code | Cookie `sessionKey` o login web | API interna de organizaciones de `claude.ai` | Uso de 5 h, uso semanal y resets | Cookie expirable; puede haber bloqueo Cloudflare. |
-| Google Gemini | API Key o login web | Validación de AI Studio o límites visibles de Gemini | Validez de key o límites actual/semanal | AI Studio no expone consumo o cuota por API key mediante este flujo. |
+| Google Gemini | Antigravity IDE, login web o API Key | Language Server local de Antigravity, límites de Gemini o AI Studio | Cuota en tiempo real (porcentaje de uso, restante, tiempo de reset de sesión/semanal) y plan | Si Antigravity IDE no está abierto, recurre a login web o validación de API key. |
 | DeepSeek | API Key o login web | API oficial de saldo y DOM de la consola Usage | Saldo, coste, tokens y peticiones | Coste/tokens/peticiones requieren sesión web; se puede mostrar el último snapshot si caduca. |
 | Personalizado | API Key | Ninguna | Sólo almacenamiento de configuración | Consulta automática no implementada (`501`). |
 
@@ -41,9 +41,10 @@ Los totales superiores suman únicamente `balance` y `accumulatedCost` presentes
 
 ## Gemini
 
-- Una API Key se valida consultando la lista de modelos, pero no produce métricas inventadas.
-- El login web captura un snapshot de los límites visibles en la interfaz de Gemini.
-- Los cambios en el DOM de Gemini pueden requerir adaptar `setupGeminiLogin`.
+- La integración sincroniza en tiempo real las cuotas y límites desde el Language Server local de Antigravity IDE (`GetUserStatus`).
+- Extrae el plan activo (`Google AI Pro`), el porcentaje de cuota consumido/restante y la hora exacta de restablecimiento (`resetTime`).
+- Si Antigravity no está en ejecución, el login web captura un snapshot de los límites visibles en la interfaz de Gemini.
+- Una API Key de AI Studio clásica se valida consultando la lista de modelos, sin producir métricas inventadas.
 
 ## DeepSeek
 

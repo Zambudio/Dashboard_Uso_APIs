@@ -1,9 +1,20 @@
 import { ApiUsageSnapshot } from '@/types/api';
+import { fetchAntigravityUsage } from './antigravity.server';
 
 export async function fetchGeminiUsage(apiKey: string): Promise<ApiUsageSnapshot> {
   const fetchedAt = new Date().toISOString();
 
-  // If the key looks like a JSON session snapshot or token
+  // 1. Intenta obtener datos en tiempo real desde el Language Server local de Antigravity
+  try {
+    const antigravitySnapshot = await fetchAntigravityUsage();
+    if (antigravitySnapshot) {
+      return antigravitySnapshot;
+    }
+  } catch (err) {
+    console.warn('[gemini] Antigravity check failed, falling back:', err);
+  }
+
+  // 2. Si la clave es un snapshot de sesión JSON previo
   if (apiKey.startsWith('{')) {
     try {
       const parsed = JSON.parse(apiKey) as {

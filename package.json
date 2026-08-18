@@ -1,7 +1,7 @@
 {
   "name": "dashboard-uso-apis",
   "version": "0.2.2",
-  "description": "Dashboard local para supervisar uso, costes y lÃ­mites reales de proveedores de IA.",
+  "description": "Dashboard local para supervisar uso, costes y límites reales de proveedores de IA.",
   "private": true,
   "license": "MIT",
   "author": "Pedro Zambudio",
@@ -29,7 +29,7 @@
     "icons": "node scripts/generate-icons.js",
     "exe": "npm run electron:build",
     "electron:dev": "node scripts/run-electron-dev.js",
-    "electron:build": "npm run icons && npm run build && node scripts/prepare-standalone.js && electron-builder --win --publish never",
+    "electron:build": "node scripts/build-electron-package.js",
     "release:windows": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/build-signed-release.ps1"
   },
   "dependencies": {

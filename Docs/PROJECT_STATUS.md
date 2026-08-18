@@ -12,6 +12,7 @@ cualquier PC sigue bloqueada por la firma de código pendiente; véase
 ## Implementado
 
 - Widget Electron, bandeja, instancia única y servidor Next.js standalone.
+- Integración nativa con Antigravity IDE (Google AI Pro): sincronización de cuotas reales (restante y tiempo de reset) mediante el Language Server local en la tarjeta de Google Gemini.
 - Panel de configuración integrado: tema, opacidad, intervalo, inicio con Windows, siempre visible y proveedores visibles.
 - Credenciales cifradas con DPAPI y fallo seguro sin cifrado.
 - Separación entre credenciales y configuración no sensible.
