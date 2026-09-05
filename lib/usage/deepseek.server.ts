@@ -82,7 +82,10 @@ function cookiesFromFlatString(cookieString: string): StoredCookie[] {
 }
 
 /** Aplica las cookies al contexto una a una para que una sola cookie inválida no tumbe el resto. */
-async function addCookiesSafely(context: import('playwright').BrowserContext, cookies: StoredCookie[]): Promise<number> {
+async function addCookiesSafely(
+  context: import('playwright').BrowserContext,
+  cookies: StoredCookie[]
+): Promise<number> {
   try {
     await context.addCookies(cookies);
     return cookies.length;
@@ -147,20 +150,33 @@ async function scrapeLiveDeepSeekUsage(
 
     await context.addInitScript(() => {
       try {
-        const navigatorPrototype = Object.getPrototypeOf(navigator) as { webdriver?: unknown };
-        delete navigatorPrototype.webdriver;
-        Object.defineProperty(navigator, 'webdriver', { get: () => undefined });
-        (window as Window & { chrome?: Record<string, unknown> }).chrome = {
-          runtime: {},
-          loadTimes: () => {},
-          csi: () => {},
-          app: {},
-        };
-        Object.defineProperty(navigator, 'plugins', {
-          get: () => [1, 2, 3, 4, 5],
-        });
+        const proto = Object.getPrototypeOf(navigator) as { webdriver?: unknown };
+        Object.defineProperty(proto, 'webdriver', { get: () => undefined, configurable: true });
+      } catch {
+        try {
+          Object.defineProperty(navigator, 'webdriver', { get: () => undefined, configurable: true });
+        } catch {}
+      }
+
+      try {
+        if (!(window as unknown as { chrome?: Record<string, unknown> }).chrome) {
+          (window as unknown as { chrome: Record<string, unknown> }).chrome = {
+            runtime: {},
+            loadTimes: () => {},
+            csi: () => {},
+            app: {},
+          };
+        }
+      } catch {}
+
+      try {
+        Object.defineProperty(navigator, 'plugins', { get: () => [1, 2, 3, 4, 5], configurable: true });
+      } catch {}
+
+      try {
         Object.defineProperty(navigator, 'languages', {
           get: () => ['es-ES', 'es', 'en-US', 'en'],
+          configurable: true,
         });
       } catch {}
     });
@@ -223,7 +239,9 @@ async function scrapeLiveDeepSeekUsage(
       scraped.requests === undefined &&
       scraped.toppedUpBalance === undefined
     ) {
-      const debugText = await page.evaluate(() => (document.body.innerText || '').slice(0, 300)).catch(() => '(no se pudo leer el texto)');
+      const debugText = await page
+        .evaluate(() => (document.body.innerText || '').slice(0, 300))
+        .catch(() => '(no se pudo leer el texto)');
       console.warn(
         '[deepseek-scrape] la página cargó pero no se encontraron datos de uso reconocibles (posible bloqueo/CAPTCHA de AWS WAF o cambio de interfaz). URL final:',
         currentUrl,
@@ -299,7 +317,10 @@ async function persistRefreshedSession(
     keys[providerId] = JSON.stringify(payload);
     await writeEnvKeys(keys);
   } catch (err) {
-    console.warn('[deepseek-scrape] no se pudo refrescar la sesión guardada:', err instanceof Error ? err.message : String(err));
+    console.warn(
+      '[deepseek-scrape] no se pudo refrescar la sesión guardada:',
+      err instanceof Error ? err.message : String(err)
+    );
   }
 }
 
@@ -358,7 +379,8 @@ export async function fetchDeepSeekUsage(secret: string, providerId?: string): P
       return {
         ...cached,
         fetchedAt,
-        error: 'Tu sesión web de DeepSeek parece haber caducado. Mostrando el último dato guardado — pulsa "Iniciar sesión web" para reconectar.',
+        error:
+          'Tu sesión web de DeepSeek parece haber caducado. Mostrando el último dato guardado — pulsa "Iniciar sesión web" para reconectar.',
       };
     }
   }

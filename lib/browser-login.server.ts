@@ -1,7 +1,7 @@
 import { Browser, BrowserContext, Page } from 'playwright';
 import { ApiUsageSnapshot, ProviderKey } from '@/types/api';
 import { readEnvKeys, writeEnvKeys } from '@/lib/env-keys.server';
-import { launchAvailableChromium } from '@/lib/playwright-browser.server';
+import { launchInteractivePersistentContext } from '@/lib/playwright-browser.server';
 import { fetchClaudeProUsage } from '@/lib/usage/claude-pro.server';
 import { fetchOpenAIUsage } from '@/lib/usage/openai.server';
 import { parseDeepSeekUsageText } from '@/lib/usage/deepseek-scrape.server';
@@ -33,21 +33,6 @@ declare global {
 const activeSessions: Map<string, BrowserLoginSession> =
   globalThis.__browserLoginSessions ?? (globalThis.__browserLoginSessions = new Map<string, BrowserLoginSession>());
 
-async function launchInteractiveChromium() {
-  const launchOptions = {
-    headless: false,
-    ignoreDefaultArgs: ['--enable-automation'],
-    args: [
-      '--no-sandbox',
-      '--disable-blink-features=AutomationControlled',
-      '--start-maximized',
-      '--disable-infobars',
-    ],
-  };
-
-  return launchAvailableChromium(launchOptions);
-}
-
 async function saveSecretForProvider(providerId: string, secret: string) {
   const currentKeys = await readEnvKeys();
   currentKeys[providerId] = secret;
@@ -75,37 +60,75 @@ export async function startBrowserLogin(providerId: string, provider: ProviderKe
 
   activeSessions.set(sessionId, session);
 
+  // Comprobación previa para Gemini: si Antigravity IDE ya está corriendo, vincular directamente sin abrir navegador
+  if (provider === 'gemini') {
+    try {
+      const antigravitySnapshot = await fetchAntigravityUsage();
+      if (antigravitySnapshot) {
+        session.status = 'extracting';
+        session.statusMessage = 'Detectado Antigravity en ejecución. Extrayendo cuotas...';
+
+        const secretPayload = JSON.stringify({
+          antigravity: true,
+          planType: antigravitySnapshot.planType,
+          cachedSnapshot: antigravitySnapshot,
+        });
+
+        await saveSecretForProvider(providerId, secretPayload);
+
+        session.usageSnapshot = antigravitySnapshot;
+        session.status = 'completed';
+        session.statusMessage = '¡Límites de Antigravity / Google Gemini vinculados correctamente!';
+
+        setTimeout(
+          () => {
+            activeSessions.delete(sessionId);
+          },
+          5 * 60 * 1000
+        );
+        return { sessionId };
+      }
+    } catch (err) {
+      console.warn('[gemini-login] Antigravity auto-check warning:', err);
+    }
+  }
+
   // Background execution
   void (async () => {
     try {
-      const browser = await launchInteractiveChromium();
-      session.browser = browser;
-      const context: BrowserContext = await browser.newContext({
-        viewport: null, // native size
-      });
+      const context: BrowserContext = await launchInteractivePersistentContext();
       session.context = context;
 
-      // Anti-bot stealth init script for Google / OAuth popups
+      // Anti-bot stealth init script para Google OAuth y Cloudflare
       await context.addInitScript(() => {
         try {
-          const navigatorPrototype = Object.getPrototypeOf(navigator) as { webdriver?: unknown };
-          delete navigatorPrototype.webdriver;
-          Object.defineProperty(navigator, 'webdriver', { get: () => undefined });
-          (window as Window & { chrome?: Record<string, unknown> }).chrome = {
-            runtime: {},
-            loadTimes: () => {},
-            csi: () => {},
-            app: {},
-          };
+          const proto = Object.getPrototypeOf(navigator) as { webdriver?: unknown };
+          delete proto.webdriver;
+          Object.defineProperty(proto, 'webdriver', { get: () => false, configurable: true });
+          Object.defineProperty(navigator, 'webdriver', { get: () => false, configurable: true });
+        } catch {}
+
+        try {
+          if (!('chrome' in window)) {
+            (window as unknown as { chrome: Record<string, unknown> }).chrome = {
+              runtime: {},
+              loadTimes: () => {},
+              csi: () => {},
+              app: { isInstalled: false },
+            };
+          }
+        } catch {}
+
+        try {
           Object.defineProperty(navigator, 'plugins', {
             get: () => [1, 2, 3, 4, 5],
+            configurable: true,
           });
           Object.defineProperty(navigator, 'languages', {
             get: () => ['es-ES', 'es', 'en-US', 'en'],
+            configurable: true,
           });
-        } catch {
-          // ignore
-        }
+        } catch {}
       });
 
       // Handle popup windows (like Google login popup in DeepSeek)
@@ -136,13 +159,16 @@ export async function startBrowserLogin(providerId: string, provider: ProviderKe
       });
 
       // 5-minute timeout guard
-      session.timeoutTimer = setTimeout(() => {
-        if (session.status !== 'completed') {
-          session.status = 'error';
-          session.statusMessage = 'Tiempo de espera agotado (5 minutos).';
-          cleanupSession(sessionId, true);
-        }
-      }, 5 * 60 * 1000);
+      session.timeoutTimer = setTimeout(
+        () => {
+          if (session.status !== 'completed') {
+            session.status = 'error';
+            session.statusMessage = 'Tiempo de espera agotado (5 minutos).';
+            cleanupSession(sessionId, true);
+          }
+        },
+        5 * 60 * 1000
+      );
 
       if (provider === 'claude-pro' || provider === 'anthropic') {
         await setupClaudeLogin(session);
@@ -289,12 +315,14 @@ async function setupOpenAILogin(session: BrowserLoginSession) {
   let capturedOrgId = '';
   let capturedOrgTitle = '';
   type UsageBucketResponse = {
-    data?: Array<{ results?: Array<{
-      amount?: { value?: number; currency?: string };
-      input_tokens?: number;
-      output_tokens?: number;
-      num_model_requests?: number;
-    }> }>;
+    data?: Array<{
+      results?: Array<{
+        amount?: { value?: number; currency?: string };
+        input_tokens?: number;
+        output_tokens?: number;
+        num_model_requests?: number;
+      }>;
+    }>;
   };
   let capturedCostsData: UsageBucketResponse | null = null;
   let capturedUsageData: UsageBucketResponse | null = null;
@@ -350,7 +378,7 @@ async function setupOpenAILogin(session: BrowserLoginSession) {
     }
   });
 
-  await page.goto('https://platform.openai.com/login', { waitUntil: 'domcontentloaded' });
+  await page.goto('https://chatgpt.com/auth/login', { waitUntil: 'domcontentloaded' });
 
   const check = async () => {
     if (session.isProcessing || session.status === 'completed' || session.status === 'error') return;
@@ -359,11 +387,43 @@ async function setupOpenAILogin(session: BrowserLoginSession) {
       const url = page.url();
       const cookies = await context.cookies();
       const sessionTokenCookie = cookies.find(
-        (c) => c.name === '__Secure-next-auth.session-token' || c.name === 'session-token' || c.name === '__Secure-auth.session-token'
+        (c) =>
+          c.name === '__Secure-next-auth.session-token' ||
+          c.name === 'session-token' ||
+          c.name === '__Secure-auth.session-token'
       );
 
-      const isInsidePlatform = url.includes('platform.openai.com') && !url.includes('/login') && !url.includes('/auth');
-      const isInsideChatGPT = url.includes('chatgpt.com') && !url.includes('/login') && !url.includes('/auth');
+      const isAuthPage =
+        url.includes('/auth') ||
+        url.includes('/login') ||
+        url.includes('accounts.google.com') ||
+        url.includes('auth0.openai.com') ||
+        url.includes('identity.openai.com');
+
+      const isInsidePlatform = url.includes('platform.openai.com') && !isAuthPage;
+      const isInsideChatGPT = url.includes('chatgpt.com') && !isAuthPage;
+
+      // Verificar en el DOM si el usuario ha iniciado sesión realmente en ChatGPT
+      let isLoggedInDOM = false;
+      if (isInsideChatGPT) {
+        isLoggedInDOM = await page.evaluate(() => {
+          try {
+            const pageText = document.body.innerText || '';
+            const hasAuthButtons =
+              /iniciar\s+sesi[óo]n|log\s+in|sign\s+in|create\s+account|registrarse|crear\s+cuenta/i.test(pageText);
+            const hasProfileButton = !!document.querySelector(
+              '[data-testid="profile-button"], [aria-label*="perfil"], [aria-label*="Profile"], #user-menu'
+            );
+            return hasProfileButton || (!hasAuthButtons && pageText.length > 600);
+          } catch {
+            return false;
+          }
+        });
+      }
+
+      const isUserLoggedIn =
+        (session.capturedBearer || sessionTokenCookie || isInsidePlatform || (isInsideChatGPT && isLoggedInDOM)) &&
+        !isAuthPage;
 
       // If logged in to platform, auto-navigate to usage to trigger native authenticated requests
       if (isInsidePlatform && !hasNavigatedToUsage && !url.includes('/usage')) {
@@ -373,7 +433,7 @@ async function setupOpenAILogin(session: BrowserLoginSession) {
         return;
       }
 
-      if (session.capturedBearer || sessionTokenCookie || isInsidePlatform || isInsideChatGPT) {
+      if (isUserLoggedIn) {
         session.isProcessing = true;
         session.status = 'extracting';
         session.statusMessage = 'Extrayendo datos de consumo de OpenAI / ChatGPT...';
@@ -392,8 +452,12 @@ async function setupOpenAILogin(session: BrowserLoginSession) {
                 let domWeeklyUtilization: number | undefined;
                 let domWeeklyResetsAt: string | undefined;
 
-                const remainingMatch = pageText.match(/(?:l[íi]mite\s+de\s+uso\s+semanal|weekly\s+usage\s+limit)[\s\S]*?(?:un\s+)?(\d+(?:[.,]\d+)?)\s*%\s*restante/i);
-                const usedMatch = pageText.match(/(?:l[íi]mite\s+de\s+uso\s+semanal|weekly\s+usage\s+limit)[\s\S]*?(?:un\s+)?(\d+(?:[.,]\d+)?)\s*%\s*(?:usado|consumido|used)/i);
+                const remainingMatch = pageText.match(
+                  /(?:l[íi]mite\s+de\s+uso\s+semanal|weekly\s+usage\s+limit)[\s\S]*?(?:un\s+)?(\d+(?:[.,]\d+)?)\s*%\s*restante/i
+                );
+                const usedMatch = pageText.match(
+                  /(?:l[íi]mite\s+de\s+uso\s+semanal|weekly\s+usage\s+limit)[\s\S]*?(?:un\s+)?(\d+(?:[.,]\d+)?)\s*%\s*(?:usado|consumido|used)/i
+                );
 
                 if (remainingMatch) {
                   const rem = parseFloat(remainingMatch[1].replace(',', '.'));
@@ -412,7 +476,10 @@ async function setupOpenAILogin(session: BrowserLoginSession) {
                 if (orgId) headers['OpenAI-Organization'] = orgId;
 
                 // Organizations
-                const orgsRes = await fetch('https://api.openai.com/v1/organizations', { credentials: 'include', headers })
+                const orgsRes = await fetch('https://api.openai.com/v1/organizations', {
+                  credentials: 'include',
+                  headers,
+                })
                   .then((r) => (r.ok ? r.json() : null))
                   .catch(() => null);
 
@@ -440,7 +507,10 @@ async function setupOpenAILogin(session: BrowserLoginSession) {
                 // manda las cookies de sesión reales), igual que el dashboard
                 // oficial de OpenAI para mostrar el saldo — más fiable que
                 // repetir la llamada desde el servidor con solo el bearer.
-                const grantsRes = await fetch('https://api.openai.com/dashboard/billing/credit_grants', { credentials: 'include', headers })
+                const grantsRes = await fetch('https://api.openai.com/dashboard/billing/credit_grants', {
+                  credentials: 'include',
+                  headers,
+                })
                   .then((r) => (r.ok ? r.json() : null))
                   .catch(() => null);
 
@@ -468,7 +538,12 @@ async function setupOpenAILogin(session: BrowserLoginSession) {
               planType: 'ChatGPT / OpenAI Workspace',
               balance,
               currency: balance !== undefined ? 'USD' : undefined,
-              unavailable: ['accumulatedCost', 'tokensUsed', 'requestCount', ...(balance === undefined ? ['balance'] : [])],
+              unavailable: [
+                'accumulatedCost',
+                'tokensUsed',
+                'requestCount',
+                ...(balance === undefined ? ['balance'] : []),
+              ],
             };
           } else if (costsData || usageData || grantsData) {
             let accumulatedCost = 0;
@@ -629,8 +704,12 @@ async function setupGeminiLogin(session: BrowserLoginSession) {
             }
 
             // Match "Uso actual" -> "0 % usado" or "0% usado"
-            const currentUsedMatch = pageText.match(/(?:uso\s+actual|current\s+usage)[\s\S]*?(\d+(?:[.,]\d+)?)\s*%\s*(?:usado|used)/i);
-            const currentRemainingMatch = pageText.match(/(?:uso\s+actual|current\s+usage)[\s\S]*?(?:un\s+)?(\d+(?:[.,]\d+)?)\s*%\s*restante/i);
+            const currentUsedMatch = pageText.match(
+              /(?:uso\s+actual|current\s+usage)[\s\S]*?(\d+(?:[.,]\d+)?)\s*%\s*(?:usado|used)/i
+            );
+            const currentRemainingMatch = pageText.match(
+              /(?:uso\s+actual|current\s+usage)[\s\S]*?(?:un\s+)?(\d+(?:[.,]\d+)?)\s*%\s*restante/i
+            );
 
             if (currentUsedMatch) {
               domSessionUtilization = parseFloat(currentUsedMatch[1].replace(',', '.'));
@@ -638,14 +717,20 @@ async function setupGeminiLogin(session: BrowserLoginSession) {
               domSessionUtilization = 100 - parseFloat(currentRemainingMatch[1].replace(',', '.'));
             }
 
-            const currentResetMatch = pageText.match(/(?:uso\s+actual|current\s+usage)[\s\S]*?(?:se\s+restablece\s+(?:a\s+las|el)?|resets?\s+(?:at|in)?)\s+([^\n\r]+)/i);
+            const currentResetMatch = pageText.match(
+              /(?:uso\s+actual|current\s+usage)[\s\S]*?(?:se\s+restablece\s+(?:a\s+las|el)?|resets?\s+(?:at|in)?)\s+([^\n\r]+)/i
+            );
             if (currentResetMatch) {
               domSessionResetsAt = currentResetMatch[1].trim();
             }
 
             // Match "Límite semanal" -> "0 % usado"
-            const weeklyUsedMatch = pageText.match(/(?:l[íi]mite\s+semanal|weekly\s+limit)[\s\S]*?(\d+(?:[.,]\d+)?)\s*%\s*(?:usado|used)/i);
-            const weeklyRemainingMatch = pageText.match(/(?:l[íi]mite\s+semanal|weekly\s+limit)[\s\S]*?(?:un\s+)?(\d+(?:[.,]\d+)?)\s*%\s*restante/i);
+            const weeklyUsedMatch = pageText.match(
+              /(?:l[íi]mite\s+semanal|weekly\s+limit)[\s\S]*?(\d+(?:[.,]\d+)?)\s*%\s*(?:usado|used)/i
+            );
+            const weeklyRemainingMatch = pageText.match(
+              /(?:l[íi]mite\s+semanal|weekly\s+limit)[\s\S]*?(?:un\s+)?(\d+(?:[.,]\d+)?)\s*%\s*restante/i
+            );
 
             if (weeklyUsedMatch) {
               domWeeklyUtilization = parseFloat(weeklyUsedMatch[1].replace(',', '.'));
@@ -653,7 +738,9 @@ async function setupGeminiLogin(session: BrowserLoginSession) {
               domWeeklyUtilization = 100 - parseFloat(weeklyRemainingMatch[1].replace(',', '.'));
             }
 
-            const weeklyResetMatch = pageText.match(/(?:l[íi]mite\s+semanal|weekly\s+limit)[\s\S]*?(?:se\s+restablece\s+(?:el|a\s+las)?|resets?\s+(?:on|in)?)\s+([^\n\r]+)/i);
+            const weeklyResetMatch = pageText.match(
+              /(?:l[íi]mite\s+semanal|weekly\s+limit)[\s\S]*?(?:se\s+restablece\s+(?:el|a\s+las)?|resets?\s+(?:on|in)?)\s+([^\n\r]+)/i
+            );
             if (weeklyResetMatch) {
               domWeeklyResetsAt = weeklyResetMatch[1].trim();
             }
@@ -667,7 +754,8 @@ async function setupGeminiLogin(session: BrowserLoginSession) {
             }
 
             const hasLimitsText = /l[íi]mites\s+de\s+uso|uso\s+actual|l[íi]mite\s+semanal/i.test(pageText);
-            const isLoggedIn = /pregunta\s+a\s+gemini|nueva\s+conversaci[óo]n|\bpro\b/i.test(pageText) || pageText.includes('Pedro');
+            const isLoggedIn =
+              /pregunta\s+a\s+gemini|nueva\s+conversaci[óo]n|\bpro\b/i.test(pageText) || pageText.includes('Pedro');
 
             return {
               hasLimitsText,
@@ -729,7 +817,8 @@ async function setupGeminiLogin(session: BrowserLoginSession) {
         }
 
         if (isInsideApp) {
-          session.statusMessage = 'Sesión de Gemini detectada. Pulsa Ajustes (⚙️) > "Límites de uso" o "Detectar ahora"...';
+          session.statusMessage =
+            'Sesión de Gemini detectada. Pulsa Ajustes (⚙️) > "Límites de uso" o "Detectar ahora"...';
 
           // Try clicking the settings / limits element automatically
           try {
@@ -747,7 +836,12 @@ async function setupGeminiLogin(session: BrowserLoginSession) {
               const gearBtn = allElements.find((el) => {
                 const label = (el.getAttribute('aria-label') || '').toLowerCase();
                 const icon = (el.textContent || '').trim();
-                return label.includes('ajustes') || label.includes('configuración') || label.includes('settings') || icon === 'settings';
+                return (
+                  label.includes('ajustes') ||
+                  label.includes('configuración') ||
+                  label.includes('settings') ||
+                  icon === 'settings'
+                );
               });
               if (gearBtn) {
                 (gearBtn as HTMLElement).click();
@@ -1021,7 +1115,10 @@ function cleanupSession(sessionId: string, closeBrowser = true) {
   }
 
   // Keep result in memory for 5 minutes so polling clients receive final status, then delete
-  setTimeout(() => {
-    activeSessions.delete(sessionId);
-  }, 5 * 60 * 1000);
+  setTimeout(
+    () => {
+      activeSessions.delete(sessionId);
+    },
+    5 * 60 * 1000
+  );
 }

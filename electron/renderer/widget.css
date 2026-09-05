@@ -1,27 +1,49 @@
-* { box-sizing: border-box; margin: 0; padding: 0; }
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
 
 /* <html> también cubre toda la ventana; si se queda con el fondo por
    defecto (no siempre transparente en Chromium/Windows) asoma cuadrado
    por detrás de las esquinas redondeadas de <body>. */
-html { background: transparent; }
+html {
+  background: transparent;
+}
 
 /* Temas de color: solo afectan a acentos decorativos (cabecera, barras de
    progreso). Los colores de estado (verde/ámbar/rojo del punto de cada
    tarjeta) son funcionales, no decorativos, y no cambian con el tema. */
-body, body[data-theme="aurora"] { --accent-1: #22d3ee; --accent-2: #d946ef; }
-body[data-theme="esmeralda"] { --accent-1: #10b981; --accent-2: #2dd4bf; }
-body[data-theme="ambar"] { --accent-1: #f59e0b; --accent-2: #fb923c; }
-body[data-theme="violeta"] { --accent-1: #8b5cf6; --accent-2: #ec4899; }
-body[data-theme="mono"] { --accent-1: #94a3b8; --accent-2: #cbd5e1; }
+body,
+body[data-theme='aurora'] {
+  --accent-1: #22d3ee;
+  --accent-2: #d946ef;
+}
+body[data-theme='esmeralda'] {
+  --accent-1: #10b981;
+  --accent-2: #2dd4bf;
+}
+body[data-theme='ambar'] {
+  --accent-1: #f59e0b;
+  --accent-2: #fb923c;
+}
+body[data-theme='violeta'] {
+  --accent-1: #8b5cf6;
+  --accent-2: #ec4899;
+}
+body[data-theme='mono'] {
+  --accent-1: #94a3b8;
+  --accent-2: #cbd5e1;
+}
 
 body {
-  font-family: -apple-system, "Segoe UI", sans-serif;
+  font-family: -apple-system, 'Segoe UI', sans-serif;
   /* Valor por defecto antes de que llegue la primera preferencia real desde
      el proceso principal (widget.js lo sobreescribe según widgetOpacity). */
   background: rgba(20, 20, 30, 0.92);
   color: #e2e8f0;
   border-radius: 16px;
-  border: 1px solid rgba(255,255,255,0.12);
+  border: 1px solid rgba(255, 255, 255, 0.12);
   overflow: hidden;
   -webkit-app-region: drag;
 }
@@ -49,8 +71,8 @@ body {
 #hidden-count {
   -webkit-app-region: no-drag;
   flex-shrink: 0;
-  background: rgba(255,255,255,0.06);
-  border: 1px solid rgba(255,255,255,0.12);
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
   color: #94a3b8;
   border-radius: 999px;
   padding: 3px 9px;
@@ -62,7 +84,7 @@ body {
 #hidden-count:hover,
 #hidden-count.open {
   color: #e2e8f0;
-  border-color: rgba(255,255,255,0.24);
+  border-color: rgba(255, 255, 255, 0.24);
 }
 
 #header-actions {
@@ -78,8 +100,8 @@ body {
 #widget-minimize,
 #widget-close {
   -webkit-app-region: no-drag;
-  background: rgba(255,255,255,0.08);
-  border: 1px solid rgba(255,255,255,0.12);
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.12);
   color: #e2e8f0;
   border-radius: 8px;
   width: 26px;
@@ -144,8 +166,8 @@ body.settings-open #banner {
   display: flex;
   align-items: center;
   gap: 8px;
-  background: rgba(255,255,255,0.03);
-  border: 1px dashed rgba(255,255,255,0.12);
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px dashed rgba(255, 255, 255, 0.12);
   border-radius: 10px;
   padding: 6px 8px 6px 10px;
   font-size: 12px;
@@ -158,8 +180,8 @@ body.settings-open #banner {
 
 .hidden-row button {
   -webkit-app-region: no-drag;
-  background: rgba(34,211,238,0.12);
-  border: 1px solid rgba(34,211,238,0.3);
+  background: rgba(34, 211, 238, 0.12);
+  border: 1px solid rgba(34, 211, 238, 0.3);
   color: #67e8f9;
   border-radius: 7px;
   padding: 3px 9px;
@@ -178,8 +200,8 @@ body.settings-open #banner {
   display: flex;
   align-items: center;
   gap: 9px;
-  background: rgba(255,255,255,0.05);
-  border: 1px solid rgba(255,255,255,0.08);
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 10px;
   padding: 8px 10px;
   font-size: 12.5px;
@@ -193,7 +215,7 @@ body.settings-open #banner {
   border-radius: 7px;
   flex-shrink: 0;
   object-fit: cover;
-  background: rgba(0,0,0,0.3);
+  background: rgba(0, 0, 0, 0.3);
 }
 
 .info {
@@ -228,7 +250,7 @@ body.settings-open #banner {
   justify-content: center;
   border: none;
   border-radius: 5px;
-  background: rgba(255,255,255,0.08);
+  background: rgba(255, 255, 255, 0.08);
   color: #94a3b8;
   font-size: 11px;
   line-height: 1;
@@ -242,7 +264,7 @@ body.settings-open #banner {
 }
 
 .card-hide-btn:hover {
-  background: rgba(244,63,94,0.18);
+  background: rgba(244, 63, 94, 0.18);
   color: #fda4af;
 }
 
@@ -294,7 +316,7 @@ body.settings-open #banner {
 .bar-track {
   height: 4px;
   border-radius: 2px;
-  background: rgba(255,255,255,0.08);
+  background: rgba(255, 255, 255, 0.08);
   overflow: hidden;
 }
 
@@ -303,8 +325,12 @@ body.settings-open #banner {
   border-radius: 2px;
 }
 
-.bar-fill.session { background: var(--accent-1); }
-.bar-fill.weekly { background: var(--accent-2); }
+.bar-fill.session {
+  background: var(--accent-1);
+}
+.bar-fill.weekly {
+  background: var(--accent-2);
+}
 
 .empty {
   padding: 10px;
@@ -318,7 +344,9 @@ body.settings-open #banner {
   padding: 0 12px 12px;
 }
 
-#settings-overlay[hidden] { display: none; }
+#settings-overlay[hidden] {
+  display: none;
+}
 
 #settings-form {
   display: flex;
@@ -326,7 +354,7 @@ body.settings-open #banner {
   gap: 12px;
   max-height: 610px;
   overflow-y: auto;
-  border: 1px solid rgba(255,255,255,0.1);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 12px;
   background: rgba(8, 10, 18, 0.76);
   padding: 14px;
@@ -340,16 +368,26 @@ body.settings-open #banner {
   align-items: center;
 }
 
-.settings-heading { justify-content: space-between; }
-.settings-heading h2 { font-size: 18px; color: #f8fafc; }
-.settings-kicker { color: var(--accent-1); font-size: 10px; text-transform: uppercase; letter-spacing: .18em; }
+.settings-heading {
+  justify-content: space-between;
+}
+.settings-heading h2 {
+  font-size: 18px;
+  color: #f8fafc;
+}
+.settings-kicker {
+  color: var(--accent-1);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+}
 
 #settings-close {
   width: 28px;
   height: 28px;
   border-radius: 8px;
-  border: 1px solid rgba(255,255,255,.12);
-  background: rgba(255,255,255,.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.06);
   color: #cbd5e1;
   cursor: pointer;
 }
@@ -368,30 +406,61 @@ body.settings-open #banner {
 .field select,
 #settings-form button {
   min-height: 32px;
-  border: 1px solid rgba(255,255,255,.12);
+  border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 8px;
   background: #202332;
   color: #e2e8f0;
   padding: 5px 9px;
 }
 
-.field input[type="range"] { width: 150px; accent-color: var(--accent-1); }
-.field output { margin-left: auto; color: var(--accent-1); }
+.field input[type='range'] {
+  width: 150px;
+  accent-color: var(--accent-1);
+}
+.field output {
+  margin-left: auto;
+  color: var(--accent-1);
+}
 
 #settings-form fieldset {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  border: 1px solid rgba(255,255,255,.09);
+  border: 1px solid rgba(255, 255, 255, 0.09);
   border-radius: 10px;
   padding: 10px;
 }
 
-#settings-form legend { padding: 0 5px; color: #94a3b8; font-size: 11px; }
-.check { gap: 8px; min-height: 26px; color: #cbd5e1; font-size: 12px; }
-.check input { width: 16px; height: 16px; accent-color: var(--accent-1); }
+#settings-form legend {
+  padding: 0 5px;
+  color: #94a3b8;
+  font-size: 11px;
+}
+.check {
+  gap: 8px;
+  min-height: 26px;
+  color: #cbd5e1;
+  font-size: 12px;
+}
+.check input {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--accent-1);
+}
 
-#settings-status { min-height: 16px; color: #fda4af; font-size: 11px; }
-.settings-actions { justify-content: flex-end; gap: 8px; }
-#settings-form button { cursor: pointer; }
-#settings-save { border-color: color-mix(in srgb, var(--accent-1) 55%, transparent) !important; color: var(--accent-1) !important; }
+#settings-status {
+  min-height: 16px;
+  color: #fda4af;
+  font-size: 11px;
+}
+.settings-actions {
+  justify-content: flex-end;
+  gap: 8px;
+}
+#settings-form button {
+  cursor: pointer;
+}
+#settings-save {
+  border-color: color-mix(in srgb, var(--accent-1) 55%, transparent) !important;
+  color: var(--accent-1) !important;
+}

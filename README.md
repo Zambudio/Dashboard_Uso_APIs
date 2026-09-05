@@ -23,12 +23,12 @@ Dashboard Uso APIs reúne la información real que cada proveedor permite consul
 
 ## Dos vistas, una sola aplicación
 
-| Widget de escritorio | Dashboard local |
-|---|---|
-| Resumen siempre a mano desde la bandeja de Windows | Vista completa de uso, costes, saldos y límites |
-| Panel propio de configuración | Gestión de proveedores y conexiones |
-| Tema, opacidad, refresco y proveedores visibles | Errores accionables en español |
-| Recuperación inteligente en el monitor activo | Datos reales o `unavailable`; nunca cifras inventadas |
+| Widget de escritorio                               | Dashboard local                                       |
+| -------------------------------------------------- | ----------------------------------------------------- |
+| Resumen siempre a mano desde la bandeja de Windows | Vista completa de uso, costes, saldos y límites       |
+| Panel propio de configuración                      | Gestión de proveedores y conexiones                   |
+| Tema, opacidad, refresco y proveedores visibles    | Errores accionables en español                        |
+| Recuperación inteligente en el monitor activo      | Datos reales o `unavailable`; nunca cifras inventadas |
 
 El widget puede iniciarse con Windows, permanecer siempre visible y recordar sus preferencias. Si queda minimizado o fuera de pantalla, el icono de bandeja lo restaura en el monitor donde se encuentra el cursor.
 
@@ -37,22 +37,32 @@ El widget puede iniciarse con Windows, permanecer siempre visible y recordar sus
 - **Configuración desde el propio widget:** tema, opacidad, intervalo de actualización, inicio con Windows, modo siempre visible y proveedores visibles.
 - **Credenciales protegidas en Windows:** Electron usa `safeStorage` y DPAPI; los secretos quedan ligados al usuario del sistema.
 - **Renderer sin secretos:** la interfaz solo sabe si una conexión está configurada. Nunca recibe claves, cookies ni tokens.
-- **Sesiones web efímeras:** no se conserva un perfil de navegador persistente. Si un proveedor exige cookies o tokens, se capturan como un bloque opaco y cifrado.
+- **Sesiones protegidas y sin datos personales:** el login interactivo usa un perfil de navegador
+  persistente fuera del paquete (cifrado del sistema/DPAPI en `%LOCALAPPDATA%\Dashboard_Uso_APIs\browser-profile`)
+  solo para que Google OAuth y otros proveedores recuerden la autenticación; la consulta automática de uso
+  navega en contextos efímeros sin perfil en disco. Si un proveedor exige cookies o tokens, se capturan como
+  bloque opaco y cifrado.
 - **Ejecución local:** el servidor escucha exclusivamente en `127.0.0.1`.
 - **Superficie reducida:** el renderer se carga mediante un protocolo interno con una lista cerrada de recursos, sin privilegios generales para `file://`.
 - **Automatización verificable:** lint, TypeScript y tests se ejecutan en [GitHub Actions](https://github.com/Zambudio/Dashboard_Uso_APIs/actions/workflows/ci.yml).
 
 ## Proveedores y datos
 
-| Integración | Fuente | Información disponible |
-|---|---|---|
-| OpenAI / ChatGPT | API y sesión web, cuando el proveedor lo permite | Uso, costes, plan y saldo según los permisos reales |
-| Anthropic API | API oficial | Uso y costes según los permisos de la organización |
-| Claude Pro / Code | Sesión web | Límites de sesión y semanales |
-| Google Gemini | API, sesión web o Antigravity IDE | Cuota en tiempo real (restante y resets de sesión/semanal), plan y disponibilidad |
-| DeepSeek | API y consola web | Saldo y métricas visibles en la cuenta |
+| Integración       | Fuente                                           | Información disponible                                                            |
+| ----------------- | ------------------------------------------------ | --------------------------------------------------------------------------------- |
+| OpenAI / ChatGPT  | API y sesión web, cuando el proveedor lo permite | Uso, costes, plan y saldo según los permisos reales                               |
+| Anthropic API     | API oficial                                      | Uso y costes según los permisos de la organización                                |
+| Claude Pro / Code | Sesión web                                       | Límites de sesión y semanales                                                     |
+| Google Gemini     | API, sesión web o Antigravity IDE                | Cuota en tiempo real (restante y resets de sesión/semanal), plan y disponibilidad |
+| DeepSeek          | API y consola web                                | Saldo y métricas visibles en la cuenta                                            |
 
 Los endpoints internos y las medidas anti-bot de los proveedores pueden cambiar. Cuando una métrica no existe, no está autorizada o no puede consultarse de forma fiable, la aplicación la representa como `unavailable`.
+
+> [!CAUTION]
+> El inicio de sesión web automatiza la consola del propio usuario (ChatGPT, Claude, DeepSeek, Google OAuth). Esto
+> puede incumplir los términos de servicio del proveedor y, en casos extremos, activar medidas anti-bot o bloqueos de
+> cuenta. Es una decisión responsable de quien instala la app: úsala solo sobre tus propias cuentas y con las claves o
+> sesiones que tú mismo aportas.
 
 ## Seguridad y privacidad
 
@@ -169,16 +179,16 @@ Una firma no garantiza por sí sola la reputación inmediata del editor, pero ap
 
 ## Documentación
 
-| Quiero… | Documento |
-|---|---|
-| Instalar o resolver un problema | [Instalación Windows](./Docs/INSTALLATION_WINDOWS.md) · [Operación](./Docs/OPERATIONS_TROUBLESHOOTING.md) |
-| Entender la seguridad | [Seguridad y credenciales](./Docs/SECURITY.md) |
-| Conocer arquitectura y API | [Arquitectura](./Docs/ARCHITECTURE.md) · [API local](./Docs/API_REFERENCE.md) |
-| Revisar proveedores y métricas | [Proveedores](./Docs/PROVIDERS.md) |
-| Compilar y firmar | [Empaquetado](./Docs/PACKAGING.md) · [Desarrollo](./Docs/DEVELOPMENT.md) |
-| Ver qué está realmente validado | [Estado del proyecto](./Docs/PROJECT_STATUS.md) · [Changelog](./CHANGELOG.md) |
-| Entender el cierre y la deuda pendiente | [Cierre temporal](./Docs/PROJECT_CLOSURE.md) |
-| Colaborar | [Guía de contribución](./CONTRIBUTING.md) |
+| Quiero…                                 | Documento                                                                                                                  |
+| --------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| Instalar o resolver un problema         | [Instalación Windows](./Docs/INSTALLATION_WINDOWS.md) · [Operación](./Docs/OPERATIONS_TROUBLESHOOTING.md)                  |
+| Entender la seguridad                   | [Seguridad y credenciales](./Docs/SECURITY.md)                                                                             |
+| Conocer arquitectura y API              | [Arquitectura](./Docs/ARCHITECTURE.md) · [API local](./Docs/API_REFERENCE.md)                                              |
+| Revisar proveedores y métricas          | [Proveedores](./Docs/PROVIDERS.md)                                                                                         |
+| Compilar y firmar                       | [Empaquetado](./Docs/PACKAGING.md) · [Desarrollo](./Docs/DEVELOPMENT.md) · [Firma con Azure](./Docs/CODE_SIGNING_AZURE.md) |
+| Ver qué está realmente validado         | [Estado del proyecto](./Docs/PROJECT_STATUS.md) · [Changelog](./CHANGELOG.md)                                              |
+| Entender el cierre y la deuda pendiente | [Cierre temporal](./Docs/PROJECT_CLOSURE.md)                                                                               |
+| Colaborar                               | [Guía de contribución](./CONTRIBUTING.md)                                                                                  |
 
 ## Estado actual
 

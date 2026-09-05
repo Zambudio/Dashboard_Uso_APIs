@@ -13,12 +13,14 @@ Objetivo: convertir este proyecto en un widget de escritorio nativo equivalente,
 ## Alcance
 
 **Dentro de alcance:**
+
 - Nuevo shell Electron que arranca el servidor Next.js existente y añade una ventana flotante + bandeja del sistema.
 - Migración de credenciales de `.env`/Base64 a almacenamiento cifrado con `safeStorage`.
 - Sustitución del empaquetado actual (`pkg` + WinForms) por `electron-builder`.
 - Actualización de la documentación (`README.md`, `Docs/`) afectada por el cambio de shell y de formato de `dist/`.
 
 **Fuera de alcance (deliberadamente, para no arriesgar trabajo recién estabilizado):**
+
 - Lógica de scraping/consulta por proveedor (`lib/usage/*.server.ts`).
 - Flujo de login interactivo con Playwright (`/api/auth/browser-login`, `BrowserLoginModal.tsx`).
 - Formato de `ApiUsageSnapshot` / `ApiProviderConfig` / `DashboardPreferences`.

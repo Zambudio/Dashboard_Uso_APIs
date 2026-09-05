@@ -28,14 +28,14 @@ Los detalles reproducibles están en [PROJECT_STATUS.md](./PROJECT_STATUS.md),
 
 ## Deuda abierta: certificado de firma de código
 
-| Campo | Estado |
-|---|---|
-| Tipo | Distribución y confianza del editor |
-| Prioridad | Bloqueante para una release pública de Windows |
-| Impacto funcional | Ninguno en el equipo donde `0.2.2` ya fue instalado y probado |
-| Evidencia actual | Setup y portable locales muestran `Authenticode: NotSigned` |
-| Riesgo | SmartScreen, Smart App Control o un EDR corporativo pueden bloquearlos |
-| Solución | Certificado reconocido o Azure Trusted Signing, timestamp y publicación desde CI |
+| Campo             | Estado                                                                           |
+| ----------------- | -------------------------------------------------------------------------------- |
+| Tipo              | Distribución y confianza del editor                                              |
+| Prioridad         | Bloqueante para una release pública de Windows                                   |
+| Impacto funcional | Ninguno en el equipo donde `0.2.2` ya fue instalado y probado                    |
+| Evidencia actual  | Setup y portable locales muestran `Authenticode: NotSigned`                      |
+| Riesgo            | SmartScreen, Smart App Control o un EDR corporativo pueden bloquearlos           |
+| Solución          | Certificado reconocido o Azure Trusted Signing, timestamp y publicación desde CI |
 
 La deuda no se resuelve desactivando el antivirus, creando exclusiones generales
 ni usando un certificado autofirmado. Tampoco puede garantizarse aceptación en

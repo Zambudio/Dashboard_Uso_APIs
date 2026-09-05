@@ -58,7 +58,10 @@ async function openaiGet<T>(url: string, token: string, extraHeaders?: Record<st
 
   if (!res.ok) {
     const text = await res.text().catch(() => '');
-    if (res.status === 403 && (text.includes('Missing scopes') || text.includes('api.usage.read') || token.startsWith('sk-proj-'))) {
+    if (
+      res.status === 403 &&
+      (text.includes('Missing scopes') || text.includes('api.usage.read') || token.startsWith('sk-proj-'))
+    ) {
       throw new Error(
         'Permisos insuficientes (403): La clave actual es una Project API Key (sk-proj-...). Para ver costes y uso de tokens se necesita una Admin API Key (sk-admin-...) con permisos "api.usage.read" y "api.costs.read" desde platform.openai.com/settings/organization/admin-keys, o usar "Iniciar sesión web".'
       );
@@ -78,7 +81,10 @@ async function openaiGet<T>(url: string, token: string, extraHeaders?: Record<st
  * lo que pase. Con la cookie/token de sesión real (no una API key de
  * proyecto) sí tiene sentido intentar el endpoint clásico de créditos.
  */
-async function tryFetchBalance(token: string, customHeaders: Record<string, string>): Promise<{ balance?: number; currency?: string }> {
+async function tryFetchBalance(
+  token: string,
+  customHeaders: Record<string, string>
+): Promise<{ balance?: number; currency?: string }> {
   try {
     const grants = await openaiGet<OpenAIDashboardCreditGrants>(
       'https://api.openai.com/dashboard/billing/credit_grants',
@@ -138,7 +144,8 @@ export async function fetchOpenAIUsage(secret: string): Promise<ApiUsageSnapshot
         headers: {
           Authorization: token.startsWith('Bearer ') ? token : `Bearer ${token}`,
           ...(sessionCookie ? { Cookie: sessionCookie } : {}),
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+          'User-Agent':
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
         },
         cache: 'no-store',
       });
@@ -148,7 +155,9 @@ export async function fetchOpenAIUsage(secret: string): Promise<ApiUsageSnapshot
         const weeklyUtil = wham.rate_limit?.primary_window?.used_percent ?? 0;
         const resetAtSeconds = wham.rate_limit?.primary_window?.reset_at;
         const weeklyResetsAt = resetAtSeconds ? new Date(resetAtSeconds * 1000).toISOString() : undefined;
-        const planName = wham.plan_type ? `ChatGPT ${wham.plan_type.charAt(0).toUpperCase() + wham.plan_type.slice(1)}` : 'ChatGPT Plus';
+        const planName = wham.plan_type
+          ? `ChatGPT ${wham.plan_type.charAt(0).toUpperCase() + wham.plan_type.slice(1)}`
+          : 'ChatGPT Plus';
         const balanceInfo = await tryFetchBalance(token, customHeaders);
 
         return {
@@ -158,7 +167,12 @@ export async function fetchOpenAIUsage(secret: string): Promise<ApiUsageSnapshot
           planType: planName,
           balance: balanceInfo.balance,
           currency: balanceInfo.currency,
-          unavailable: ['accumulatedCost', 'tokensUsed', 'requestCount', ...(balanceInfo.balance === undefined ? ['balance'] : [])],
+          unavailable: [
+            'accumulatedCost',
+            'tokensUsed',
+            'requestCount',
+            ...(balanceInfo.balance === undefined ? ['balance'] : []),
+          ],
         };
       }
     } catch {
@@ -322,7 +336,7 @@ export async function fetchOpenAIUsage(secret: string): Promise<ApiUsageSnapshot
   // propaga el error más informativo que tengamos (normalmente el 403 de
   // usage/completions, que explica qué tipo de key hace falta).
   if (snapshot.balance === undefined && snapshot.tokensUsed === undefined && snapshot.accumulatedCost === undefined) {
-    throw (usageError ?? balanceError ?? new Error('No se pudo obtener ningún dato de OpenAI con esta clave.'));
+    throw usageError ?? balanceError ?? new Error('No se pudo obtener ningún dato de OpenAI con esta clave.');
   }
 
   // Si conseguimos algo (ej. el saldo) pero tokens/coste fallaron por falta

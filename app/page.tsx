@@ -6,16 +6,70 @@ import { BrowserLoginModal } from '@/components/BrowserLoginModal';
 import { DashboardSettingsPanel } from '@/components/DashboardSettingsPanel';
 import { ProviderCard } from '@/components/ProviderCard';
 import { ProviderSettingsPanel } from '@/components/ProviderSettingsPanel';
-import { deleteProviderCredentials, fetchCredentialStatus, fetchProviderUsage, fetchServerConfig, savePreferences, saveProviderCredential, saveProviders } from '@/lib/storage';
+import {
+  deleteProviderCredentials,
+  fetchCredentialStatus,
+  fetchProviderUsage,
+  fetchServerConfig,
+  savePreferences,
+  saveProviderCredential,
+  saveProviders,
+} from '@/lib/storage';
 import { getProviderDefinition } from '@/lib/providers';
-import { ApiProviderConfig, ApiUsageSnapshot, DashboardPreferences, ProviderKey, ProviderVisibility } from '@/types/api';
+import {
+  ApiProviderConfig,
+  ApiUsageSnapshot,
+  DashboardPreferences,
+  ProviderKey,
+  ProviderVisibility,
+} from '@/types/api';
 
 const initialProviders: ApiProviderConfig[] = [
-  { id: 'openai', name: 'OpenAI / ChatGPT', provider: 'openai', kind: 'api', apiKey: '', status: 'unconfigured', visibility: 'visible' },
-  { id: 'claude-pro', name: 'Claude Pro / Code', provider: 'claude-pro', kind: 'subscription', apiKey: '', status: 'unconfigured', visibility: 'visible' },
-  { id: 'gemini', name: 'Google Gemini', provider: 'gemini', kind: 'api', apiKey: '', status: 'unconfigured', visibility: 'visible' },
-  { id: 'anthropic', name: 'Anthropic Claude (API)', provider: 'anthropic', kind: 'api', apiKey: '', status: 'unconfigured', visibility: 'visible' },
-  { id: 'deepseek', name: 'DeepSeek', provider: 'deepseek', kind: 'api', apiKey: '', status: 'unconfigured', visibility: 'visible' },
+  {
+    id: 'openai',
+    name: 'OpenAI / ChatGPT',
+    provider: 'openai',
+    kind: 'api',
+    apiKey: '',
+    status: 'unconfigured',
+    visibility: 'visible',
+  },
+  {
+    id: 'claude-pro',
+    name: 'Claude Pro / Code',
+    provider: 'claude-pro',
+    kind: 'subscription',
+    apiKey: '',
+    status: 'unconfigured',
+    visibility: 'visible',
+  },
+  {
+    id: 'gemini',
+    name: 'Google Gemini',
+    provider: 'gemini',
+    kind: 'api',
+    apiKey: '',
+    status: 'unconfigured',
+    visibility: 'visible',
+  },
+  {
+    id: 'anthropic',
+    name: 'Anthropic Claude (API)',
+    provider: 'anthropic',
+    kind: 'api',
+    apiKey: '',
+    status: 'unconfigured',
+    visibility: 'visible',
+  },
+  {
+    id: 'deepseek',
+    name: 'DeepSeek',
+    provider: 'deepseek',
+    kind: 'api',
+    apiKey: '',
+    status: 'unconfigured',
+    visibility: 'visible',
+  },
 ];
 
 const defaultPreferences: DashboardPreferences = {
@@ -67,10 +121,7 @@ export default function HomePage() {
   useEffect(() => {
     async function loadData() {
       // 1. Get configs from server & local
-      const [serverConfig, configuredIds] = await Promise.all([
-        fetchServerConfig(),
-        fetchCredentialStatus()
-      ]);
+      const [serverConfig, configuredIds] = await Promise.all([fetchServerConfig(), fetchCredentialStatus()]);
 
       // 2. Resolve preferences
       const effectivePrefs = serverConfig.preferences || defaultPreferences;
@@ -79,7 +130,7 @@ export default function HomePage() {
       // 3. Resolve providers
       const effectiveProviders = serverConfig.providers || [];
       let baseProviders = effectiveProviders.length > 0 ? effectiveProviders : initialProviders;
-      
+
       const storedIds = new Set(baseProviders.map((p) => p.id));
       const deletedDefaultIds = new Set(effectivePrefs.deletedDefaultProviderIds ?? []);
       const missingDefaults = initialProviders.filter((p) => !storedIds.has(p.id) && !deletedDefaultIds.has(p.id));
@@ -97,7 +148,9 @@ export default function HomePage() {
       }));
 
       // 5. Fetch usage
-      const toRefresh = providersWithStatus.filter((provider) => provider.connected && getProviderDefinition(provider.provider).usageImplemented);
+      const toRefresh = providersWithStatus.filter(
+        (provider) => provider.connected && getProviderDefinition(provider.provider).usageImplemented
+      );
 
       if (toRefresh.length) {
         setInitialLoadingIds(new Set(toRefresh.map((p) => p.id)));
@@ -117,7 +170,11 @@ export default function HomePage() {
             const next = current.map((provider) => {
               const snapshot = byId.get(provider.id);
               if (!snapshot) return provider;
-              return { ...provider, usage: snapshot, status: snapshot.error ? ('error' as const) : ('online' as const) };
+              return {
+                ...provider,
+                usage: snapshot,
+                status: snapshot.error ? ('error' as const) : ('online' as const),
+              };
             });
             saveProviders(next);
             return next;
@@ -171,13 +228,27 @@ export default function HomePage() {
   }, []);
 
   const totalBalance = useMemo(() => providers.reduce((sum, item) => sum + (item.usage?.balance ?? 0), 0), [providers]);
-  const totalCost = useMemo(() => providers.reduce((sum, item) => sum + (item.usage?.accumulatedCost ?? 0), 0), [providers]);
-  const visibleCount = useMemo(() => providers.filter((provider) => provider.visibility !== 'hidden').length, [providers]);
-  const hiddenCount = useMemo(() => providers.filter((provider) => provider.visibility === 'hidden').length, [providers]);
-  const connectedCount = useMemo(() => providers.filter((provider) => provider.connected && provider.visibility !== 'hidden').length, [providers]);
+  const totalCost = useMemo(
+    () => providers.reduce((sum, item) => sum + (item.usage?.accumulatedCost ?? 0), 0),
+    [providers]
+  );
+  const visibleCount = useMemo(
+    () => providers.filter((provider) => provider.visibility !== 'hidden').length,
+    [providers]
+  );
+  const hiddenCount = useMemo(
+    () => providers.filter((provider) => provider.visibility === 'hidden').length,
+    [providers]
+  );
+  const connectedCount = useMemo(
+    () => providers.filter((provider) => provider.connected && provider.visibility !== 'hidden').length,
+    [providers]
+  );
 
   const visibleProviders = useMemo(() => {
-    const filtered = providers.filter((provider) => preferences.showHiddenProviders || provider.visibility !== 'hidden');
+    const filtered = providers.filter(
+      (provider) => preferences.showHiddenProviders || provider.visibility !== 'hidden'
+    );
     switch (preferences.sortOrder) {
       case 'status':
         return [...filtered].sort((a, b) => a.status.localeCompare(b.status));
@@ -203,14 +274,21 @@ export default function HomePage() {
 
   const displayOrder = liveOrder ?? baseOrder;
   const displayProviders = useMemo(
-    () => displayOrder.map((id) => visibleProviders.find((p) => p.id === id)).filter((p): p is ApiProviderConfig => Boolean(p)),
+    () =>
+      displayOrder
+        .map((id) => visibleProviders.find((p) => p.id === id))
+        .filter((p): p is ApiProviderConfig => Boolean(p)),
     [displayOrder, visibleProviders]
   );
 
   const commitOrder = useCallback(
     (order: string[]) => {
       const hiddenIds = providers.map((p) => p.id).filter((id) => !order.includes(id));
-      const nextPrefs: DashboardPreferences = { ...preferences, sortOrder: 'default', cardOrder: [...order, ...hiddenIds] };
+      const nextPrefs: DashboardPreferences = {
+        ...preferences,
+        sortOrder: 'default',
+        cardOrder: [...order, ...hiddenIds],
+      };
       setPreferences(nextPrefs);
       savePreferences(nextPrefs);
     },
@@ -379,7 +457,8 @@ export default function HomePage() {
             <div>
               <h1 className="text-3xl font-semibold text-white sm:text-4xl">Monitor de uso de APIs de IA</h1>
               <p className="mt-3 max-w-2xl text-sm text-slate-400 sm:text-base">
-                Datos reales de saldo, coste y consumo de tus proveedores de API, con inicio de sesión web automático para Claude, ChatGPT y Gemini.
+                Datos reales de saldo, coste y consumo de tus proveedores de API, con inicio de sesión web automático
+                para Claude, ChatGPT y Gemini.
               </p>
             </div>
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
@@ -400,8 +479,16 @@ export default function HomePage() {
 
           {preferences.showSummaryCards && (
             <div className="mt-6 grid gap-4 md:grid-cols-3">
-              <SummaryCard title="Saldo total" value={`$${totalBalance.toFixed(2)}`} subtitle={`${visibleCount} proveedores activos`} />
-              <SummaryCard title="Coste acumulado (7 días)" value={`$${totalCost.toFixed(2)}`} subtitle={`${connectedCount} conectados`} />
+              <SummaryCard
+                title="Saldo total"
+                value={`$${totalBalance.toFixed(2)}`}
+                subtitle={`${visibleCount} proveedores activos`}
+              />
+              <SummaryCard
+                title="Coste acumulado (7 días)"
+                value={`$${totalCost.toFixed(2)}`}
+                subtitle={`${connectedCount} conectados`}
+              />
               <SummaryCard title="Tarjetas ocultas" value={`${hiddenCount}`} subtitle="Visibles en ajustes" />
             </div>
           )}
@@ -449,7 +536,9 @@ export default function HomePage() {
           {displayProviders.length === 0 ? (
             <div className="rounded-2xl border border-white/10 bg-[#151521]/90 p-8 text-center text-slate-300 shadow-card">
               <p className="text-xl font-semibold text-white">No hay proveedores visibles</p>
-              <p className="mt-2 text-sm text-slate-400">Activa &quot;Mostrar proveedores ocultos&quot; en ajustes o añade una nueva integración.</p>
+              <p className="mt-2 text-sm text-slate-400">
+                Activa &quot;Mostrar proveedores ocultos&quot; en ajustes o añade una nueva integración.
+              </p>
             </div>
           ) : (
             displayProviders.map((provider) => (

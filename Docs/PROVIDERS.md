@@ -2,14 +2,14 @@
 
 ## Matriz de capacidades
 
-| Proveedor | Conexión | Fuente real | Métricas principales | Limitaciones |
-|---|---|---|---|---|
-| OpenAI / ChatGPT | Admin API Key o sesión web | API de organización y endpoints autenticados de ChatGPT | Coste, tokens, peticiones o porcentaje semanal según credencial | Una `sk-proj-*` no puede leer costes de organización. |
-| Anthropic Claude API | Admin API Key o sesión Claude | Usage/Cost Report API o sesión Claude | Tokens, coste o límites de sesión/semanales | Las claves estándar `sk-ant-api*` no tienen permisos de informes. |
-| Claude Pro / Code | Cookie `sessionKey` o login web | API interna de organizaciones de `claude.ai` | Uso de 5 h, uso semanal y resets | Cookie expirable; puede haber bloqueo Cloudflare. |
-| Google Gemini | Antigravity IDE, login web o API Key | Language Server local de Antigravity, límites de Gemini o AI Studio | Cuota en tiempo real (porcentaje de uso, restante, tiempo de reset de sesión/semanal) y plan | Si Antigravity IDE no está abierto, recurre a login web o validación de API key. |
-| DeepSeek | API Key o login web | API oficial de saldo y DOM de la consola Usage | Saldo, coste, tokens y peticiones | Coste/tokens/peticiones requieren sesión web; se puede mostrar el último snapshot si caduca. |
-| Personalizado | API Key | Ninguna | Sólo almacenamiento de configuración | Consulta automática no implementada (`501`). |
+| Proveedor            | Conexión                             | Fuente real                                                         | Métricas principales                                                                         | Limitaciones                                                                                 |
+| -------------------- | ------------------------------------ | ------------------------------------------------------------------- | -------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
+| OpenAI / ChatGPT     | Admin API Key o sesión web           | API de organización y endpoints autenticados de ChatGPT             | Coste, tokens, peticiones o porcentaje semanal según credencial                              | Una `sk-proj-*` no puede leer costes de organización.                                        |
+| Anthropic Claude API | Admin API Key o sesión Claude        | Usage/Cost Report API o sesión Claude                               | Tokens, coste o límites de sesión/semanales                                                  | Las claves estándar `sk-ant-api*` no tienen permisos de informes.                            |
+| Claude Pro / Code    | Cookie `sessionKey` o login web      | API interna de organizaciones de `claude.ai`                        | Uso de 5 h, uso semanal y resets                                                             | Cookie expirable; puede haber bloqueo Cloudflare.                                            |
+| Google Gemini        | Antigravity IDE, login web o API Key | Language Server local de Antigravity, límites de Gemini o AI Studio | Cuota en tiempo real (porcentaje de uso, restante, tiempo de reset de sesión/semanal) y plan | Si Antigravity IDE no está abierto, recurre a login web o validación de API key.             |
+| DeepSeek             | API Key o login web                  | API oficial de saldo y DOM de la consola Usage                      | Saldo, coste, tokens y peticiones                                                            | Coste/tokens/peticiones requieren sesión web; se puede mostrar el último snapshot si caduca. |
+| Personalizado        | API Key                              | Ninguna                                                             | Sólo almacenamiento de configuración                                                         | Consulta automática no implementada (`501`).                                                 |
 
 ## Normalización
 

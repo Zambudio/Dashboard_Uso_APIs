@@ -56,10 +56,13 @@ function applyCollapsed(collapsed) {
 let collapsed = false;
 applyCollapsed(collapsed);
 
-window.widgetAPI.getSettings().then((settings) => {
-  collapsed = Boolean(settings.collapsed);
-  applyCollapsed(collapsed);
-}).catch(() => {});
+window.widgetAPI
+  .getSettings()
+  .then((settings) => {
+    collapsed = Boolean(settings.collapsed);
+    applyCollapsed(collapsed);
+  })
+  .catch(() => {});
 
 collapseBtn.addEventListener('click', () => {
   collapsed = !collapsed;
@@ -119,7 +122,9 @@ async function openSettings() {
 settingsBtn.addEventListener('click', openSettings);
 settingsCloseBtn.addEventListener('click', closeSettings);
 settingsCancelBtn.addEventListener('click', closeSettings);
-opacityInput.addEventListener('input', () => { opacityValue.value = `${opacityInput.value}%`; });
+opacityInput.addEventListener('input', () => {
+  opacityValue.value = `${opacityInput.value}%`;
+});
 
 settingsForm.addEventListener('submit', async (event) => {
   event.preventDefault();
@@ -153,12 +158,20 @@ settingsOverlay.addEventListener('keydown', (event) => {
     return;
   }
   if (event.key !== 'Tab') return;
-  const focusable = Array.from(settingsOverlay.querySelectorAll('button, input, select')).filter((item) => !item.disabled);
+  const focusable = Array.from(settingsOverlay.querySelectorAll('button, input, select')).filter(
+    (item) => !item.disabled
+  );
   if (!focusable.length) return;
   const first = focusable[0];
   const last = focusable[focusable.length - 1];
-  if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
-  if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
+  if (event.shiftKey && document.activeElement === first) {
+    event.preventDefault();
+    last.focus();
+  }
+  if (!event.shiftKey && document.activeElement === last) {
+    event.preventDefault();
+    first.focus();
+  }
 });
 
 window.widgetAPI.onServerStatus((status) => {
@@ -271,13 +284,16 @@ function buildCardBody(provider) {
 
   const hasSession = usage && (usage.sessionUtilization !== undefined || usage.sessionResetsAt !== undefined);
   const isSubscriptionLayout =
-    provider.kind === 'subscription' || (usage && (usage.sessionUtilization !== undefined || usage.weeklyUtilization !== undefined));
+    provider.kind === 'subscription' ||
+    (usage && (usage.sessionUtilization !== undefined || usage.weeklyUtilization !== undefined));
 
   if (isSubscriptionLayout) {
     if (hasSession) {
       body.appendChild(buildBarRow('Sesión', usage.sessionUtilization ?? 0, usage.sessionResetsAt, 'session'));
     }
-    body.appendChild(buildBarRow('Semanal', (usage && usage.weeklyUtilization) ?? 0, usage && usage.weeklyResetsAt, 'weekly'));
+    body.appendChild(
+      buildBarRow('Semanal', (usage && usage.weeklyUtilization) ?? 0, usage && usage.weeklyResetsAt, 'weekly')
+    );
   } else {
     const row = document.createElement('div');
     row.className = 'row';
@@ -348,7 +364,9 @@ function renderProviders(providers, preferences) {
       logo.alt = '';
       if (logoSrc) {
         logo.src = logoSrc;
-        logo.onerror = () => { logo.style.visibility = 'hidden'; };
+        logo.onerror = () => {
+          logo.style.visibility = 'hidden';
+        };
       } else {
         logo.style.visibility = 'hidden';
       }

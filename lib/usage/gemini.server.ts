@@ -63,6 +63,13 @@ export async function fetchGeminiUsage(apiKey: string): Promise<ApiUsageSnapshot
   return {
     fetchedAt,
     planType: 'Google AI Studio (API Key)',
-    unavailable: ['balance', 'accumulatedCost', 'tokensUsed', 'requestCount', 'sessionUtilization', 'weeklyUtilization'],
+    unavailable: [
+      'balance',
+      'accumulatedCost',
+      'tokensUsed',
+      'requestCount',
+      'sessionUtilization',
+      'weeklyUtilization',
+    ],
   };
 }

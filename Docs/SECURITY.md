@@ -10,14 +10,24 @@
 
 ## Persistencia
 
-| Dato | Ubicación Electron | Protección |
-|---|---|---|
-| Claves, tokens y sesiones | `%APPDATA%\dashboard-uso-apis\credentials.enc` | `safeStorage`/DPAPI |
-| Proveedores y preferencias | configuración de `electron-store` | No sensible |
-| Posición, colapsado y ajustes nativos | configuración de `electron-store` | No sensible |
-| Perfil de navegador | No persistido | Contexto efímero |
+| Dato                                  | Ubicación Electron                                  | Protección                  |
+| ------------------------------------- | --------------------------------------------------- | --------------------------- |
+| Claves, tokens y sesiones             | `%APPDATA%\dashboard-uso-apis\credentials.enc`      | `safeStorage`/DPAPI         |
+| Proveedores y preferencias            | configuración de `electron-store`                   | No sensible                 |
+| Posición, colapsado y ajustes nativos | configuración de `electron-store`                   | No sensible                 |
+| Perfil de login interactivo           | `%LOCALAPPDATA%\Dashboard_Uso_APIs\browser-profile` | Cifrado del sistema (DPAPI) |
 
-La aplicación no usa `localStorage`, `sessionStorage` ni cookies propias para conservar la sesión. DeepSeek y otros proveedores pueden exigir cookies o almacenamiento web de su origen; si se capturan, se serializan dentro del secreto cifrado y se rehidratan únicamente en un navegador efímero durante la consulta.
+La aplicación no usa `localStorage`, `sessionStorage` ni cookies propias para conservar la sesión. DeepSeek y otros proveedores pueden exigir cookies o almacenamiento web de su origen; si se capturan, se serializan dentro del secreto cifrado.
+
+El **login interactivo** (cuando un humano se autentica ante el proveedor) puede abrir un perfil persistente en
+`%LOCALAPPDATA%\Dashboard_Uso_APIs\browser-profile` para que Google OAuth y demás proveedores recuerden la sesión y no se
+repita la autenticación en cada uso. Ese perfil:
+
+- vive **fuera** del directorio de la app empaquetada, por lo que **no se distribuye** con el instalador;
+- cumple la persistencia cifrada del propio navegador (Chromium protege cookies con DPAPI en Windows), distinta del
+  `safeStorage` de la app;
+- puede eliminarse por completo borrando el directorio (la app no lo restaura).
+  La **consulta automática de uso** (`/api/usage` y el poller) nunca abre ese perfil: usa navegadores efímeros sin disco.
 
 ## Defensa del renderer Electron
 

@@ -36,22 +36,24 @@ cualquier PC sigue bloqueada por la firma de código pendiente; véase
 
 ## Validación de esta entrega
 
-| Comprobación | Estado |
-|---|---|
-| ESLint 9 | Correcto |
-| TypeScript estricto y sin caché incremental | Correcto |
-| Tests unitarios dirigidos | 50/50 correctos |
-| Auditoría del lockfile actualizado | 0 vulnerabilidades |
-| `npm run check` con dependencias nuevas | Correcto en copia NTFS limpia |
-| `npm run build` con Next.js 16 | Correcto en copia NTFS limpia |
-| Paquete Electron `0.2.2` | Setup (110.981.533 bytes) y portable (110.761.113 bytes) generados desde NTFS |
-| Arranque del paquete previo al sellado de fuses | HTTP 200 en `127.0.0.1:31873` con perfil aislado |
-| Arranque del paquete final endurecido `0.2.2` | Instalado sobre `0.2.1`; servidor HTTP 200, ventana visible y cuatro proveedores renderizados |
-| Configuración de fuses del EXE final | Verificada con `@electron/fuses read` |
-| Navegador del sistema | Microsoft Edge 151 iniciado correctamente mediante Playwright |
-| `electron:dev` invocado desde NAS | Correcto mediante staging NTFS; HTTP 200 en `127.0.0.1:32123` |
-| Firma de los artefactos `0.2.2` locales | `NotSigned`; requieren certificado del mantenedor antes de distribuir |
-| Carga visual del renderer `0.2.2` | Validada en la instalación final: URL interna, título, DOM, fondo, datos reales y panel de configuración correctos |
+| Comprobación                                    | Estado                                                                                                             |
+| ----------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| ESLint 9                                        | Correcto                                                                                                           |
+| TypeScript estricto y sin caché incremental     | Correcto                                                                                                           |
+| Tests unitarios dirigidos                       | 50/50 correctos                                                                                                    |
+| Auditoría del lockfile actualizado              | 0 vulnerabilidades (`npm audit --audit-level=high`) tras `npm audit fix`                                           |
+| Formateo con Prettier                           | `format:check` correcto                                                                                            |
+| `GET /api/health` + `GET /api/keys` (smoke)     | HTTP 200 y forma esperada en `.next/standalone`                                                                    |
+| `npm run check` con dependencias nuevas         | Correcto en copia NTFS limpia                                                                                      |
+| `npm run build` con Next.js 16                  | Correcto en copia NTFS limpia                                                                                      |
+| Paquete Electron `0.2.2`                        | Setup (110.981.533 bytes) y portable (110.761.113 bytes) generados desde NTFS                                      |
+| Arranque del paquete previo al sellado de fuses | HTTP 200 en `127.0.0.1:31873` con perfil aislado                                                                   |
+| Arranque del paquete final endurecido `0.2.2`   | Instalado sobre `0.2.1`; servidor HTTP 200, ventana visible y cuatro proveedores renderizados                      |
+| Configuración de fuses del EXE final            | Verificada con `@electron/fuses read`                                                                              |
+| Navegador del sistema                           | Microsoft Edge 151 iniciado correctamente mediante Playwright                                                      |
+| `electron:dev` invocado desde NAS               | Correcto mediante staging NTFS; HTTP 200 en `127.0.0.1:32123`                                                      |
+| Firma de los artefactos `0.2.2` locales         | `NotSigned`; requieren certificado del mantenedor antes de distribuir                                              |
+| Carga visual del renderer `0.2.2`               | Validada en la instalación final: URL interna, título, DOM, fondo, datos reales y panel de configuración correctos |
 
 ## Limitaciones reales
 

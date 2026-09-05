@@ -55,9 +55,7 @@ if (!gotLock) {
   }
 
   function envFilePath() {
-    return app.isPackaged
-      ? path.join(app.getPath('userData'), '.env')
-      : path.join(__dirname, '..', '.env');
+    return app.isPackaged ? path.join(app.getPath('userData'), '.env') : path.join(__dirname, '..', '.env');
   }
 
   async function startServer(broker) {
@@ -96,58 +94,64 @@ if (!gotLock) {
     await startServer(broker);
   }
 
-  app.whenReady().then(async () => {
-    await registerWidgetProtocol({
-      protocol,
-      net,
-      rendererRoot: path.join(__dirname, 'renderer'),
+  app
+    .whenReady()
+    .then(async () => {
+      await registerWidgetProtocol({
+        protocol,
+        net,
+        rendererRoot: path.join(__dirname, 'renderer'),
+      });
+
+      const broker = await startCredentialBroker({
+        safeStorage,
+        filePath: path.join(app.getPath('userData'), 'credentials.enc'),
+        legacyEnvPath: envFilePath(),
+        configStore: store,
+      });
+      console.log('[widget] Broker de credenciales escuchando en ' + broker.url);
+
+      const ok = await startServer(broker);
+      if (!ok) return;
+
+      widgetWindow = await createWidgetWindow({ store, serverUrl: SERVER_URL });
+
+      tray = createTray({
+        onShowWidget: () => revealWidgetWindow(widgetWindow),
+        onOpenBrowser: () => shell.openExternal(SERVER_URL),
+        onRestartServer: () => restartServer(broker),
+        onQuit: () => app.quit(),
+      });
+
+      stopPolling = startUsagePolling({
+        serverUrl: SERVER_URL,
+        onUpdate: (snapshot) => {
+          if (widgetWindow && !widgetWindow.isDestroyed()) {
+            // Un sondeo que sí responde confirma que el servidor está vivo:
+            // limpia cualquier aviso de "servidor no responde" previo antes
+            // de empujar los datos nuevos.
+            widgetWindow.webContents.send('server-status', { down: false });
+            widgetWindow.webContents.send('usage-update', snapshot);
+          }
+          if (tray) tray.updateFromProviders(snapshot.providers || []);
+        },
+        onError: (err) => {
+          console.error('[widget] Error consultando el dashboard:', err.message);
+          if (widgetWindow && !widgetWindow.isDestroyed()) {
+            widgetWindow.webContents.send('server-status', { down: true });
+          }
+        },
+      });
+    })
+    .catch((error) => {
+      const message = error instanceof Error ? error.message : String(error);
+      console.error('[widget] Error fatal durante el arranque:', message);
+      dialog.showErrorBox(
+        'Dashboard Uso APIs no pudo iniciarse',
+        `${message}\n\nNo se ha guardado ninguna credencial sin cifrar.`
+      );
+      app.quit();
     });
-
-    const broker = await startCredentialBroker({
-      safeStorage,
-      filePath: path.join(app.getPath('userData'), 'credentials.enc'),
-      legacyEnvPath: envFilePath(),
-      configStore: store,
-    });
-    console.log('[widget] Broker de credenciales escuchando en ' + broker.url);
-
-    const ok = await startServer(broker);
-    if (!ok) return;
-
-    widgetWindow = await createWidgetWindow({ store, serverUrl: SERVER_URL });
-
-    tray = createTray({
-      onShowWidget: () => revealWidgetWindow(widgetWindow),
-      onOpenBrowser: () => shell.openExternal(SERVER_URL),
-      onRestartServer: () => restartServer(broker),
-      onQuit: () => app.quit(),
-    });
-
-    stopPolling = startUsagePolling({
-      serverUrl: SERVER_URL,
-      onUpdate: (snapshot) => {
-        if (widgetWindow && !widgetWindow.isDestroyed()) {
-          // Un sondeo que sí responde confirma que el servidor está vivo:
-          // limpia cualquier aviso de "servidor no responde" previo antes
-          // de empujar los datos nuevos.
-          widgetWindow.webContents.send('server-status', { down: false });
-          widgetWindow.webContents.send('usage-update', snapshot);
-        }
-        if (tray) tray.updateFromProviders(snapshot.providers || []);
-      },
-      onError: (err) => {
-        console.error('[widget] Error consultando el dashboard:', err.message);
-        if (widgetWindow && !widgetWindow.isDestroyed()) {
-          widgetWindow.webContents.send('server-status', { down: true });
-        }
-      },
-    });
-  }).catch((error) => {
-    const message = error instanceof Error ? error.message : String(error);
-    console.error('[widget] Error fatal durante el arranque:', message);
-    dialog.showErrorBox('Dashboard Uso APIs no pudo iniciarse', `${message}\n\nNo se ha guardado ninguna credencial sin cifrar.`);
-    app.quit();
-  });
 
   app.on('window-all-closed', () => {
     // La bandeja mantiene la app viva; este proyecto solo soporta Windows.

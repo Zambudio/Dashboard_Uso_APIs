@@ -1,11 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { ProviderKey } from '@/types/api';
-import { startBrowserLogin, getBrowserLoginStatus, cancelBrowserLogin, forceCheckSession } from '@/lib/browser-login.server';
+import {
+  startBrowserLogin,
+  getBrowserLoginStatus,
+  cancelBrowserLogin,
+  forceCheckSession,
+} from '@/lib/browser-login.server';
 
 export const dynamic = 'force-dynamic';
 
 export async function POST(request: NextRequest) {
-  let body: { action?: 'start' | 'cancel' | 'force_check'; providerId?: string; provider?: ProviderKey; sessionId?: string };
+  let body: {
+    action?: 'start' | 'cancel' | 'force_check';
+    providerId?: string;
+    provider?: ProviderKey;
+    sessionId?: string;
+  };
   try {
     body = await request.json();
   } catch {

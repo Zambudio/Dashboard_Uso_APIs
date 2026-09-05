@@ -19,7 +19,10 @@ export async function fetchProviderUsage(id: string, provider: ProviderKey): Pro
     }
     return data as ApiUsageSnapshot;
   } catch (err) {
-    return { fetchedAt: new Date().toISOString(), error: err instanceof Error ? err.message : 'Error de red consultando el proveedor.' };
+    return {
+      fetchedAt: new Date().toISOString(),
+      error: err instanceof Error ? err.message : 'Error de red consultando el proveedor.',
+    };
   }
 }
 

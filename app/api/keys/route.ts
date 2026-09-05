@@ -16,7 +16,13 @@ export async function PUT(request: NextRequest) {
     const body = (await request.json()) as { data?: Record<string, string> };
     const candidate = body && typeof body.data === 'object' ? body.data : {};
     const incoming = Object.fromEntries(
-      Object.entries(candidate).filter(([id, value]) => /^[a-z0-9][a-z0-9-]{0,127}$/i.test(id) && typeof value === 'string' && value.length > 0 && value.length <= 250000)
+      Object.entries(candidate).filter(
+        ([id, value]) =>
+          /^[a-z0-9][a-z0-9-]{0,127}$/i.test(id) &&
+          typeof value === 'string' &&
+          value.length > 0 &&
+          value.length <= 250000
+      )
     );
     if (Object.keys(incoming).length !== Object.keys(candidate).length) {
       return NextResponse.json({ ok: false, error: 'Credencial o identificador invÃ¡lido.' }, { status: 400 });

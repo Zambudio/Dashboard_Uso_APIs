@@ -1,6 +1,12 @@
 import fs from 'fs';
 import path from 'path';
-import { resolveBrokerConfig, readKeysFromBroker, writeKeysToBroker, readConfigFromBroker, writeConfigToBroker } from './cred-broker-client';
+import {
+  resolveBrokerConfig,
+  readKeysFromBroker,
+  writeKeysToBroker,
+  readConfigFromBroker,
+  writeConfigToBroker,
+} from './cred-broker-client';
 
 const KEYS_VAR = 'DASHBOARD_PROVIDER_KEYS';
 

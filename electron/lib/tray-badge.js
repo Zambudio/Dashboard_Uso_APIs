@@ -5,9 +5,9 @@
 // electron/tray.js envuelve el resultado con nativeImage.createFromBuffer(),
 // eso sí necesita el runtime real de Electron.
 const COLORS = {
-  ok: { r: 16, g: 185, b: 129 },       // emerald-500, igual que 'online' en ProviderCard
-  warning: { r: 245, g: 158, b: 11 },  // amber-500, igual que 'warning' en ProviderCard
-  critical: { r: 244, g: 63, b: 94 },  // rose-500, igual que 'offline'/'error' en ProviderCard
+  ok: { r: 16, g: 185, b: 129 }, // emerald-500, igual que 'online' en ProviderCard
+  warning: { r: 245, g: 158, b: 11 }, // amber-500, igual que 'warning' en ProviderCard
+  critical: { r: 244, g: 63, b: 94 }, // rose-500, igual que 'offline'/'error' en ProviderCard
   neutral: { r: 100, g: 116, b: 139 }, // slate-500, igual que 'unconfigured' en ProviderCard
 };
 

@@ -22,11 +22,13 @@
 ### Task 1: Preferencia `refreshWidgetSeconds`
 
 **Files:**
+
 - Modify: `types/api.ts`
 - Modify: `app/page.tsx` (objeto `defaultPreferences`, líneas 21-24)
 - Modify: `components/DashboardSettingsPanel.tsx`
 
 **Interfaces:**
+
 - Produces: `DashboardPreferences.refreshWidgetSeconds?: number` — usado más adelante por `electron/usage-poller.js` (Task 8) para decidir cada cuánto refrescar el widget.
 
 - [ ] **Step 1: Añadir el campo al tipo**
@@ -63,20 +65,22 @@ const defaultPreferences: DashboardPreferences = {
 En `components/DashboardSettingsPanel.tsx`, dentro del bloque `<div className="mt-5 ...">` que ya contiene el `<select>` de orden de tarjetas, añade justo debajo (antes del cierre de ese `<div>`) un segundo bloque:
 
 ```tsx
-      <div className="mt-5 rounded-2xl border border-white/10 bg-slate-950/30 p-4 text-sm text-slate-300">
-        <label className="flex items-center justify-between gap-3">
-          <span>Refresco del widget de escritorio (segundos)</span>
-          <input
-            type="number"
-            min={30}
-            step={30}
-            value={preferences.refreshWidgetSeconds ?? 300}
-            onChange={(event) => onSave({ ...preferences, refreshWidgetSeconds: Number(event.target.value) || 300 })}
-            className="w-24 rounded-xl border border-white/10 bg-[#141424] px-3 py-2 text-white"
-          />
-        </label>
-        <p className="mt-2 text-xs text-slate-500">Cada cuánto consulta el widget flotante los datos de todos los proveedores.</p>
-      </div>
+<div className="mt-5 rounded-2xl border border-white/10 bg-slate-950/30 p-4 text-sm text-slate-300">
+  <label className="flex items-center justify-between gap-3">
+    <span>Refresco del widget de escritorio (segundos)</span>
+    <input
+      type="number"
+      min={30}
+      step={30}
+      value={preferences.refreshWidgetSeconds ?? 300}
+      onChange={(event) => onSave({ ...preferences, refreshWidgetSeconds: Number(event.target.value) || 300 })}
+      className="w-24 rounded-xl border border-white/10 bg-[#141424] px-3 py-2 text-white"
+    />
+  </label>
+  <p className="mt-2 text-xs text-slate-500">
+    Cada cuánto consulta el widget flotante los datos de todos los proveedores.
+  </p>
+</div>
 ```
 
 - [ ] **Step 4: Verificar tipos y build**
@@ -96,10 +100,12 @@ git commit -m "feat: añadir preferencia de intervalo de refresco del widget"
 ### Task 2: Cliente puro del broker de credenciales (`lib/cred-broker-client.js`)
 
 **Files:**
+
 - Create: `lib/cred-broker-client.js`
 - Test: `lib/cred-broker-client.test.js`
 
 **Interfaces:**
+
 - Produces: `resolveBrokerConfig(env): {url,token} | null`, `readKeysFromBroker(broker, fetchImpl?): Promise<Record<string,string>>`, `writeKeysToBroker(broker, keys, fetchImpl?): Promise<void>` — consumidos por `lib/env-keys.server.ts` en la Task 3.
 - Consumes: nada (módulo puro, sin dependencias del proyecto).
 
@@ -222,6 +228,7 @@ git commit -m "feat: añadir cliente puro del broker de credenciales"
 ### Task 3: Hacer `lib/env-keys.server.ts` compatible con el broker (async)
 
 **Files:**
+
 - Modify: `lib/env-keys.server.ts`
 - Modify: `app/api/keys/route.ts`
 - Modify: `app/api/usage/route.ts:31`
@@ -229,6 +236,7 @@ git commit -m "feat: añadir cliente puro del broker de credenciales"
 - Modify: `tsconfig.json` (excluir `scratch/`)
 
 **Interfaces:**
+
 - Consumes: `resolveBrokerConfig`, `readKeysFromBroker`, `writeKeysToBroker` de `lib/cred-broker-client.js` (Task 2).
 - Produces: `readEnvKeys(): Promise<Record<string,string>>`, `writeEnvKeys(keys): Promise<void>` — firma cambia de síncrona a asíncrona; toda la Task 6 (server-manager) depende de las variables de entorno `DASHBOARD_CRED_BROKER_URL`/`DASHBOARD_CRED_BROKER_TOKEN` que estas funciones leen.
 
@@ -284,7 +292,7 @@ export async function PUT(request: NextRequest) {
 - [ ] **Step 3: Actualizar `app/api/usage/route.ts:31`**
 
 ```ts
-  const keys = await readEnvKeys();
+const keys = await readEnvKeys();
 ```
 
 - [ ] **Step 4: Actualizar `lib/browser-login.server.ts`**
@@ -304,9 +312,11 @@ Y en cada una de las 4 llamadas (líneas 286, 529, 698, 880), añadir `await`:
 ```ts
 await saveSecretForProvider(session.providerId, secret);
 ```
+
 ```ts
 await saveSecretForProvider(session.providerId, secretPayload);
 ```
+
 (misma forma en las tres restantes). Las cuatro llamadas ya están dentro de funciones `async` que hacen `await` a operaciones de Playwright cerca de esas líneas — si alguna no lo estuviera, `next build` lo señalará en el Step 6 y habrá que envolver esa función en `async` también.
 
 - [ ] **Step 5: Excluir `scratch/` del type-check**
@@ -331,9 +341,11 @@ Expected: ambos terminan sin errores. Si `next build` señala una llamada a `sav
 - [ ] **Step 7: Verificar el flujo sin broker (modo navegador sin Electron)**
 
 Run: `npm run dev` en una terminal, y en otra:
+
 ```bash
 curl -s http://127.0.0.1:3000/api/keys
 ```
+
 Expected: HTTP 200 con el JSON de claves existente en `.env` (idéntico a como funcionaba antes del cambio — confirma que el fallback a fichero sigue intacto). Detén `npm run dev` (Ctrl+C) al terminar.
 
 - [ ] **Step 8: Commit**
@@ -348,10 +360,12 @@ git commit -m "feat: hacer asíncronas las claves de proveedor para soportar el 
 ### Task 4: Almacén cifrado puro (`electron/lib/credential-store.js`)
 
 **Files:**
+
 - Create: `electron/lib/credential-store.js`
 - Test: `electron/lib/credential-store.test.js`
 
 **Interfaces:**
+
 - Produces: `createCredentialStore({safeStorage, filePath, fsImpl?}): {load(), save(keys)}`, `migrateFromLegacyEnv(envFilePath, fsImpl?): Record<string,string>|null` — consumidos por `electron/credential-broker.js` (Task 5).
 - Consumes: una interfaz `safeStorage`-like inyectada (`isEncryptionAvailable()`, `encryptString()`, `decryptString()`) — en producción será el `safeStorage` real de Electron (Task 11); en los tests, un doble de prueba.
 
@@ -382,7 +396,10 @@ function tmpDir() {
 
 test('load() returns {} when the store file does not exist yet', () => {
   const dir = tmpDir();
-  const store = createCredentialStore({ safeStorage: fakeSafeStorage(true), filePath: path.join(dir, 'credentials.enc') });
+  const store = createCredentialStore({
+    safeStorage: fakeSafeStorage(true),
+    filePath: path.join(dir, 'credentials.enc'),
+  });
   assert.deepEqual(store.load(), {});
 });
 
@@ -509,10 +526,12 @@ git commit -m "feat: añadir almacén de credenciales cifrado con safeStorage in
 ### Task 5: Broker HTTP de credenciales (`electron/credential-broker.js`)
 
 **Files:**
+
 - Create: `electron/credential-broker.js`
 - Test: `electron/credential-broker.test.js`
 
 **Interfaces:**
+
 - Consumes: `createCredentialStore`, `migrateFromLegacyEnv` de `electron/lib/credential-store.js` (Task 4).
 - Produces: `startCredentialBroker({safeStorage, filePath, legacyEnvPath?}): Promise<{url, token, close()}>` — consumido por `electron/main.js` (Task 11) y por `lib/env-keys.server.ts` vía las variables de entorno que `server-manager.js` propaga.
 
@@ -544,17 +563,23 @@ function tmpDir() {
 
 function request(url, { method = 'GET', token, body } = {}) {
   return new Promise((resolve, reject) => {
-    const req = http.request(url, {
-      method,
-      headers: {
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        'Content-Type': 'application/json',
+    const req = http.request(
+      url,
+      {
+        method,
+        headers: {
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          'Content-Type': 'application/json',
+        },
       },
-    }, (res) => {
-      let data = '';
-      res.on('data', (c) => { data += c; });
-      res.on('end', () => resolve({ status: res.statusCode, body: data }));
-    });
+      (res) => {
+        let data = '';
+        res.on('data', (c) => {
+          data += c;
+        });
+        res.on('end', () => resolve({ status: res.statusCode, body: data }));
+      }
+    );
     req.on('error', reject);
     if (body) req.write(JSON.stringify(body));
     req.end();
@@ -562,15 +587,25 @@ function request(url, { method = 'GET', token, body } = {}) {
 }
 
 test('GET /credentials without a token is rejected with 401', async () => {
-  const broker = await startCredentialBroker({ safeStorage: fakeSafeStorage(), filePath: path.join(tmpDir(), 'c.enc') });
+  const broker = await startCredentialBroker({
+    safeStorage: fakeSafeStorage(),
+    filePath: path.join(tmpDir(), 'c.enc'),
+  });
   const res = await request(`${broker.url}/credentials`);
   assert.equal(res.status, 401);
   await broker.close();
 });
 
 test('PUT then GET /credentials round-trips with the correct token', async () => {
-  const broker = await startCredentialBroker({ safeStorage: fakeSafeStorage(), filePath: path.join(tmpDir(), 'c.enc') });
-  const put = await request(`${broker.url}/credentials`, { method: 'PUT', token: broker.token, body: { openai: 'sk-1' } });
+  const broker = await startCredentialBroker({
+    safeStorage: fakeSafeStorage(),
+    filePath: path.join(tmpDir(), 'c.enc'),
+  });
+  const put = await request(`${broker.url}/credentials`, {
+    method: 'PUT',
+    token: broker.token,
+    body: { openai: 'sk-1' },
+  });
   assert.equal(put.status, 200);
   const get = await request(`${broker.url}/credentials`, { token: broker.token });
   assert.deepEqual(JSON.parse(get.body), { openai: 'sk-1' });
@@ -582,14 +617,21 @@ test('imports a legacy .env DASHBOARD_PROVIDER_KEYS once when the encrypted stor
   const envPath = path.join(dir, '.env');
   const encoded = Buffer.from(JSON.stringify({ deepseek: 'sess-legacy' })).toString('base64');
   fs.writeFileSync(envPath, `DASHBOARD_PROVIDER_KEYS=${encoded}\n`);
-  const broker = await startCredentialBroker({ safeStorage: fakeSafeStorage(), filePath: path.join(dir, 'c.enc'), legacyEnvPath: envPath });
+  const broker = await startCredentialBroker({
+    safeStorage: fakeSafeStorage(),
+    filePath: path.join(dir, 'c.enc'),
+    legacyEnvPath: envPath,
+  });
   const get = await request(`${broker.url}/credentials`, { token: broker.token });
   assert.deepEqual(JSON.parse(get.body), { deepseek: 'sess-legacy' });
   await broker.close();
 });
 
 test('unknown path returns 404', async () => {
-  const broker = await startCredentialBroker({ safeStorage: fakeSafeStorage(), filePath: path.join(tmpDir(), 'c.enc') });
+  const broker = await startCredentialBroker({
+    safeStorage: fakeSafeStorage(),
+    filePath: path.join(tmpDir(), 'c.enc'),
+  });
   const res = await request(`${broker.url}/other`, { token: broker.token });
   assert.equal(res.status, 404);
   await broker.close();
@@ -639,7 +681,9 @@ function startCredentialBroker({ safeStorage, filePath, legacyEnvPath }) {
   function readBody(req) {
     return new Promise((resolve, reject) => {
       let data = '';
-      req.on('data', (chunk) => { data += chunk; });
+      req.on('data', (chunk) => {
+        data += chunk;
+      });
       req.on('end', () => resolve(data));
       req.on('error', reject);
     });
@@ -707,10 +751,12 @@ git commit -m "feat: añadir broker HTTP local de credenciales cifradas"
 ### Task 6: Gestor del servidor Next.js (`electron/server-manager.js`)
 
 **Files:**
+
 - Create: `electron/server-manager.js`
 - Test: `electron/server-manager.test.js`
 
 **Interfaces:**
+
 - Produces: `probePort(host,port,timeoutMs?): Promise<boolean>`, `waitForServer(host,port,{retries?,delayMs?}): Promise<boolean>`, `spawnServer({standaloneDir,port,host,envFile,execPath,brokerUrl,brokerToken,onExit}): ChildProcess` — consumidos por `electron/main.js` (Task 11).
 
 - [ ] **Step 1: Escribir los tests**
@@ -773,7 +819,10 @@ function probePort(host, port, timeoutMs = 800, probePath = '/') {
       res.resume();
       resolve(true);
     });
-    req.on('timeout', () => { req.destroy(); resolve(false); });
+    req.on('timeout', () => {
+      req.destroy();
+      resolve(false);
+    });
     req.on('error', () => resolve(false));
   });
 }
@@ -811,7 +860,9 @@ function spawnServer({ standaloneDir, port, host, envFile, execPath, brokerUrl, 
     }),
     stdio: 'inherit',
   });
-  child.on('exit', (code) => { if (onExit) onExit(code); });
+  child.on('exit', (code) => {
+    if (onExit) onExit(code);
+  });
   return child;
 }
 
@@ -835,10 +886,12 @@ git commit -m "feat: añadir gestor de arranque del servidor Next.js para Electr
 ### Task 7: Icono de bandeja — color puro (`electron/lib/tray-badge.js`)
 
 **Files:**
+
 - Create: `electron/lib/tray-badge.js`
 - Test: `electron/lib/tray-badge.test.js`
 
 **Interfaces:**
+
 - Produces: `COLORS` (objeto con `ok`/`warning`/`critical`/`neutral`, mismos tonos que `statusColors` de `ProviderCard.tsx`), `worstStatusColor(statuses: string[]): {r,g,b}`, `generateBadgeBuffer(color,size?): {width,height,buffer}` — consumidos por `electron/tray.js` (Task 9).
 
 - [ ] **Step 1: Escribir los tests**
@@ -901,9 +954,9 @@ Crea `electron/lib/tray-badge.js`:
 // electron/tray.js envuelve el resultado con nativeImage.createFromBuffer(),
 // eso sí necesita el runtime real de Electron.
 const COLORS = {
-  ok: { r: 16, g: 185, b: 129 },       // emerald-500, igual que 'online' en ProviderCard
-  warning: { r: 245, g: 158, b: 11 },  // amber-500, igual que 'warning' en ProviderCard
-  critical: { r: 244, g: 63, b: 94 },  // rose-500, igual que 'offline'/'error' en ProviderCard
+  ok: { r: 16, g: 185, b: 129 }, // emerald-500, igual que 'online' en ProviderCard
+  warning: { r: 245, g: 158, b: 11 }, // amber-500, igual que 'warning' en ProviderCard
+  critical: { r: 244, g: 63, b: 94 }, // rose-500, igual que 'offline'/'error' en ProviderCard
   neutral: { r: 100, g: 116, b: 139 }, // slate-500, igual que 'unconfigured' en ProviderCard
 };
 
@@ -949,10 +1002,12 @@ git commit -m "feat: añadir generación pura del color del icono de bandeja"
 ### Task 8: Poller de uso (`electron/usage-poller.js`)
 
 **Files:**
+
 - Create: `electron/usage-poller.js`
 - Test: `electron/usage-poller.test.js`
 
 **Interfaces:**
+
 - Produces: `fetchDashboardSnapshot(serverUrl): Promise<{providers, preferences}>`, `startUsagePolling({serverUrl,onUpdate,onError?,defaultIntervalMs?,fetchSnapshot?}): stop()` — consumido por `electron/main.js` (Task 11) y por `electron/tray.js` (Task 9, vía los `providers` que llegan en cada `onUpdate`).
 - Consumes: `fetch` global de Node (disponible en Electron main y en Node ≥18) contra `GET /api/config` y `POST /api/usage` del servidor ya arrancado (Task 6).
 
@@ -973,7 +1028,11 @@ test('startUsagePolling calls onUpdate immediately and again after the configure
     return { providers: [], preferences: { refreshWidgetSeconds: 0.02 } }; // 20ms
   };
   const updates = [];
-  const stop = startUsagePolling({ serverUrl: 'http://x', onUpdate: (s) => updates.push(s), fetchSnapshot: fakeSnapshot });
+  const stop = startUsagePolling({
+    serverUrl: 'http://x',
+    onUpdate: (s) => updates.push(s),
+    fetchSnapshot: fakeSnapshot,
+  });
   await new Promise((r) => setTimeout(r, 60));
   stop();
   assert.ok(calls >= 2, `expected at least 2 polls, got ${calls}`);
@@ -982,8 +1041,16 @@ test('startUsagePolling calls onUpdate immediately and again after the configure
 
 test('startUsagePolling reports fetch failures via onError instead of throwing', async () => {
   const errors = [];
-  const fakeSnapshot = async () => { throw new Error('network down'); };
-  const stop = startUsagePolling({ serverUrl: 'http://x', onUpdate: () => {}, onError: (e) => errors.push(e), defaultIntervalMs: 20, fetchSnapshot: fakeSnapshot });
+  const fakeSnapshot = async () => {
+    throw new Error('network down');
+  };
+  const stop = startUsagePolling({
+    serverUrl: 'http://x',
+    onUpdate: () => {},
+    onError: (e) => errors.push(e),
+    defaultIntervalMs: 20,
+    fetchSnapshot: fakeSnapshot,
+  });
   await new Promise((r) => setTimeout(r, 30));
   stop();
   assert.ok(errors.length >= 1);
@@ -992,7 +1059,10 @@ test('startUsagePolling reports fetch failures via onError instead of throwing',
 
 test('stop() prevents further polling', async () => {
   let calls = 0;
-  const fakeSnapshot = async () => { calls++; return { providers: [], preferences: { refreshWidgetSeconds: 0.01 } }; };
+  const fakeSnapshot = async () => {
+    calls++;
+    return { providers: [], preferences: { refreshWidgetSeconds: 0.01 } };
+  };
   const stop = startUsagePolling({ serverUrl: 'http://x', onUpdate: () => {}, fetchSnapshot: fakeSnapshot });
   await new Promise((r) => setTimeout(r, 15));
   stop();
@@ -1065,7 +1135,13 @@ async function fetchDashboardSnapshot(serverUrl) {
   return { providers: withUsage, preferences: configRes.preferences };
 }
 
-function startUsagePolling({ serverUrl, onUpdate, onError, defaultIntervalMs = 300000, fetchSnapshot = fetchDashboardSnapshot }) {
+function startUsagePolling({
+  serverUrl,
+  onUpdate,
+  onError,
+  defaultIntervalMs = 300000,
+  fetchSnapshot = fetchDashboardSnapshot,
+}) {
   let stopped = false;
   let timer = null;
 
@@ -1109,9 +1185,11 @@ git commit -m "feat: añadir poller de uso del proceso principal"
 ### Task 9: Bandeja del sistema (`electron/tray.js`)
 
 **Files:**
+
 - Create: `electron/tray.js`
 
 **Interfaces:**
+
 - Consumes: `worstStatusColor`, `generateBadgeBuffer`, `COLORS` de `electron/lib/tray-badge.js` (Task 7).
 - Produces: `createTray({onShowWidget,onOpenBrowser,onRestartServer,onQuit}): {updateFromProviders(providers), setServerDown(), destroy()}`, `summarizeTooltip(providers): string` — consumidos por `electron/main.js` (Task 11).
 
@@ -1238,6 +1316,7 @@ git commit -m "feat: añadir icono de bandeja con color de estado y tooltip resu
 ### Task 10: Ventana del widget, preload y renderer
 
 **Files:**
+
 - Create: `electron/preload.js`
 - Create: `electron/widget-window.js`
 - Create: `electron/renderer/widget.html`
@@ -1245,6 +1324,7 @@ git commit -m "feat: añadir icono de bandeja con color de estado y tooltip resu
 - Create: `electron/renderer/widget.js`
 
 **Interfaces:**
+
 - Produces: `createWidgetWindow({store, serverUrl}): BrowserWindow` — consumido por `electron/main.js` (Task 11). `window.widgetAPI` en el renderer (`onUsageUpdate`, `resize`, `openDashboard`).
 - Consumes: `electron-store` (instancia `store` creada en `main.js`), IPC `usage-update` enviado desde el proceso principal (Task 11) con el payload `{providers, preferences}` de `fetchDashboardSnapshot`.
 
@@ -1372,23 +1452,23 @@ Crea `electron/renderer/widget.html`:
 ```html
 <!DOCTYPE html>
 <html lang="es">
-<head>
-  <meta charset="UTF-8" />
-  <title>Dashboard de uso de APIs</title>
-  <link rel="stylesheet" href="widget.css" />
-</head>
-<body>
-  <header id="header">
-    <span id="title">Uso de APIs</span>
-    <div id="header-actions">
-      <button id="toggle-collapse" title="Colapsar/expandir">▾</button>
-      <button id="open-dashboard" title="Abrir dashboard completo">⤢</button>
-    </div>
-  </header>
-  <div id="banner">El servidor no responde</div>
-  <main id="cards"></main>
-  <script src="widget.js"></script>
-</body>
+  <head>
+    <meta charset="UTF-8" />
+    <title>Dashboard de uso de APIs</title>
+    <link rel="stylesheet" href="widget.css" />
+  </head>
+  <body>
+    <header id="header">
+      <span id="title">Uso de APIs</span>
+      <div id="header-actions">
+        <button id="toggle-collapse" title="Colapsar/expandir">▾</button>
+        <button id="open-dashboard" title="Abrir dashboard completo">⤢</button>
+      </div>
+    </header>
+    <div id="banner">El servidor no responde</div>
+    <main id="cards"></main>
+    <script src="widget.js"></script>
+  </body>
 </html>
 ```
 
@@ -1397,14 +1477,18 @@ Crea `electron/renderer/widget.html`:
 Crea `electron/renderer/widget.css`:
 
 ```css
-* { box-sizing: border-box; margin: 0; padding: 0; }
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
 
 body {
-  font-family: -apple-system, "Segoe UI", sans-serif;
+  font-family: -apple-system, 'Segoe UI', sans-serif;
   background: #14141ecc;
   color: #e2e8f0;
   border-radius: 16px;
-  border: 1px solid rgba(255,255,255,0.12);
+  border: 1px solid rgba(255, 255, 255, 0.12);
   overflow: hidden;
   -webkit-app-region: drag;
 }
@@ -1430,8 +1514,8 @@ body {
 #open-dashboard,
 #toggle-collapse {
   -webkit-app-region: no-drag;
-  background: rgba(255,255,255,0.08);
-  border: 1px solid rgba(255,255,255,0.12);
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.12);
   color: #e2e8f0;
   border-radius: 8px;
   width: 26px;
@@ -1473,8 +1557,8 @@ body.collapsed #cards {
   display: flex;
   align-items: center;
   gap: 8px;
-  background: rgba(255,255,255,0.05);
-  border: 1px solid rgba(255,255,255,0.08);
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 10px;
   padding: 8px 10px;
   font-size: 12.5px;
@@ -1618,7 +1702,10 @@ const fs = require('fs');
 
 app.whenReady().then(async () => {
   const win = new BrowserWindow({
-    width: 340, height: 200, frame: false, show: false,
+    width: 340,
+    height: 200,
+    frame: false,
+    show: false,
     webPreferences: { preload: path.join(__dirname, '..', 'electron', 'preload.js') },
   });
   await win.loadFile(path.join(__dirname, '..', 'electron', 'renderer', 'widget.html'));
@@ -1656,15 +1743,18 @@ git commit -m "feat: añadir ventana flotante del widget y su renderer"
 ### Task 11: Empaquetado de dependencias y `electron/main.js`
 
 **Files:**
+
 - Modify: `package.json` (añadir `main`, `scripts`, `dependencies`, `devDependencies`)
 - Create: `electron/main.js`
 
 **Interfaces:**
+
 - Consumes: todo lo producido en las Tasks 5-10 (`startCredentialBroker`, `waitForServer`/`spawnServer`, `createTray`, `createWidgetWindow`, `startUsagePolling`).
 
 - [ ] **Step 1: Instalar dependencias**
 
 Run:
+
 ```bash
 npm install --save-dev electron electron-builder
 npm install electron-store
@@ -1729,9 +1819,7 @@ if (!gotLock) {
   }
 
   function envFilePath() {
-    return app.isPackaged
-      ? path.join(app.getPath('userData'), '.env')
-      : path.join(__dirname, '..', '.env');
+    return app.isPackaged ? path.join(app.getPath('userData'), '.env') : path.join(__dirname, '..', '.env');
   }
 
   async function startServer(broker) {
@@ -1784,7 +1872,10 @@ if (!gotLock) {
     widgetWindow = createWidgetWindow({ store, serverUrl: SERVER_URL });
 
     tray = createTray({
-      onShowWidget: () => { widgetWindow.show(); widgetWindow.focus(); },
+      onShowWidget: () => {
+        widgetWindow.show();
+        widgetWindow.focus();
+      },
       onOpenBrowser: () => shell.openExternal(SERVER_URL),
       onRestartServer: () => restartServer(broker),
       onQuit: () => app.quit(),
@@ -1837,9 +1928,11 @@ git commit -m "feat: añadir electron/main.js y dependencias de Electron"
 ### Task 12: Preparación del bundle standalone y arranque real
 
 **Files:**
+
 - Create: `scripts/prepare-standalone.js`
 
 **Interfaces:**
+
 - Consumes: `.next/standalone` (generado por `npm run build`, sin cambios respecto a hoy).
 - Produces: `build/standalone-bundle/` — consumido por `electron/server-manager.js` vía `standaloneDir()` de `electron/main.js` (Task 11).
 
@@ -1883,7 +1976,10 @@ copyDir(path.join(root, 'public'), path.join(bundleStandalone, 'public'));
 // Pro/DeepSeek). Se copian los paquetes completos en vez de confiar en el
 // tracing parcial — igual razonamiento que el antiguo build-exe.js.
 copyDir(path.join(root, 'node_modules', 'playwright'), path.join(bundleStandalone, 'node_modules', 'playwright'));
-copyDir(path.join(root, 'node_modules', 'playwright-core'), path.join(bundleStandalone, 'node_modules', 'playwright-core'));
+copyDir(
+  path.join(root, 'node_modules', 'playwright-core'),
+  path.join(bundleStandalone, 'node_modules', 'playwright-core')
+);
 
 fs.copyFileSync(path.join(root, 'inspector-shim.js'), path.join(bundleDir, 'inspector-shim.js'));
 fs.copyFileSync(path.join(root, 'server-entry.js'), path.join(bundleDir, 'server-entry.js'));
@@ -1894,10 +1990,12 @@ console.log('[prepare-standalone] Bundle listo en build/standalone-bundle/');
 - [ ] **Step 2: Generar el build de Next.js y el bundle**
 
 Run:
+
 ```bash
 npm run build
 node scripts/prepare-standalone.js
 ```
+
 Expected: `npm run build` termina sin errores (ya lo hacía antes de este plan); aparece `build/standalone-bundle/server-entry.js`, `build/standalone-bundle/inspector-shim.js` y `build/standalone-bundle/standalone/server.js`.
 
 - [ ] **Step 3: Arrancar la app Electron completa por primera vez**
@@ -1905,6 +2003,7 @@ Expected: `npm run build` termina sin errores (ya lo hacía antes de este plan);
 Run: `npm run electron:dev`
 
 Expected en la consola (stdio heredado del proceso hijo + logs de `main.js`):
+
 ```
 [widget] Broker de credenciales escuchando en http://127.0.0.1:XXXXX
 [widget] Arrancando servidor en http://127.0.0.1:3000
@@ -1913,9 +2012,11 @@ Expected en la consola (stdio heredado del proceso hijo + logs de `main.js`):
 ```
 
 En otra terminal, confirma que el servidor responde y que el `.env` existente (con las claves reales ya configuradas en este equipo) se sigue sirviendo a través del broker:
+
 ```bash
 curl -s http://127.0.0.1:3000/api/config
 ```
+
 Expected: HTTP 200 con el JSON de proveedores configurados — igual que antes de este cambio, demostrando que el broker migró el `.env` existente sin pérdida de datos.
 
 Deja la app corriendo para la Task 13 (icono de bandeja) y ciérrala con **Salir** desde la bandeja al terminar de verificar, o `Ctrl+C` en la terminal.
@@ -1938,14 +2039,14 @@ git commit -m "feat: añadir preparación del bundle standalone para Electron"
 Con `npm run electron:dev` corriendo (Task 12, Step 3) y el `.env` real de este equipo ya migrado al broker, añade temporalmente estas líneas de depuración justo después de `widgetWindow = createWidgetWindow(...)` en `electron/main.js` (bórralas al final de este Step):
 
 ```js
-  const fs = require('fs');
-  widgetWindow.webContents.on('did-finish-load', () => {
-    setTimeout(async () => {
-      const image = await widgetWindow.webContents.capturePage();
-      fs.writeFileSync(path.join(app.getPath('userData'), '..', 'widget-live.png'), image.toPNG());
-      console.log('[widget] Captura guardada en', path.join(app.getPath('userData'), '..', 'widget-live.png'));
-    }, 4000);
-  });
+const fs = require('fs');
+widgetWindow.webContents.on('did-finish-load', () => {
+  setTimeout(async () => {
+    const image = await widgetWindow.webContents.capturePage();
+    fs.writeFileSync(path.join(app.getPath('userData'), '..', 'widget-live.png'), image.toPNG());
+    console.log('[widget] Captura guardada en', path.join(app.getPath('userData'), '..', 'widget-live.png'));
+  }, 4000);
+});
 ```
 
 Run: `npm run electron:dev`, espera a que aparezca en consola la ruta de `widget-live.png` (unos segundos después del primer `usage-update`), luego cierra la app.
@@ -1969,9 +2070,11 @@ Añade temporalmente `console.log('[widget] tooltip actual:', require('./tray').
 ### Task 14: Empaquetado con electron-builder
 
 **Files:**
+
 - Modify: `package.json` (bloque `"build"` de electron-builder)
 
 **Interfaces:**
+
 - Consumes: `build/standalone-bundle/` (Task 12), todo `electron/**` (Tasks 5-11).
 
 - [ ] **Step 1: Añadir el bloque `build` a `package.json`**
@@ -2015,14 +2118,18 @@ Expected: termina sin errores y crea `dist/win-unpacked/Dashboard Uso APIs.exe`.
 - [ ] **Step 3: Ejecutar el build sin empaquetar y comprobar arranque limpio**
 
 Run (PowerShell):
+
 ```powershell
 Start-Process "dist\win-unpacked\Dashboard Uso APIs.exe"
 ```
+
 Espera unos segundos y verifica:
+
 ```powershell
 Get-Process -Name "Dashboard Uso APIs" -ErrorAction SilentlyContinue
 curl.exe -s http://127.0.0.1:3000/api/config
 ```
+
 Expected: el proceso aparece corriendo y `/api/config` responde 200. Cierra la app desde el icono de bandeja (**Salir**) al terminar.
 
 - [ ] **Step 4: Comprobar la instancia única**
@@ -2049,6 +2156,7 @@ git commit -m "feat: configurar electron-builder para el instalador y la versió
 ### Task 15: Retirar el empaquetado antiguo (pkg + WinForms)
 
 **Files:**
+
 - Modify: `package.json` (quitar script `"exe"`, dependencia `@yao-pkg/pkg`, bloque `"pkg"`)
 - Delete: `scripts/build-exe.js`
 - Delete: `scripts/tray-launcher.cs`
@@ -2063,6 +2171,7 @@ Solo se ejecuta esta Task después de que la Task 14 haya verificado con éxito 
 Elimina la línea `"exe": "npm run build && node scripts/build-exe.js"` de `"scripts"`, elimina `"@yao-pkg/pkg": "^6.22.0"` de `"devDependencies"`, y elimina el bloque `"pkg": { "targets": [...], "outputPath": "dist" }` completo (ya no aplica; el nuevo `"build"` de electron-builder usa su propio `directories.output`).
 
 Añade en su lugar, en `"scripts"`:
+
 ```json
     "exe": "npm run electron:build",
 ```
@@ -2078,6 +2187,7 @@ git rm scripts/build-exe.js scripts/tray-launcher.cs scripts/sign-exe.ps1
 - [ ] **Step 3: Actualizar `.gitignore`**
 
 Añade:
+
 ```
 /build/
 dist/win-unpacked/
@@ -2091,14 +2201,17 @@ git rm -r dist/
 npm run build
 npm run exe
 ```
+
 Expected: `npm run exe` (ahora alias de `electron:build`) termina sin errores y deja en `dist/` únicamente: `Dashboard Uso APIs-<version>-Setup.exe`, `Dashboard Uso APIs-<version>-portable.exe` (y sus `.blockmap`, ya ignorados). Verifica con `git status` que ya no aparecen `dashboard.exe` ni `DashboardTray.exe` ni `standalone/` como borrados-pendientes-de-confirmar sin más — deben quedar efectivamente eliminados del árbol de trabajo.
 
 - [ ] **Step 5: Repetir el smoke test del portable/instalador ya generado**
 
 Run (PowerShell), ejecutando el instalador o el portable recién generado (ajusta el nombre exacto al que haya producido el Step 4):
+
 ```powershell
 Start-Process "dist\Dashboard Uso APIs-0.1.0-portable.exe"
 ```
+
 Expected: arranca igual que en la Task 14 (icono de bandeja, ventana del widget, `curl` a `/api/config` responde 200). Cierra la app desde **Salir** al terminar.
 
 - [ ] **Step 6: Commit**
@@ -2113,6 +2226,7 @@ git commit -m "chore: retirar empaquetado pkg+WinForms en favor de electron-buil
 ### Task 16: Documentación
 
 **Files:**
+
 - Modify: `README.md`
 - Modify: `Docs/PACKAGING.md`
 - Modify: `Docs/ARCHITECTURE.md`

@@ -10,7 +10,11 @@ test('startUsagePolling calls onUpdate immediately and again after the configure
     return { providers: [], preferences: { refreshWidgetSeconds: 0.02 } }; // 20ms
   };
   const updates = [];
-  const stop = startUsagePolling({ serverUrl: 'http://x', onUpdate: (s) => updates.push(s), fetchSnapshot: fakeSnapshot });
+  const stop = startUsagePolling({
+    serverUrl: 'http://x',
+    onUpdate: (s) => updates.push(s),
+    fetchSnapshot: fakeSnapshot,
+  });
   await new Promise((r) => setTimeout(r, 60));
   stop();
   assert.ok(calls >= 2, `expected at least 2 polls, got ${calls}`);
@@ -19,8 +23,16 @@ test('startUsagePolling calls onUpdate immediately and again after the configure
 
 test('startUsagePolling reports fetch failures via onError instead of throwing', async () => {
   const errors = [];
-  const fakeSnapshot = async () => { throw new Error('network down'); };
-  const stop = startUsagePolling({ serverUrl: 'http://x', onUpdate: () => {}, onError: (e) => errors.push(e), defaultIntervalMs: 20, fetchSnapshot: fakeSnapshot });
+  const fakeSnapshot = async () => {
+    throw new Error('network down');
+  };
+  const stop = startUsagePolling({
+    serverUrl: 'http://x',
+    onUpdate: () => {},
+    onError: (e) => errors.push(e),
+    defaultIntervalMs: 20,
+    fetchSnapshot: fakeSnapshot,
+  });
   await new Promise((r) => setTimeout(r, 30));
   stop();
   assert.ok(errors.length >= 1);
@@ -29,7 +41,10 @@ test('startUsagePolling reports fetch failures via onError instead of throwing',
 
 test('stop() prevents further polling', async () => {
   let calls = 0;
-  const fakeSnapshot = async () => { calls++; return { providers: [], preferences: { refreshWidgetSeconds: 0.01 } }; };
+  const fakeSnapshot = async () => {
+    calls++;
+    return { providers: [], preferences: { refreshWidgetSeconds: 0.01 } };
+  };
   const stop = startUsagePolling({ serverUrl: 'http://x', onUpdate: () => {}, fetchSnapshot: fakeSnapshot });
   await new Promise((r) => setTimeout(r, 15));
   stop();

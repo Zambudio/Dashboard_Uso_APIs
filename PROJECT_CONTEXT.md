@@ -28,7 +28,9 @@ corporativa, descrita en `Docs/PROJECT_CLOSURE.md`.
 - El renderer nunca recibe valores secretos; `/api/keys` solo devuelve IDs configurados.
 - `safeStorage`/DPAPI es obligatorio para persistir credenciales en Electron. Si no está disponible, se falla de forma segura.
 - Proveedores y preferencias se guardan en `electron-store`; no se duplican en `localStorage`.
-- Los logins usan contextos efímeros. Las cookies o tokens exigidos por un proveedor se guardan únicamente dentro del bloque cifrado.
+- El login interactivo usa un perfil de navegador persistente fuera del paquete
+  (`%LOCALAPPDATA%\Dashboard_Uso_APIs\browser-profile`, cifrado del sistema/DPAPI).
+  La consulta automática de uso navega en contextos efímeros sin perfil en disco.
 - `force-dynamic` se mantiene en rutas de configuración, credenciales y uso.
 - Los datos no expuestos se representan con `unavailable`.
 - `dist/` es un artefacto, no código fuente, y se publica mediante GitHub Releases.

@@ -112,7 +112,11 @@ export async function fetchAntigravityUsage(): Promise<ApiUsageSnapshot | null> 
 
         for (const port of ports) {
           try {
-            const data = await queryLanguageServer(port, csrfToken, '/exa.language_server_pb.LanguageServerService/GetUserStatus');
+            const data = await queryLanguageServer(
+              port,
+              csrfToken,
+              '/exa.language_server_pb.LanguageServerService/GetUserStatus'
+            );
             if (data?.userStatus) {
               const userStatus = data.userStatus;
               const configs = userStatus.cascadeModelConfigData?.clientModelConfigs || [];
@@ -128,7 +132,8 @@ export async function fetchAntigravityUsage(): Promise<ApiUsageSnapshot | null> 
               const remainingFraction = typeof quota?.remainingFraction === 'number' ? quota.remainingFraction : 1;
               const utilization = Math.max(0, Math.min(100, Math.round((1 - remainingFraction) * 100)));
 
-              const tierName = userStatus.userTier?.name || userStatus.planStatus?.planInfo?.planName || 'Google AI Pro';
+              const tierName =
+                userStatus.userTier?.name || userStatus.planStatus?.planInfo?.planName || 'Google AI Pro';
               const planType = `${tierName} (Antigravity)`;
 
               return {

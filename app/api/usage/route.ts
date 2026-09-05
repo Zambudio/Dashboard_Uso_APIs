@@ -25,13 +25,19 @@ export async function POST(request: NextRequest) {
 
   const definition = getProviderDefinition(provider);
   if (!definition.usageImplemented) {
-    return NextResponse.json({ error: `La consulta de uso todavía no está implementada para ${definition.label}.` }, { status: 501 });
+    return NextResponse.json(
+      { error: `La consulta de uso todavía no está implementada para ${definition.label}.` },
+      { status: 501 }
+    );
   }
 
   const state = await readDashboardState<{ providers?: Array<{ id: string; provider: ProviderKey }> }>();
   const configuredProvider = state.providers?.find((item) => item.id === id);
   if (!configuredProvider || configuredProvider.provider !== provider) {
-    return NextResponse.json({ error: 'La integraciÃ³n solicitada no existe o no coincide con el proveedor.' }, { status: 400 });
+    return NextResponse.json(
+      { error: 'La integraciÃ³n solicitada no existe o no coincide con el proveedor.' },
+      { status: 400 }
+    );
   }
 
   const keys = await readEnvKeys();

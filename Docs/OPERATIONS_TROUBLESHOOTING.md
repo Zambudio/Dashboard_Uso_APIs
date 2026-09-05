@@ -15,10 +15,7 @@
 Desde `0.2.2`, el renderer se carga mediante el protocolo interno
 `dashboard-widget://`. Si esa carga falla, la aplicación muestra un error de
 arranque en vez de dejar una ventana transparente. Una ventana vacía en una
-versión anterior requiere actualizar el instalador, no borrar las credenciales.
-3. Ejecuta una sola vez la aplicación; la segunda instancia activa la primera y aplica la misma recuperación.
-4. Comprueba en Administrador de tareas que no haya una instancia bloqueada.
-5. Si es una instalación corporativa, pide a TI el evento del EDR usando hash y editor; no desactives el antivirus.
+versión anterior requiere actualizar el instalador, no borrar las credenciales. 3. Ejecuta una sola vez la aplicación; la segunda instancia activa la primera y aplica la misma recuperación. 4. Comprueba en Administrador de tareas que no haya una instancia bloqueada. 5. Si es una instalación corporativa, pide a TI el evento del EDR usando hash y editor; no desactives el antivirus.
 
 ## Servidor no disponible
 
@@ -43,14 +40,14 @@ En redes con proxy, configura la salida de Node/Playwright según la política c
 
 ## Errores por proveedor
 
-| Mensaje | Acción |
-|---|---|
-| 401/403 OpenAI | Comprueba permisos; una Project Key normalmente no lee costes globales. |
-| Cloudflare OpenAI | El proveedor ha bloqueado automatización; usa una vía oficial/manual disponible. |
-| 401/403 Anthropic | Usa una Admin API Key o reconecta la sesión correcta. |
-| Sesión DeepSeek caducada | Inicia sesión web de nuevo. |
-| Organización Claude ausente | Reconecta y confirma organización/plan accesible. |
-| Gemini sin métricas | Una API key puede validar acceso sin exponer límites de suscripción. |
+| Mensaje                     | Acción                                                                           |
+| --------------------------- | -------------------------------------------------------------------------------- |
+| 401/403 OpenAI              | Comprueba permisos; una Project Key normalmente no lee costes globales.          |
+| Cloudflare OpenAI           | El proveedor ha bloqueado automatización; usa una vía oficial/manual disponible. |
+| 401/403 Anthropic           | Usa una Admin API Key o reconecta la sesión correcta.                            |
+| Sesión DeepSeek caducada    | Inicia sesión web de nuevo.                                                      |
+| Organización Claude ausente | Reconecta y confirma organización/plan accesible.                                |
+| Gemini sin métricas         | Una API key puede validar acceso sin exponer límites de suscripción.             |
 
 ## Credenciales
 

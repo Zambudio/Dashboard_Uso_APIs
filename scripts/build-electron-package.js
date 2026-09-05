@@ -3,12 +3,7 @@
 const fs = require('node:fs');
 const path = require('node:path');
 const { spawnSync } = require('node:child_process');
-const {
-  resolveLocalWorktree,
-  assertSafeTarget,
-  copyTrackedFiles,
-  gitManifest,
-} = require('./run-electron-dev');
+const { resolveLocalWorktree, assertSafeTarget, copyTrackedFiles, gitManifest } = require('./run-electron-dev');
 
 function run(command, args, cwd, env = process.env) {
   const result = spawnSync(command, args, { cwd, env, stdio: 'inherit' });
@@ -40,7 +35,11 @@ function main() {
     copyTrackedFiles(source, target, gitManifest(source));
 
     for (const transient of ['.next', 'build', 'dist']) {
-      fs.rmSync(path.join(target, transient), { recursive: true, force: true });
+      try {
+        fs.rmSync(path.join(target, transient), { recursive: true, force: true, maxRetries: 5, retryDelay: 200 });
+      } catch (err) {
+        console.warn(`[build] Aviso al limpiar ${transient}: ${err instanceof Error ? err.message : String(err)}`);
+      }
     }
 
     const electronModule = path.join(target, 'node_modules', 'electron');

@@ -72,6 +72,9 @@ En GitHub, añade ambos valores como Actions secrets y crea un tag `v<versión>`
 
 Para usuarios generales se necesita un certificado de firma de código emitido por una CA reconocida o Azure Trusted Signing. Para entornos corporativos, coordina además la inclusión del editor/hash en la política EDR. Un PFX autofirmado no construye reputación en SmartScreen/SAC.
 
+La vía prevista y su paso a paso (recursos, perfiles, secretos en GitHub y
+verificación) están en [Firma con Azure Trusted Signing](./CODE_SIGNING_AZURE.md).
+
 ### Deuda de distribución al cerrar `0.2.2`
 
 La aplicación `0.2.2` está funcionalmente validada, pero sus artefactos locales

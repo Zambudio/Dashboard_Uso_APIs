@@ -130,7 +130,10 @@ export function ProviderCard({
   // ruido sin información. 0 es un valor real (sesión empezada sin uso todavía)
   // y sí debe mostrarse; solo `undefined` en ambos campos oculta la fila.
   const hasSessionWindow = usage?.sessionUtilization !== undefined || usage?.sessionResetsAt !== undefined;
-  const isSubscriptionLayout = provider.kind === 'subscription' || usage?.sessionUtilization !== undefined || usage?.weeklyUtilization !== undefined;
+  const isSubscriptionLayout =
+    provider.kind === 'subscription' ||
+    usage?.sessionUtilization !== undefined ||
+    usage?.weeklyUtilization !== undefined;
 
   const handleRefresh = async () => {
     if (!onRefresh || refreshing) return;
@@ -154,8 +157,12 @@ export function ProviderCard({
           <div>
             <div className="flex flex-wrap items-center gap-2">
               <h3 className="text-lg font-semibold text-white">{provider.name}</h3>
-              <span className={`h-2.5 w-2.5 rounded-full ${statusColors[provider.status] ?? statusColors.unconfigured}`} />
-              <span className={`rounded-full px-2 py-0.5 text-[10px] uppercase tracking-[0.2em] ${connected ? 'bg-emerald-500/10 text-emerald-300 border border-emerald-400/30' : 'bg-slate-700/70 text-slate-300 border border-slate-500/30'}`}>
+              <span
+                className={`h-2.5 w-2.5 rounded-full ${statusColors[provider.status] ?? statusColors.unconfigured}`}
+              />
+              <span
+                className={`rounded-full px-2 py-0.5 text-[10px] uppercase tracking-[0.2em] ${connected ? 'bg-emerald-500/10 text-emerald-300 border border-emerald-400/30' : 'bg-slate-700/70 text-slate-300 border border-slate-500/30'}`}
+              >
                 {connected ? 'Conectado' : 'No conectado'}
               </span>
               {usage?.planType && (
@@ -168,7 +175,11 @@ export function ProviderCard({
                   Suscripción
                 </span>
               )}
-              {hidden && <span className="rounded-full border border-slate-500/40 bg-slate-800/80 px-2 py-0.5 text-[10px] uppercase tracking-[0.2em] text-slate-300">Oculto</span>}
+              {hidden && (
+                <span className="rounded-full border border-slate-500/40 bg-slate-800/80 px-2 py-0.5 text-[10px] uppercase tracking-[0.2em] text-slate-300">
+                  Oculto
+                </span>
+              )}
             </div>
             <p className="mt-1 text-sm text-slate-400">{definition.label}</p>
           </div>
@@ -203,14 +214,19 @@ export function ProviderCard({
       )}
 
       {loading ? (
-        isSubscriptionLayout ? <SkeletonGauges /> : <SkeletonStats />
+        isSubscriptionLayout ? (
+          <SkeletonGauges />
+        ) : (
+          <SkeletonStats />
+        )
       ) : isSubscriptionLayout ? (
         <>
           <div className="mb-4 grid gap-3 sm:grid-cols-2">
             <div>
               <DonutChart value={usage?.weeklyUtilization ?? 0} max={100} color="#8b5cf6" label="Uso semanal" />
               <p className="mt-2 text-center text-[11px] tabular text-slate-400">
-                Consumido {Math.round(usage?.weeklyUtilization ?? 0)}% · Restante {Math.round(100 - (usage?.weeklyUtilization ?? 0))}%
+                Consumido {Math.round(usage?.weeklyUtilization ?? 0)}% · Restante{' '}
+                {Math.round(100 - (usage?.weeklyUtilization ?? 0))}%
               </p>
             </div>
             <div className="flex flex-col justify-center gap-3 rounded-2xl border border-white/10 bg-slate-950/40 p-3">
@@ -219,12 +235,16 @@ export function ProviderCard({
                   <p className="text-[11px] uppercase tracking-[0.2em] text-slate-500">
                     {provider.provider === 'gemini' ? 'Reset uso actual' : 'Reset sesión (5h)'}
                   </p>
-                  <p className="mt-1 text-xl font-semibold tabular text-cyan-300">{formatRelativeTime(usage?.sessionResetsAt) ?? '—'}</p>
+                  <p className="mt-1 text-xl font-semibold tabular text-cyan-300">
+                    {formatRelativeTime(usage?.sessionResetsAt) ?? '—'}
+                  </p>
                 </div>
               ) : null}
               <div>
                 <p className="text-[11px] uppercase tracking-[0.2em] text-slate-500">Reset semanal</p>
-                <p className="mt-1 text-xl font-semibold tabular text-fuchsia-300">{formatRelativeTime(usage?.weeklyResetsAt) ?? '—'}</p>
+                <p className="mt-1 text-xl font-semibold tabular text-fuchsia-300">
+                  {formatRelativeTime(usage?.weeklyResetsAt) ?? '—'}
+                </p>
               </div>
             </div>
           </div>
@@ -262,7 +282,10 @@ export function ProviderCard({
               <div key={field} className="rounded-xl bg-white/5 px-3 py-2">
                 <p className="text-[11px] uppercase tracking-[0.2em] text-slate-500">{FIELD_LABELS[field]}</p>
                 {isUnavailable ? (
-                  <p className="mt-1 text-sm text-slate-500" title="Este proveedor no expone este dato en su API pública">
+                  <p
+                    className="mt-1 text-sm text-slate-500"
+                    title="Este proveedor no expone este dato en su API pública"
+                  >
                     No disponible
                   </p>
                 ) : value === undefined ? (
@@ -294,15 +317,17 @@ export function ProviderCard({
 
       {provider.provider === 'deepseek' && usage?.currency && (
         <p className="mt-3 text-[11px] text-slate-500">
-          DeepSeek solo expone el saldo (no su historial de gasto). El saldo total = regalado + recargado. La plataforma reporta en{' '}
-          <span className="font-medium text-slate-300">{usage.currency}</span>.
+          DeepSeek solo expone el saldo (no su historial de gasto). El saldo total = regalado + recargado. La plataforma
+          reporta en <span className="font-medium text-slate-300">{usage.currency}</span>.
         </p>
       )}
 
       <div className="mt-5 flex flex-col gap-3 border-t border-white/10 pt-4 text-xs text-slate-400 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <span>Última actualización</span>
-          <span className="ml-2 font-medium tabular text-white">{usage?.fetchedAt ? new Date(usage.fetchedAt).toLocaleTimeString('es-ES') : 'Nunca'}</span>
+          <span className="ml-2 font-medium tabular text-white">
+            {usage?.fetchedAt ? new Date(usage.fetchedAt).toLocaleTimeString('es-ES') : 'Nunca'}
+          </span>
         </div>
         <div className="flex flex-wrap gap-2">
           {onBrowserLogin && definition.browserLoginSupported && (

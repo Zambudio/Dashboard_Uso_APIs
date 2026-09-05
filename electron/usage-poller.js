@@ -61,7 +61,13 @@ async function fetchDashboardSnapshot(serverUrl) {
 // completo, aunque el servidor ya haya vuelto a responder.
 const RETRY_INTERVAL_MS = 15000;
 
-function startUsagePolling({ serverUrl, onUpdate, onError, defaultIntervalMs = 300000, fetchSnapshot = fetchDashboardSnapshot }) {
+function startUsagePolling({
+  serverUrl,
+  onUpdate,
+  onError,
+  defaultIntervalMs = 300000,
+  fetchSnapshot = fetchDashboardSnapshot,
+}) {
   let stopped = false;
   let timer = null;
 

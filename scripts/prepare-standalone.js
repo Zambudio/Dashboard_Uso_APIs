@@ -23,7 +23,11 @@ function copyDir(src, dest) {
 // la carpeta que se está borrando llega desincronizado del estado real por
 // la latencia de red) — sin retry, el build entero abortaba en este paso
 // de forma intermitente y sin relación con el código.
-fs.rmSync(bundleDir, { recursive: true, force: true, maxRetries: 10, retryDelay: 300 });
+try {
+  fs.rmSync(bundleDir, { recursive: true, force: true, maxRetries: 10, retryDelay: 300 });
+} catch (err) {
+  console.warn(`[prepare-standalone] Aviso al limpiar bundleDir: ${err instanceof Error ? err.message : String(err)}`);
+}
 fs.mkdirSync(bundleDir, { recursive: true });
 
 copyDir(nextStandalone, bundleStandalone);
@@ -38,7 +42,10 @@ copyDir(path.join(root, 'public'), path.join(bundleStandalone, 'public'));
 // Pro/DeepSeek). Se copian los paquetes completos en vez de confiar en el
 // tracing parcial; por eso se copian explícitamente estos dos paquetes.
 copyDir(path.join(root, 'node_modules', 'playwright'), path.join(bundleStandalone, 'node_modules', 'playwright'));
-copyDir(path.join(root, 'node_modules', 'playwright-core'), path.join(bundleStandalone, 'node_modules', 'playwright-core'));
+copyDir(
+  path.join(root, 'node_modules', 'playwright-core'),
+  path.join(bundleStandalone, 'node_modules', 'playwright-core')
+);
 
 fs.copyFileSync(path.join(root, 'inspector-shim.js'), path.join(bundleDir, 'inspector-shim.js'));
 fs.copyFileSync(path.join(root, 'server-entry.js'), path.join(bundleDir, 'server-entry.js'));

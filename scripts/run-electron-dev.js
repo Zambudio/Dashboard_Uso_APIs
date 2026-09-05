@@ -75,11 +75,13 @@ function copyTrackedFiles(source, target, files) {
 function gitManifest(source) {
   const result = spawnSync(
     'git',
-    ['ls-files', '-z', '--cached', '--others', '--exclude-standard'],
+    ['-c', 'safe.directory=*', 'ls-files', '-z', '--cached', '--others', '--exclude-standard'],
     { cwd: source, encoding: 'utf8', maxBuffer: 10 * 1024 * 1024 }
   );
   if (result.status !== 0) {
-    throw new Error(`No se pudo obtener el manifiesto de Git: ${result.stderr || result.error?.message || 'error desconocido'}`);
+    throw new Error(
+      `No se pudo obtener el manifiesto de Git: ${result.stderr || result.error?.message || 'error desconocido'}`
+    );
   }
   return result.stdout
     .split('\0')
@@ -115,11 +117,7 @@ function runNpm(args, cwd) {
 function createElectronEnvironment(env = process.env) {
   const electronEnv = { ...env };
   electronEnv.DASHBOARD_PORT ||= '32123';
-  electronEnv.DASHBOARD_DEV_USER_DATA = path.join(
-    env.LOCALAPPDATA,
-    'DashboardUsoAPIs',
-    'dev-user-data'
-  );
+  electronEnv.DASHBOARD_DEV_USER_DATA = path.join(env.LOCALAPPDATA, 'DashboardUsoAPIs', 'dev-user-data');
   delete electronEnv.ELECTRON_RUN_AS_NODE;
   delete electronEnv.NODE_OPTIONS;
   return electronEnv;
@@ -140,7 +138,11 @@ function main() {
   copyTrackedFiles(source, target, gitManifest(source));
 
   for (const transient of ['.next', 'build']) {
-    fs.rmSync(resolveInside(target, transient), { recursive: true, force: true });
+    try {
+      fs.rmSync(resolveInside(target, transient), { recursive: true, force: true, maxRetries: 5, retryDelay: 200 });
+    } catch (err) {
+      console.warn(`[electron:dev] Aviso al limpiar ${transient}: ${err instanceof Error ? err.message : String(err)}`);
+    }
   }
 
   const electronModule = path.join(target, 'node_modules', 'electron');

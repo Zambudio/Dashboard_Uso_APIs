@@ -35,11 +35,16 @@ export function AddProviderForm({ onSubmit, onCancel, onBrowserLogin }: AddProvi
   };
 
   return (
-    <form onSubmit={handleSubmit} className="rounded-2xl border border-white/10 bg-[#151521] p-5 shadow-xl shadow-black/20">
+    <form
+      onSubmit={handleSubmit}
+      className="rounded-2xl border border-white/10 bg-[#151521] p-5 shadow-xl shadow-black/20"
+    >
       <div className="mb-4 flex items-center justify-between">
         <div>
           <h2 className="text-lg font-semibold text-white">Añadir proveedor</h2>
-          <p className="text-sm text-slate-400">Puedes conectar iniciando sesión en tu navegador o introduciendo la clave manualmente.</p>
+          <p className="text-sm text-slate-400">
+            Puedes conectar iniciando sesión en tu navegador o introduciendo la clave manualmente.
+          </p>
         </div>
         <button type="button" onClick={onCancel} className="text-sm text-slate-400 transition hover:text-white">
           Cancelar
@@ -82,7 +87,8 @@ export function AddProviderForm({ onSubmit, onCancel, onBrowserLogin }: AddProvi
             <div>
               <p className="text-sm font-semibold text-fuchsia-200">Recomendado: Inicio de sesión web</p>
               <p className="text-xs text-slate-300">
-                Inicia sesión en {definition.label} en el navegador y vincularemos tus datos de gasto automáticamente sin copiar claves.
+                Inicia sesión en {definition.label} en el navegador y vincularemos tus datos de gasto automáticamente
+                sin copiar claves.
               </p>
             </div>
             <button
@@ -112,7 +118,12 @@ export function AddProviderForm({ onSubmit, onCancel, onBrowserLogin }: AddProvi
         {definition.helpUrl && (
           <>
             {' '}
-            <a href={definition.helpUrl} target="_blank" rel="noreferrer" className="text-cyan-300 underline hover:text-cyan-200">
+            <a
+              href={definition.helpUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="text-cyan-300 underline hover:text-cyan-200"
+            >
               Ver en {new URL(definition.helpUrl).hostname}
             </a>
           </>
@@ -120,7 +131,10 @@ export function AddProviderForm({ onSubmit, onCancel, onBrowserLogin }: AddProvi
       </div>
 
       <div className="mt-5 flex justify-end">
-        <button type="submit" className="rounded-xl bg-cyan-600/30 border border-cyan-400/40 px-4 py-2 font-medium text-cyan-200 transition hover:bg-cyan-600/50">
+        <button
+          type="submit"
+          className="rounded-xl bg-cyan-600/30 border border-cyan-400/40 px-4 py-2 font-medium text-cyan-200 transition hover:bg-cyan-600/50"
+        >
           Guardar integración manual
         </button>
       </div>

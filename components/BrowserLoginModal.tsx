@@ -20,7 +20,9 @@ interface PollStatusResponse {
 
 export function BrowserLoginModal({ provider, onSuccess, onClose }: BrowserLoginModalProps) {
   const [sessionId, setSessionId] = useState<string | null>(null);
-  const [status, setStatus] = useState<'starting' | 'waiting_user_login' | 'extracting' | 'completed' | 'cancelled' | 'error'>('starting');
+  const [status, setStatus] = useState<
+    'starting' | 'waiting_user_login' | 'extracting' | 'completed' | 'cancelled' | 'error'
+  >('starting');
   const [statusMessage, setStatusMessage] = useState('Iniciando ventana de navegador...');
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [checkingNow, setCheckingNow] = useState(false);

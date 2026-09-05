@@ -27,7 +27,11 @@ export interface DeepSeekScrapedUsage {
 
 const CURRENCY_SYMBOLS: Record<string, string> = { $: 'USD', '¥': 'CNY', '€': 'EUR' };
 
-function findAmount(lines: string[], labelPattern: RegExp, lookahead = 6): { value: number; currency?: string } | undefined {
+function findAmount(
+  lines: string[],
+  labelPattern: RegExp,
+  lookahead = 6
+): { value: number; currency?: string } | undefined {
   for (let i = 0; i < lines.length; i++) {
     if (!labelPattern.test(lines[i])) continue;
     for (let j = i; j < Math.min(lines.length, i + 1 + lookahead); j++) {

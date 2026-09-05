@@ -20,7 +20,10 @@ function tmpDir() {
 
 test('load() returns {} when the store file does not exist yet', () => {
   const dir = tmpDir();
-  const store = createCredentialStore({ safeStorage: fakeSafeStorage(true), filePath: path.join(dir, 'credentials.enc') });
+  const store = createCredentialStore({
+    safeStorage: fakeSafeStorage(true),
+    filePath: path.join(dir, 'credentials.enc'),
+  });
   assert.deepEqual(store.load(), {});
 });
 

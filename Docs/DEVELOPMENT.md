@@ -13,18 +13,18 @@ npm run dev
 
 ## Comandos
 
-| Comando | Uso |
-|---|---|
-| `npm run dev` | Next.js en desarrollo. |
-| `npm run lint` | ESLint 9 y Core Web Vitals. |
-| `npm run typecheck` | TypeScript estricto sin emitir. |
-| `npm test` | Tests unitarios dirigidos; no ejecuta scripts de diagnóstico. |
-| `npm run check` | lint + tipos + tests. |
-| `npm run build` | Standalone de producción. |
-| `npm run electron:dev` | Copia fuentes versionadas a NTFS, prepara standalone y abre un Electron aislado. |
-| `npm run electron:build` | Instalador y portable locales. |
-| `npm run exe` | Alias compatible de `electron:build`. |
-| `npm run release:windows` | Release firmada y SHA-256. |
+| Comando                   | Uso                                                                              |
+| ------------------------- | -------------------------------------------------------------------------------- |
+| `npm run dev`             | Next.js en desarrollo.                                                           |
+| `npm run lint`            | ESLint 9 y Core Web Vitals.                                                      |
+| `npm run typecheck`       | TypeScript estricto sin emitir.                                                  |
+| `npm test`                | Tests unitarios dirigidos; no ejecuta scripts de diagnóstico.                    |
+| `npm run check`           | lint + tipos + tests.                                                            |
+| `npm run build`           | Standalone de producción.                                                        |
+| `npm run electron:dev`    | Copia fuentes versionadas a NTFS, prepara standalone y abre un Electron aislado. |
+| `npm run electron:build`  | Instalador y portable locales.                                                   |
+| `npm run exe`             | Alias compatible de `electron:build`.                                            |
+| `npm run release:windows` | Release firmada y SHA-256.                                                       |
 
 ## Estructura
 

@@ -30,13 +30,7 @@ test('revealing a hidden widget restores and centers it on the selected display'
 
   revealWindowOnDisplay(win, PRIMARY);
 
-  assert.deepEqual(calls, [
-    ['restore'],
-    ['setPosition', 1550, 622],
-    ['show'],
-    ['moveTop'],
-    ['focus'],
-  ]);
+  assert.deepEqual(calls, [['restore'], ['setPosition', 1550, 622], ['show'], ['moveTop'], ['focus']]);
 });
 
 test('revealing an already visible widget does not move it unnecessarily', () => {

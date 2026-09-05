@@ -9,7 +9,10 @@ function probePort(host, port, timeoutMs = 800, probePath = '/') {
       res.resume();
       resolve(true);
     });
-    req.on('timeout', () => { req.destroy(); resolve(false); });
+    req.on('timeout', () => {
+      req.destroy();
+      resolve(false);
+    });
     req.on('error', () => resolve(false));
   });
 }
@@ -53,7 +56,9 @@ function spawnServer({ standaloneDir, port, host, envFile, forkProcess, brokerUr
     env: childEnv,
     stdio: 'inherit',
   });
-  child.on('exit', (code) => { if (onExit) onExit(code); });
+  child.on('exit', (code) => {
+    if (onExit) onExit(code);
+  });
   return child;
 }
 

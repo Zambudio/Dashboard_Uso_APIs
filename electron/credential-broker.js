@@ -29,9 +29,16 @@ function startCredentialBroker({ safeStorage, filePath, legacyEnvPath, configSto
   if (configStore && legacyEnvPath && fs.existsSync(legacyEnvPath) && !configStore.has('dashboardState')) {
     const raw = fs.readFileSync(legacyEnvPath, 'utf8');
     const decode = (name) => {
-      const match = raw.split(/\r?\n/).map((line) => line.match(new RegExp(`^\\s*${name}\\s*=\\s*"?([^"\\r\\n]*)"?\\s*$`))).find(Boolean);
+      const match = raw
+        .split(/\r?\n/)
+        .map((line) => line.match(new RegExp(`^\\s*${name}\\s*=\\s*"?([^"\\r\\n]*)"?\\s*$`)))
+        .find(Boolean);
       if (!match || !match[1]) return null;
-      try { return JSON.parse(Buffer.from(match[1], 'base64').toString('utf8')); } catch { return null; }
+      try {
+        return JSON.parse(Buffer.from(match[1], 'base64').toString('utf8'));
+      } catch {
+        return null;
+      }
     };
     const providers = decode('DASHBOARD_CONFIG');
     const preferences = decode('DASHBOARD_PREFERENCES');
@@ -67,9 +74,13 @@ function startCredentialBroker({ safeStorage, filePath, legacyEnvPath, configSto
       return;
     }
     if (req.method === 'GET') {
-      const value = req.url === '/credentials'
-        ? store.load()
-        : (configStore?.get('dashboardState', { providers: null, preferences: null }) ?? { providers: null, preferences: null });
+      const value =
+        req.url === '/credentials'
+          ? store.load()
+          : (configStore?.get('dashboardState', { providers: null, preferences: null }) ?? {
+              providers: null,
+              preferences: null,
+            });
       res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' });
       res.end(JSON.stringify(value));
       return;
@@ -80,7 +91,10 @@ function startCredentialBroker({ safeStorage, filePath, legacyEnvPath, configSto
           const value = JSON.parse(body || '{}');
           if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error('invalid payload');
           if (req.url === '/credentials') {
-            const valid = Object.entries(value).every(([id, secret]) => /^[a-z0-9][a-z0-9-]{0,127}$/i.test(id) && typeof secret === 'string' && secret.length <= 250000);
+            const valid = Object.entries(value).every(
+              ([id, secret]) =>
+                /^[a-z0-9][a-z0-9-]{0,127}$/i.test(id) && typeof secret === 'string' && secret.length <= 250000
+            );
             if (!valid) throw new Error('invalid credentials');
             store.save(value);
           } else {

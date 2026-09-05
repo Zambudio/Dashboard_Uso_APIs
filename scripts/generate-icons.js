@@ -9,7 +9,7 @@ const iconSizes = [16, 24, 32, 48, 64, 128, 256];
 
 const crcTable = Array.from({ length: 256 }, (_, index) => {
   let value = index;
-  for (let bit = 0; bit < 8; bit++) value = (value & 1) ? (0xedb88320 ^ (value >>> 1)) : (value >>> 1);
+  for (let bit = 0; bit < 8; bit++) value = value & 1 ? 0xedb88320 ^ (value >>> 1) : value >>> 1;
   return value >>> 0;
 });
 
@@ -42,7 +42,7 @@ function render(size) {
   const pixels = Buffer.alloc(dimension * dimension * 4);
   const bars = [
     [0.219, 0.559, 0.359, 0.777],
-    [0.430, 0.426, 0.570, 0.777],
+    [0.43, 0.426, 0.57, 0.777],
     [0.641, 0.246, 0.781, 0.777],
   ];
 
@@ -63,9 +63,10 @@ function render(size) {
         const [left, top, right, bottom] = bars[index];
         if (!roundedRect(nx, ny, left, top, right, bottom, (right - left) / 2)) continue;
         const gradient = Math.min(1, Math.max(0, (nx - 0.219) / 0.562));
-        const stops = gradient < 0.52
-          ? [[34, 211, 238], [139, 92, 246], gradient / 0.52]
-          : [[139, 92, 246], [236, 72, 153], (gradient - 0.52) / 0.48];
+        const stops =
+          gradient < 0.52
+            ? [[34, 211, 238], [139, 92, 246], gradient / 0.52]
+            : [[139, 92, 246], [236, 72, 153], (gradient - 0.52) / 0.48];
         pixels[offset] = Math.round(stops[0][0] + (stops[1][0] - stops[0][0]) * stops[2]);
         pixels[offset + 1] = Math.round(stops[0][1] + (stops[1][1] - stops[0][1]) * stops[2]);
         pixels[offset + 2] = Math.round(stops[0][2] + (stops[1][2] - stops[0][2]) * stops[2]);
@@ -87,7 +88,7 @@ function render(size) {
       const sums = [0, 0, 0, 0];
       for (let sy = 0; sy < scale; sy++) {
         for (let sx = 0; sx < scale; sx++) {
-          const source = (((y * scale + sy) * dimension) + (x * scale + sx)) * 4;
+          const source = ((y * scale + sy) * dimension + (x * scale + sx)) * 4;
           for (let channel = 0; channel < 4; channel++) sums[channel] += pixels[source + channel];
         }
       }
@@ -134,5 +135,8 @@ images.forEach(({ size, data }, index) => {
 
 fs.mkdirSync(outputDir, { recursive: true });
 fs.writeFileSync(path.join(outputDir, 'app-icon.png'), images.at(-1).data);
-fs.writeFileSync(path.join(outputDir, 'app-icon.ico'), Buffer.concat([icoHeader, ...images.map((image) => image.data)]));
+fs.writeFileSync(
+  path.join(outputDir, 'app-icon.ico'),
+  Buffer.concat([icoHeader, ...images.map((image) => image.data)])
+);
 console.log('[icons] assets/app-icon.png y assets/app-icon.ico generados.');

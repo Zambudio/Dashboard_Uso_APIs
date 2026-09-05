@@ -21,13 +21,13 @@ flowchart LR
 
 ## Límites de confianza
 
-| Zona | Puede conocer secretos | Persistencia |
-|---|---:|---|
-| Renderer del widget | No | Ninguna |
-| Dashboard web | No; solo presencia de conexión | Ninguna en navegador |
-| Servidor Next.js | Sí, durante la llamada necesaria | No |
-| Broker Electron | Sí | `safeStorage`/DPAPI |
-| Configuración Electron | No contiene secretos | JSON de `electron-store` |
+| Zona                   |           Puede conocer secretos | Persistencia             |
+| ---------------------- | -------------------------------: | ------------------------ |
+| Renderer del widget    |                               No | Ninguna                  |
+| Dashboard web          |   No; solo presencia de conexión | Ninguna en navegador     |
+| Servidor Next.js       | Sí, durante la llamada necesaria | No                       |
+| Broker Electron        |                               Sí | `safeStorage`/DPAPI      |
+| Configuración Electron |             No contiene secretos | JSON de `electron-store` |
 
 El broker escucha en un puerto aleatorio de loopback y exige un bearer token aleatorio transmitido al proceso hijo mediante variables de entorno. `/api/keys` nunca devuelve el mapa real: `GET` responde únicamente `configuredIds`.
 
@@ -72,11 +72,11 @@ sequenceDiagram
   participant U as Usuario
   participant UI as Dashboard
   participant N as Next.js
-  participant P as Playwright efímero
+  participant P as Playwright (login interactivo)
   participant B as Broker cifrado
   U->>UI: Iniciar sesión web
   UI->>N: Crear sesión temporal
-  N->>P: Abrir contexto sin perfil persistente
+  N->>P: Abrir contexto de login (perfil persistente, no empaquetado)
   U->>P: Autenticarse en el proveedor
   P->>N: Token/cookies/estado requerido
   N->>B: Guardar bloque opaco cifrado
@@ -84,7 +84,9 @@ sequenceDiagram
   N->>P: Cerrar y eliminar contexto
 ```
 
-Algunos proveedores autentican su propia web mediante cookies o `localStorage`. Esos valores pueden formar parte del bloque cifrado porque son necesarios para reproducir una sesión, pero no se guardan en cookies del widget ni en un perfil persistente de Playwright.
+Algunos proveedores autentican su propia web mediante cookies o `localStorage`. Esos valores pueden formar parte del bloque cifrado porque son necesarios para reproducir una sesión. No se guardan en cookies del widget. El **login interactivo** abre un perfil de navegador persistente en
+`%LOCALAPPDATA%\Dashboard_Uso_APIs\browser-profile` (fuera del paquete, con cifrado del sistema/DPAPI) para recordar la
+autenticación; la consulta automática de uso siempre usa navegadores efímeros sin perfil en disco.
 
 ## Dashboard web
 

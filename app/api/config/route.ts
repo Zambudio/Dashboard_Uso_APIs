@@ -11,8 +11,9 @@ function sanitizeUsage(value: unknown): ApiUsageSnapshot | undefined {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return undefined;
   const usage = value as Partial<ApiUsageSnapshot>;
   if (typeof usage.fetchedAt !== 'string') return undefined;
-  const number = (candidate: unknown) => typeof candidate === 'number' && Number.isFinite(candidate) ? candidate : undefined;
-  const text = (candidate: unknown, max = 500) => typeof candidate === 'string' ? candidate.slice(0, max) : undefined;
+  const number = (candidate: unknown) =>
+    typeof candidate === 'number' && Number.isFinite(candidate) ? candidate : undefined;
+  const text = (candidate: unknown, max = 500) => (typeof candidate === 'string' ? candidate.slice(0, max) : undefined);
   return {
     fetchedAt: usage.fetchedAt,
     balance: number(usage.balance),
@@ -28,7 +29,9 @@ function sanitizeUsage(value: unknown): ApiUsageSnapshot | undefined {
     weeklyResetsAt: text(usage.weeklyResetsAt, 64),
     planType: text(usage.planType, 120),
     tier: text(usage.tier, 120),
-    unavailable: Array.isArray(usage.unavailable) ? usage.unavailable.filter((item): item is string => typeof item === 'string').slice(0, 50) : undefined,
+    unavailable: Array.isArray(usage.unavailable)
+      ? usage.unavailable.filter((item): item is string => typeof item === 'string').slice(0, 50)
+      : undefined,
     error: text(usage.error, 1000),
   };
 }
@@ -59,15 +62,23 @@ function sanitizeProviders(value: unknown): ApiProviderConfig[] {
 function sanitizePreferences(value: unknown): DashboardPreferences {
   if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error('invalid preferences');
   const preferences = value as Partial<DashboardPreferences>;
-  if (preferences.refreshWidgetSeconds !== undefined && (preferences.refreshWidgetSeconds < 15 || preferences.refreshWidgetSeconds > 86400)) {
+  if (
+    preferences.refreshWidgetSeconds !== undefined &&
+    (preferences.refreshWidgetSeconds < 15 || preferences.refreshWidgetSeconds > 86400)
+  ) {
     throw new Error('invalid refresh interval');
   }
   if (preferences.widgetOpacity !== undefined && (preferences.widgetOpacity < 30 || preferences.widgetOpacity > 100)) {
     throw new Error('invalid opacity');
   }
-  const ids = (candidate: unknown) => Array.isArray(candidate)
-    ? [...new Set(candidate.filter((id): id is string => typeof id === 'string' && /^[a-z0-9][a-z0-9-]{0,127}$/i.test(id)))].slice(0, 100)
-    : undefined;
+  const ids = (candidate: unknown) =>
+    Array.isArray(candidate)
+      ? [
+          ...new Set(
+            candidate.filter((id): id is string => typeof id === 'string' && /^[a-z0-9][a-z0-9-]{0,127}$/i.test(id))
+          ),
+        ].slice(0, 100)
+      : undefined;
   const sortOrders = new Set(['default', 'status', 'balance', 'cost']);
   const themes = new Set(['aurora', 'esmeralda', 'ambar', 'violeta', 'mono']);
   return {
@@ -84,12 +95,14 @@ function sanitizePreferences(value: unknown): DashboardPreferences {
 }
 
 export async function GET() {
-  return NextResponse.json(await readDashboardState<{ providers: ApiProviderConfig[] | null; preferences: DashboardPreferences | null }>());
+  return NextResponse.json(
+    await readDashboardState<{ providers: ApiProviderConfig[] | null; preferences: DashboardPreferences | null }>()
+  );
 }
 
 export async function PUT(request: NextRequest) {
   try {
-    const body = await request.json() as { providers?: unknown; preferences?: unknown };
+    const body = (await request.json()) as { providers?: unknown; preferences?: unknown };
     const sanitized: { providers?: ApiProviderConfig[]; preferences?: DashboardPreferences } = {};
     if (body.providers !== undefined) sanitized.providers = sanitizeProviders(body.providers);
     if (body.preferences !== undefined) sanitized.preferences = sanitizePreferences(body.preferences);

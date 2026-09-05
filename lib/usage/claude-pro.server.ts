@@ -9,8 +9,14 @@ const CHROME_USER_AGENT =
   'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
 
 const BLOCKED_SIGNATURES = [
-  { pattern: 'Just a moment', error: 'Cloudflare bloqueó la petición (protección anti-bot). Reintenta en unos minutos.' },
-  { pattern: 'Enable JavaScript and cookies to continue', error: 'Cloudflare pidió un reto JS/cookies que no se pudo superar.' },
+  {
+    pattern: 'Just a moment',
+    error: 'Cloudflare bloqueó la petición (protección anti-bot). Reintenta en unos minutos.',
+  },
+  {
+    pattern: 'Enable JavaScript and cookies to continue',
+    error: 'Cloudflare pidió un reto JS/cookies que no se pudo superar.',
+  },
 ];
 
 interface ClaudeOrganization {

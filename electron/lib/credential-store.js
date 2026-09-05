@@ -56,7 +56,9 @@ function createCredentialStore({ safeStorage, filePath, fsImpl = fs }) {
 
   function save(keys) {
     if (!safeStorage.isEncryptionAvailable()) {
-      throw new Error('El cifrado seguro del sistema operativo no está disponible; no se guardarán credenciales en texto plano.');
+      throw new Error(
+        'El cifrado seguro del sistema operativo no está disponible; no se guardarán credenciales en texto plano.'
+      );
     }
     const json = JSON.stringify(keys);
     const dir = path.dirname(filePath);
