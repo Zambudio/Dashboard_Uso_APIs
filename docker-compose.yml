@@ -1,0 +1,21 @@
+services:
+  dashboard-ia:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: monitor-apis-ia
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - DASHBOARD_ENV_FILE=/app/.data/.env
+    volumes:
+      # Volumen gestionado por Docker (máximo rendimiento y persistencia total entre reinicios)
+      - dashboard-data:/app/.data
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+volumes:
+  dashboard-data:

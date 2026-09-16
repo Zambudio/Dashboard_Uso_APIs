@@ -19,8 +19,8 @@
   },
   "main": "electron/main.js",
   "scripts": {
-    "dev": "next dev",
-    "build": "next build",
+    "dev": "next dev --webpack",
+    "build": "next build --webpack",
     "start": "next start",
     "lint": "eslint .",
     "format": "prettier --write \"**/*.{js,ts,tsx,jsx,mjs,cjs,json,css,md}\"",

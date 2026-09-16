@@ -2,6 +2,7 @@ import { Browser, BrowserContext, Page } from 'playwright';
 import { ApiUsageSnapshot, ProviderKey } from '@/types/api';
 import { readEnvKeys, writeEnvKeys } from '@/lib/env-keys.server';
 import { launchInteractivePersistentContext } from '@/lib/playwright-browser.server';
+import { resolveBrokerConfig, captureSessionCookie } from '@/lib/cred-broker-client';
 import { fetchClaudeProUsage } from '@/lib/usage/claude-pro.server';
 import { fetchOpenAIUsage } from '@/lib/usage/openai.server';
 import { parseDeepSeekUsageText } from '@/lib/usage/deepseek-scrape.server';
@@ -32,6 +33,36 @@ declare global {
 
 const activeSessions: Map<string, BrowserLoginSession> =
   globalThis.__browserLoginSessions ?? (globalThis.__browserLoginSessions = new Map<string, BrowserLoginSession>());
+
+/**
+ * Detecta la página de Google "Este navegador o aplicación no es seguro"
+ * (bloqueo anti-automatización de OAuth). En ese caso avisa al usuario de que
+ * el navegador automatizado no puede completar el login y le orienta a pegar
+ * la credencial manualmente.
+ */
+async function detectGoogleAuthBlock(page: Page, url: string): Promise<string | null> {
+  if (!url.includes('accounts.google.com')) return null;
+  let text = '';
+  try {
+    text = await page.evaluate(() => document.body?.innerText || '');
+  } catch {
+    return null;
+  }
+  const lower = text.toLowerCase();
+  const blocked =
+    lower.includes('no se ha podido iniciar sesi') ||
+    lower.includes('no sean seguros') ||
+    lower.includes('navegador o la aplicaci') ||
+    lower.includes('browser or app may not be secure') ||
+    lower.includes('this browser or app may not be secure');
+  if (!blocked) return null;
+  return (
+    'Google bloqueó la ventana automatizada ("Este navegador o aplicación no es seguro"). ' +
+    'No es un problema de tu cuenta: es la protección anti-bot de Google. ' +
+    'Cierra esta ventana y pega la credencial manualmente en la tarjeta ' +
+    '(copia la cookie/token de sesión desde tu navegador normal y usa el campo de credencial).'
+  );
+}
 
 async function saveSecretForProvider(providerId: string, secret: string) {
   const currentKeys = await readEnvKeys();
@@ -96,6 +127,27 @@ export async function startBrowserLogin(providerId: string, provider: ProviderKe
   // Background execution
   void (async () => {
     try {
+      // App empaquetada (broker presente): el login se hace en una ventana
+      // real del proceso principal de Electron y se captura la cookie de
+      // sesión desde `session.defaultSession`, evitando que Playwright (que
+      // Google/Cloudflare detectan como automatización) bloquee el inicio.
+      const broker = resolveBrokerConfig(process.env);
+      if (broker && provider === 'claude-pro') {
+        const res = await captureSessionCookie(broker, {
+          url: 'https://claude.ai/login',
+          cookieName: 'sessionKey',
+          trustedHosts: ['claude.ai', 'accounts.google.com', 'appleid.apple.com', 'login.microsoftonline.com'],
+        });
+        if (!res || !res.success || !res.cookie) {
+          throw new Error(res?.error || 'No se pudo capturar la sesión de claude.ai.');
+        }
+        await saveSecretForProvider(providerId, res.cookie);
+        session.usageSnapshot = await fetchClaudeProUsage(res.cookie);
+        session.status = 'completed';
+        session.statusMessage = '¡Sesión de Claude vinculada y datos de consumo obtenidos!';
+        return;
+      }
+
       const context: BrowserContext = await launchInteractivePersistentContext();
       session.context = context;
 
@@ -212,6 +264,13 @@ async function setupClaudeLogin(session: BrowserLoginSession) {
       const sessionCookie = cookies.find((c) => c.name === 'sessionKey' && c.value && c.value.length > 10);
 
       const url = page.url();
+      const googleBlock = await detectGoogleAuthBlock(page, url);
+      if (googleBlock) {
+        session.status = 'error';
+        session.statusMessage = googleBlock;
+        session.error = googleBlock;
+        return;
+      }
       const isInsideClaude = url.includes('claude.ai') && !url.includes('/login') && !url.includes('/auth');
 
       if (sessionCookie || isInsideClaude) {
@@ -385,6 +444,13 @@ async function setupOpenAILogin(session: BrowserLoginSession) {
 
     try {
       const url = page.url();
+      const googleBlock = await detectGoogleAuthBlock(page, url);
+      if (googleBlock) {
+        session.status = 'error';
+        session.statusMessage = googleBlock;
+        session.error = googleBlock;
+        return;
+      }
       const cookies = await context.cookies();
       const sessionTokenCookie = cookies.find(
         (c) =>
@@ -677,6 +743,13 @@ async function setupGeminiLogin(session: BrowserLoginSession) {
 
     try {
       const url = page.url();
+      const googleBlock = await detectGoogleAuthBlock(page, url);
+      if (googleBlock) {
+        session.status = 'error';
+        session.statusMessage = googleBlock;
+        session.error = googleBlock;
+        return;
+      }
       const isGemini = url.includes('gemini.google.com') && !url.includes('accounts.google.com');
       const isAIStudio = url.includes('aistudio.google.com') && !url.includes('accounts.google.com');
 
@@ -911,6 +984,13 @@ async function setupDeepSeekLogin(session: BrowserLoginSession) {
 
     try {
       const url = page.url();
+      const googleBlock = await detectGoogleAuthBlock(page, url);
+      if (googleBlock) {
+        session.status = 'error';
+        session.statusMessage = googleBlock;
+        session.error = googleBlock;
+        return;
+      }
       const isLoggedOut = url.includes('sign_in') || url.includes('login') || url.includes('accounts.google.com');
       const isDeepSeekPlatform = url.includes('platform.deepseek.com');
 

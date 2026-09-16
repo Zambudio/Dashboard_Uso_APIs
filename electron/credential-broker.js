@@ -10,7 +10,7 @@ const { createCredentialStore, migrateFromLegacyEnv, removeLegacyEnvKeys } = req
 // aparte) no puede llamar a safeStorage directamente porque no es un proceso
 // Electron. El token evita que cualquier otro proceso local que adivine el
 // puerto pueda leer secretos.
-function startCredentialBroker({ safeStorage, filePath, legacyEnvPath, configStore }) {
+function startCredentialBroker({ safeStorage, filePath, legacyEnvPath, configStore, sessionService }) {
   const store = createCredentialStore({ safeStorage, filePath });
   const token = crypto.randomBytes(24).toString('hex');
 
@@ -65,12 +65,44 @@ function startCredentialBroker({ safeStorage, filePath, legacyEnvPath, configSto
   }
 
   const server = http.createServer((req, res) => {
-    if (req.url !== '/credentials' && req.url !== '/config') {
+    if (
+      req.url !== '/credentials' &&
+      req.url !== '/config' &&
+      req.url !== '/session/capture' &&
+      req.url !== '/session/fetch'
+    ) {
       res.writeHead(404).end();
       return;
     }
     if (!authorized(req)) {
       res.writeHead(401).end();
+      return;
+    }
+    if (req.method === 'POST' && sessionService && (req.url === '/session/capture' || req.url === '/session/fetch')) {
+      readBody(req).then((body) => {
+        let payload = {};
+        try {
+          payload = JSON.parse(body || '{}');
+        } catch {
+          res.writeHead(400).end();
+          return;
+        }
+        const run =
+          req.url === '/session/capture'
+            ? sessionService.captureSessionCookie(payload)
+            : sessionService
+                .setCookies(payload.cookies || [])
+                .then(() => Promise.all((payload.urls || []).map((u) => sessionService.fetchViaWindow(u))));
+        run
+          .then((data) => {
+            res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' });
+            res.end(JSON.stringify({ ok: true, data }));
+          })
+          .catch((err) => {
+            res.writeHead(502, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ ok: false, error: err instanceof Error ? err.message : String(err) }));
+          });
+      });
       return;
     }
     if (req.method === 'GET') {

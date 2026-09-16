@@ -9,9 +9,15 @@ const manrope = Manrope({
 });
 
 export const metadata: Metadata = {
-  title: 'AI API Usage Dashboard',
-  description: 'Monitoriza uso, saldo y límites de tus APIs de IA.',
+  title: 'Monitor de uso de APIs de IA',
+  description: 'Monitoriza uso, saldo y límites de tus suscripciones y APIs de IA.',
+  manifest: '/manifest.json',
+  icons: {
+    icon: '/app-icon.png',
+    apple: '/app-icon.png',
+  },
 };
+
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (

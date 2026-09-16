@@ -1,5 +1,6 @@
 import { ApiUsageSnapshot } from '@/types/api';
 import { launchAvailableChromium } from '@/lib/playwright-browser.server';
+import { resolveBrokerConfig, fetchSessionUrls } from '@/lib/cred-broker-client';
 
 async function launchChromium() {
   return launchAvailableChromium({ headless: true });
@@ -52,6 +53,54 @@ function parseBody<T>(bodyText: string): T {
 export async function fetchClaudeProUsage(sessionKey: string): Promise<ApiUsageSnapshot> {
   const fetchedAt = new Date().toISOString();
 
+  // Ruta 1 (widget Electron / broker): se fija la cookie en la sesión del
+  // proceso principal y se consulta con una ventana oculta real (Chromium con
+  // user-agent Chrome y la cookie de sesión), lo que evita que Cloudflare
+  // bloquee la petición. Es el mismo enfoque del widget de referencia.
+  const broker = resolveBrokerConfig(process.env);
+  if (broker) {
+    const cookies = [
+      {
+        url: 'https://claude.ai',
+        name: 'sessionKey',
+        value: sessionKey,
+        domain: '.claude.ai',
+        path: '/',
+        secure: true,
+        httpOnly: true,
+      },
+    ];
+    try {
+      const [orgs] = await fetchSessionUrls(broker, {
+        cookies,
+        urls: ['https://claude.ai/api/organizations'],
+      });
+      const organizationId = Array.isArray(orgs) ? orgs[0]?.uuid : orgs?.uuid;
+      if (!organizationId) {
+        throw new Error('No se encontró ninguna organización en tu cuenta de claude.ai.');
+      }
+      const [usage] = await fetchSessionUrls(broker, {
+        cookies,
+        urls: [`https://claude.ai/api/organizations/${organizationId}/usage`],
+      });
+      return {
+        fetchedAt,
+        sessionUtilization: usage?.five_hour?.utilization,
+        weeklyUtilization: usage?.seven_day?.utilization,
+        sessionResetsAt: usage?.five_hour?.resets_at,
+        weeklyResetsAt: usage?.seven_day?.resets_at,
+        unavailable: ['balance', 'accumulatedCost', 'tokensUsed', 'requestCount'],
+      };
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      if (/Cloudflare|InvalidJSON|session[^a-z]/i.test(message)) {
+        throw new Error(`La sesión de claude.ai no es válida o caducó (${message}). Vuelve a iniciar sesión.`);
+      }
+      throw error;
+    }
+  }
+
+  // Ruta 2 (desarrollo web sin Electron): Playwright efímero.
   const browser = await launchChromium();
   try {
     const context = await browser.newContext({ userAgent: CHROME_USER_AGENT });

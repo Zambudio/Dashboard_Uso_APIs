@@ -31,8 +31,10 @@ cualquier PC sigue bloqueada por la firma de código pendiente; véase
 - Empaquetado antiguo `pkg` + tray C# retirado; `npm run exe` es alias de Electron Builder.
 - Navegador de producción resuelto mediante Edge/Chrome sin reactivar `runAsNode`.
 - Staging NTFS compatible con borrados pendientes del árbol de trabajo.
-- Recuperación desde bandeja: restaura ventanas minimizadas y las trae al monitor activo.
-- Renderer servido por un protocolo interno con lista cerrada de recursos; `file://` continúa sin privilegios adicionales.
+- Docker y Docker Compose: despliegue contenedorizado oficial (`node:22-alpine` multi-etapa, usuario no-root `nextjs:1001`), con persistencia de configuración y uso en volumen `dashboard-data`.
+- PWA y modo Web App independiente: manifiesto completo con iconos dedicados (192x192, 512x512 y favicon) para instalación como ventana de escritorio desacoplada del navegador.
+- Sincronización de cuotas y uso web: soporte de extensiones/bookmarklet hacia `/api/usage/sync` y tolerancia ante entornos sin navegador gráfico de escritorio (fallback limpio en Docker sin errores de Playwright).
+- Normalización visual y unificación de tarjetas: cuadrículas alineadas en 4 niveles, visualización de cuota Pro en Claude/OpenAI/Gemini y panel de resumen recolocado.
 
 ## Validación de esta entrega
 

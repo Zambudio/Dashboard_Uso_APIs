@@ -7,7 +7,13 @@ type ChromiumLaunchPersistentOptions = NonNullable<Parameters<typeof chromium.la
 
 function isMissingBrowser(error: unknown): boolean {
   const message = error instanceof Error ? error.message : String(error);
-  return message.includes("Executable doesn't exist") || message.includes('Executable doesn');
+  return (
+    message.includes("Executable doesn't exist") ||
+    message.includes('Executable doesn') ||
+    message.includes('Chromium distribution') ||
+    message.includes('not found') ||
+    message.includes('browserType.launch')
+  );
 }
 
 function installDevelopmentChromium(): boolean {

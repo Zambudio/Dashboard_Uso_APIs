@@ -7,9 +7,10 @@ Este directorio es la fuente de verdad técnica y operativa de Dashboard_Uso_API
 ### Usuario final
 
 1. [Instalación en Windows](./INSTALLATION_WINDOWS.md)
-2. [Operación y resolución de problemas](./OPERATIONS_TROUBLESHOOTING.md)
-3. [Proveedores y métricas](./PROVIDERS.md)
-4. [Seguridad y credenciales](./SECURITY.md)
+2. [Despliegue con Docker (PC o servidor)](./DOCKER.md)
+3. [Operación y resolución de problemas](./OPERATIONS_TROUBLESHOOTING.md)
+4. [Proveedores y métricas](./PROVIDERS.md)
+5. [Seguridad y credenciales](./SECURITY.md)
 
 ### Desarrollo y mantenimiento
 

@@ -8,6 +8,7 @@ out/
 .env.*.local
 dist/.env
 dist/standalone/.env
+.data/
 
 # Perfil persistente de Chromium/Chrome para "Iniciar sesión web" (cookies de
 # sesión reales, no debe versionarse ni distribuirse con el instalador).

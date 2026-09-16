@@ -3,7 +3,6 @@
 import { PointerEvent as ReactPointerEvent, useState } from 'react';
 import { ApiProviderConfig } from '@/types/api';
 import { getProviderDefinition } from '@/lib/providers';
-import { DonutChart } from './DonutChart';
 import { UsageBar } from './UsageBar';
 import { ProviderLogo } from './ProviderLogo';
 
@@ -14,39 +13,60 @@ interface ProviderCardProps {
   onConnect?: (provider: ApiProviderConfig) => void;
   onRefresh?: (id: string) => Promise<void>;
   onBrowserLogin?: (provider: ApiProviderConfig) => void;
-  /** true mientras el refresco inicial (sincronizado, al cargar la página) está en curso para este proveedor. */
+  onOpenSync?: (provider: ApiProviderConfig) => void;
   loading?: boolean;
-  /** Handle de arrastre para reordenar; si se pasa, aparece un asa arriba a la derecha. */
   dragHandleProps?: { onPointerDown: (event: ReactPointerEvent<HTMLButtonElement>) => void };
   isDragging?: boolean;
 }
 
-const FIELD_LABELS: Record<string, string> = {
-  balance: 'Saldo total',
-  accumulatedCost: 'Coste acumulado',
-  tokensUsed: 'Tokens consumidos',
-  requestCount: 'Nº de peticiones',
+const PROVIDER_URLS: Record<string, string> = {
+  'claude-pro': 'https://claude.ai/settings/usage',
+  'openai': 'https://chatgpt.com/settings/usage',
+  'gemini': 'https://gemini.google.com/usage',
+  'deepseek': 'https://platform.deepseek.com/usage',
+  'anthropic': 'https://console.anthropic.com/settings/cost',
 };
-
-function currencySymbol(currency?: string): string {
-  if (currency === 'CNY') return '¥';
-  if (currency === 'USD') return '$';
-  return '';
-}
 
 function formatRelativeTime(iso?: string): string | null {
   if (!iso) return null;
+  // Si ya es un texto descriptivo
+  if (
+    iso.includes('min') ||
+    iso.includes('Resets') ||
+    iso.includes('restablece') ||
+    iso.includes('las')
+  ) {
+    return iso;
+  }
   const date = new Date(iso);
   if (Number.isNaN(date.getTime())) {
-    // If it's a pre-formatted human string like "16 ago 2026 8:13", return directly
     return iso;
   }
   const diffMs = date.getTime() - Date.now();
-  const diffHours = diffMs / (1000 * 60 * 60);
-  if (diffHours <= 0) return 'ya';
-  if (diffHours < 1) return `${Math.round(diffHours * 60)} min`;
-  if (diffHours < 48) return `${Math.round(diffHours)} h`;
-  return `${Math.round(diffHours / 24)} d`;
+  if (diffMs <= 0) return 'en breves instantes';
+  const totalMinutes = Math.round(diffMs / (1000 * 60));
+  if (totalMinutes < 60) return `en ${totalMinutes} min`;
+  const hours = Math.floor(totalMinutes / 60);
+  const mins = totalMinutes % 60;
+  if (hours < 24) {
+    return mins > 0 ? `en ${hours} h ${mins} min` : `en ${hours} h`;
+  }
+  const days = Math.floor(hours / 24);
+  const remHours = hours % 24;
+  return remHours > 0 ? `en ${days} d ${remHours} h` : `en ${days} d`;
+}
+
+
+function formatMinutesAgo(isoDate?: string): string {
+  if (!isoDate) return 'Sin sincronizar';
+  const d = new Date(isoDate);
+  if (Number.isNaN(d.getTime())) return 'Reciente';
+  const diffMinutes = Math.floor((Date.now() - d.getTime()) / 60000);
+  if (diffMinutes <= 0) return 'Justo ahora';
+  if (diffMinutes < 60) return `Hace ${diffMinutes} min`;
+  const diffHours = Math.floor(diffMinutes / 60);
+  if (diffHours < 24) return `Hace ${diffHours} h`;
+  return `Hace ${Math.floor(diffHours / 24)} d`;
 }
 
 function DragHandle({ onPointerDown }: { onPointerDown: (event: ReactPointerEvent<HTMLButtonElement>) => void }) {
@@ -70,70 +90,40 @@ function DragHandle({ onPointerDown }: { onPointerDown: (event: ReactPointerEven
   );
 }
 
-function SkeletonStats() {
-  return (
-    <div className="grid gap-3 sm:grid-cols-2">
-      {[0, 1, 2, 3].map((i) => (
-        <div key={i} className="rounded-xl bg-white/5 px-3 py-2">
-          <div className="skeleton h-2.5 w-20 rounded-full" />
-          <div className="skeleton mt-2.5 h-4 w-14 rounded-full" />
-        </div>
-      ))}
-    </div>
-  );
-}
-
-function SkeletonGauges() {
-  return (
-    <div className="grid gap-3 sm:grid-cols-2">
-      <div className="flex flex-col items-center justify-center rounded-2xl border border-white/10 bg-slate-950/40 p-3">
-        <div className="skeleton h-24 w-24 rounded-full" />
-      </div>
-      <div className="flex flex-col justify-center gap-3 rounded-2xl border border-white/10 bg-slate-950/40 p-3">
-        <div className="skeleton h-3 w-24 rounded-full" />
-        <div className="skeleton h-3 w-20 rounded-full" />
-      </div>
-    </div>
-  );
-}
-
 export function ProviderCard({
   provider,
   onConfigure,
   onToggleVisibility,
-  onConnect,
   onRefresh,
-  onBrowserLogin,
+  onOpenSync,
   loading,
   dragHandleProps,
   isDragging,
 }: ProviderCardProps) {
   const [refreshing, setRefreshing] = useState(false);
-  const definition = getProviderDefinition(provider.provider);
 
-  const statusColors = {
-    online: 'bg-emerald-500',
-    warning: 'bg-amber-500',
-    offline: 'bg-rose-500',
-    error: 'bg-rose-500',
-    unconfigured: 'bg-slate-500',
-  } as const;
-
-  const connected = Boolean(provider.connected);
-  const hidden = provider.visibility === 'hidden';
   const usage = provider.usage;
-  const unavailable = new Set(usage?.unavailable ?? []);
-  // Claude (Anthropic) y Gemini tienen una ventana de sesión de 5h/actual además del
-  // límite semanal, pero solo la mostramos si hay datos reales: antes se forzaba
-  // también por tipo de proveedor, así que una tarjeta sin sesión iniciada (ej.
-  // Claude Pro sin datos) mostraba una barra vacía en 0% con "—" en el reset,
-  // ruido sin información. 0 es un valor real (sesión empezada sin uso todavía)
-  // y sí debe mostrarse; solo `undefined` en ambos campos oculta la fila.
-  const hasSessionWindow = usage?.sessionUtilization !== undefined || usage?.sessionResetsAt !== undefined;
-  const isSubscriptionLayout =
+  const hidden = provider.visibility === 'hidden';
+  const officialUrl = PROVIDER_URLS[provider.provider];
+
+  const hasUsageData = Boolean(
+    usage &&
+      (usage.sessionUtilization !== undefined ||
+        usage.weeklyUtilization !== undefined ||
+        usage.balance !== undefined ||
+        usage.accumulatedCost !== undefined ||
+        usage.tokensUsed !== undefined)
+  );
+
+  const isSubscription =
     provider.kind === 'subscription' ||
     usage?.sessionUtilization !== undefined ||
-    usage?.weeklyUtilization !== undefined;
+    usage?.weeklyUtilization !== undefined ||
+    provider.provider === 'claude-pro' ||
+    provider.id === 'claude-pro' ||
+    provider.name.toLowerCase().includes('claude') ||
+    provider.provider === 'openai' ||
+    provider.provider === 'gemini';
 
   const handleRefresh = async () => {
     if (!onRefresh || refreshing) return;
@@ -145,229 +135,200 @@ export function ProviderCard({
     }
   };
 
+  const planBadge =
+    usage?.planType ||
+    (provider.provider === 'claude-pro' || provider.id === 'claude-pro' || provider.name.toLowerCase().includes('claude')
+      ? 'Claude Pro'
+      : provider.provider === 'openai'
+      ? 'ChatGPT Plus / Team'
+      : provider.provider === 'gemini'
+      ? 'Google AI Pro (Antigravity)'
+      : provider.provider === 'deepseek'
+      ? 'DeepSeek Platform'
+      : null);
+
   return (
     <div
-      className={`rounded-2xl border border-white/10 ${hidden ? 'bg-white/5 opacity-70' : 'bg-[#17171f]'} p-5 shadow-card transition-shadow duration-200 ease-out ${
-        isDragging ? 'shadow-card-lift ring-1 ring-cyan-400/40' : ''
+      className={`relative flex flex-col justify-between h-full rounded-2xl border ${
+        hasUsageData ? 'border-white/[0.12] bg-[#141724]' : 'border-white/[0.08] bg-[#11131c]'
+      } p-5 shadow-xl transition-all duration-200 ${
+        isDragging ? 'scale-[1.02] shadow-cyan-500/10 ring-2 ring-cyan-500/50' : ''
       }`}
     >
-      <div className="mb-4 flex items-start justify-between gap-4">
-        <div className="flex items-start gap-3">
-          <ProviderLogo provider={provider.provider} />
-          <div>
-            <div className="flex flex-wrap items-center gap-2">
-              <h3 className="text-lg font-semibold text-white">{provider.name}</h3>
-              <span
-                className={`h-2.5 w-2.5 rounded-full ${statusColors[provider.status] ?? statusColors.unconfigured}`}
-              />
-              <span
-                className={`rounded-full px-2 py-0.5 text-[10px] uppercase tracking-[0.2em] ${connected ? 'bg-emerald-500/10 text-emerald-300 border border-emerald-400/30' : 'bg-slate-700/70 text-slate-300 border border-slate-500/30'}`}
-              >
-                {connected ? 'Conectado' : 'No conectado'}
-              </span>
-              {usage?.planType && (
-                <span className="rounded-full border border-cyan-400/30 bg-cyan-500/10 px-2 py-0.5 text-[10px] uppercase tracking-[0.2em] text-cyan-300">
-                  {usage.planType}
-                </span>
-              )}
-              {provider.kind === 'subscription' && !usage?.planType && (
-                <span className="rounded-full border border-fuchsia-400/30 bg-fuchsia-500/10 px-2 py-0.5 text-[10px] uppercase tracking-[0.2em] text-fuchsia-300">
-                  Suscripción
-                </span>
-              )}
-              {hidden && (
-                <span className="rounded-full border border-slate-500/40 bg-slate-800/80 px-2 py-0.5 text-[10px] uppercase tracking-[0.2em] text-slate-300">
-                  Oculto
-                </span>
-              )}
+      {/* Cabecera de la tarjeta */}
+      <div>
+        <div className="flex items-start justify-between gap-3 min-h-[68px]">
+          <div className="flex items-start gap-3">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/[0.06] p-2 shadow-inner mt-0.5">
+              <ProviderLogo provider={provider.provider} />
             </div>
-            <p className="mt-1 text-sm text-slate-400">{definition.label}</p>
+            <div className="flex flex-col gap-1">
+              <h3 className="text-base font-bold text-white leading-tight">{provider.name}</h3>
+              {planBadge ? (
+                <div>
+                  <span className="inline-block rounded-md border border-cyan-500/30 bg-cyan-500/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-cyan-300">
+                    {planBadge}
+                  </span>
+                </div>
+              ) : (
+                <div className="h-[21px]" aria-hidden="true" />
+              )}
+              <div className="flex items-center gap-2 text-xs text-slate-400">
+                <span
+                  className={`inline-block h-2 w-2 rounded-full ${
+                    hasUsageData ? 'bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.6)]' : 'bg-slate-500'
+                  }`}
+                />
+                <span>{hasUsageData ? formatMinutesAgo(usage?.fetchedAt) : 'Sin sincronizar'}</span>
+                {officialUrl && (
+                  <>
+                    <span>·</span>
+                    <a
+                      href={officialUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-cyan-400/90 hover:text-cyan-300 hover:underline inline-flex items-center gap-0.5"
+                    >
+                      Pestaña de uso ↗
+                    </a>
+                  </>
+                )}
+              </div>
+            </div>
+          </div>
+
+
+          <div className="flex shrink-0 items-center gap-1.5">
+            {dragHandleProps && <DragHandle onPointerDown={dragHandleProps.onPointerDown} />}
+            <button
+              onClick={() => onConfigure(provider)}
+              title="Configurar clave o ajustes"
+              className="rounded-lg p-1.5 text-slate-400 hover:bg-white/10 hover:text-slate-200 transition"
+            >
+              ⚙️
+            </button>
           </div>
         </div>
-        <div className="flex shrink-0 items-center gap-1">
-          {dragHandleProps && <DragHandle onPointerDown={dragHandleProps.onPointerDown} />}
-          <button
-            onClick={() => onConfigure(provider)}
-            className="rounded-lg px-2 py-1 text-xs text-slate-400 transition hover:text-cyan-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/60"
-          >
-            Configurar
-          </button>
+
+        {/* Mensaje de error si hubo */}
+        {usage?.error && (
+          <div className="mt-3.5 rounded-xl border border-rose-500/30 bg-rose-500/10 px-3 py-2 text-xs text-rose-300">
+            ⚠️ {usage.error}
+          </div>
+        )}
+
+        {/* CONTENIDO PRINCIPAL: LAS DOS BARRAS */}
+        <div className="mt-4 space-y-3 min-h-[316px] flex flex-col justify-between">
+          {loading ? (
+            <div className="space-y-3 min-h-[316px] flex flex-col justify-between">
+              <div className="h-[124px] w-full animate-pulse rounded-2xl bg-white/5" />
+              <div className="h-[124px] w-full animate-pulse rounded-2xl bg-white/5" />
+              <div className="h-11 w-full animate-pulse rounded-xl bg-white/5" />
+            </div>
+          ) : isSubscription ? (
+            <>
+              {/* BARRA 1: SESIÓN ACTUAL */}
+              <UsageBar
+                progress={usage?.sessionUtilization ?? 0}
+                label={provider.provider === 'gemini' ? 'Sesión actual (5h)' : 'Sesión actual (5h)'}
+                resetBadge={formatRelativeTime(usage?.sessionResetsAt)}
+                secondary={
+                  usage?.sessionUtilization !== undefined
+                    ? `${Math.round(usage.sessionUtilization)}% usado`
+                    : 'Sin datos'
+                }
+              />
+
+              {/* BARRA 2: LÍMITE SEMANAL */}
+              <UsageBar
+                progress={usage?.weeklyUtilization ?? 0}
+                label="Límite semanal"
+                resetBadge={formatRelativeTime(usage?.weeklyResetsAt)}
+                secondary={
+                  usage?.weeklyUtilization !== undefined
+                    ? `${Math.round(usage.weeklyUtilization)}% usado`
+                    : 'Sin datos'
+                }
+              />
+
+              {/* SALDO O CRÉDITOS SI CORRESPONDE (O SPACER PARA ALINEACIÓN EXACTA) */}
+              {usage?.balance !== undefined || usage?.accumulatedCost !== undefined ? (
+                <div className="flex h-11 items-center justify-between rounded-xl border border-white/[0.08] bg-[#0c0e17]/90 px-4 text-xs text-slate-300">
+                  <span className="text-slate-400 font-semibold">
+                    {usage.accumulatedCost !== undefined ? 'Créditos gastados' : 'Saldo de créditos'}
+                  </span>
+                  <span className="font-bold tabular-nums text-white text-sm">
+                    {usage.accumulatedCost !== undefined
+                      ? `${usage.accumulatedCost.toFixed(2)} ${usage.currency || 'EUR'}`
+                      : `${Number(usage.balance).toLocaleString()} ${usage.currency || 'créditos'}`}
+                  </span>
+                </div>
+              ) : (
+                <div className="h-11" aria-hidden="true" />
+              )}
+            </>
+          ) : (
+            /* VISTA DE PROVEEDORES PURAMENTE API (DeepSeek, OpenAI API, Anthropic API) */
+            <div className="flex h-full flex-col justify-between min-h-[316px] space-y-3">
+              <div className="flex-1 flex flex-col justify-center rounded-2xl border border-white/[0.08] bg-[#0c0e17]/90 p-5">
+                <p className="text-xs font-bold uppercase tracking-wider text-slate-400">Saldo Disponible</p>
+                <p className="mt-2 text-3xl font-black tabular-nums text-emerald-400 tracking-tight">
+                  {usage?.balance !== undefined
+                    ? `${usage.currency === 'CNY' ? '¥' : '$'}${usage.balance.toFixed(2)}`
+                    : '—'}
+                </p>
+              </div>
+              <div className="grid grid-cols-2 gap-3 text-xs">
+                <div className="rounded-2xl border border-white/[0.08] bg-[#0c0e17]/90 p-4">
+                  <p className="text-xs font-medium text-slate-400">Tokens consumidos</p>
+                  <p className="mt-1.5 text-base font-bold text-slate-200 tabular-nums">
+                    {usage?.tokensUsed !== undefined ? usage.tokensUsed.toLocaleString() : '—'}
+                  </p>
+                </div>
+                <div className="rounded-2xl border border-white/[0.08] bg-[#0c0e17]/90 p-4">
+                  <p className="text-xs font-medium text-slate-400">Peticiones</p>
+                  <p className="mt-1.5 text-base font-bold text-slate-200 tabular-nums">
+                    {usage?.requestCount !== undefined ? usage.requestCount.toLocaleString() : '—'}
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
-      {usage?.error && (
-        <div className="mb-4 rounded-xl border border-rose-400/30 bg-rose-500/10 px-3 py-2 text-xs text-rose-200">
-          {usage.error}
-        </div>
-      )}
 
-      {!connected && !loading && (
-        <div className="mb-4 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs text-slate-400">
-          Conecta tu {definition.secretLabel.toLowerCase()} para ver datos reales de uso.
-        </div>
-      )}
 
-      {connected && !usage && !loading && (
-        <div className="mb-4 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs text-slate-400">
-          Sin datos todavía — pulsa &quot;Actualizar&quot;.
-        </div>
-      )}
+      {/* Pie de la tarjeta: Acciones rápidas */}
+      <div className="mt-5 flex items-center justify-between border-t border-white/[0.08] pt-3.5">
+        {onOpenSync && (
+          <button
+            onClick={() => onOpenSync(provider)}
+            className="inline-flex items-center gap-1.5 rounded-lg bg-cyan-500/15 border border-cyan-500/30 px-3 py-1.5 text-xs font-semibold text-cyan-300 hover:bg-cyan-500/25 transition"
+          >
+            <span>⚡</span>
+            <span>Sincronizar</span>
+          </button>
+        )}
 
-      {loading ? (
-        isSubscriptionLayout ? (
-          <SkeletonGauges />
-        ) : (
-          <SkeletonStats />
-        )
-      ) : isSubscriptionLayout ? (
-        <>
-          <div className="mb-4 grid gap-3 sm:grid-cols-2">
-            <div>
-              <DonutChart value={usage?.weeklyUtilization ?? 0} max={100} color="#8b5cf6" label="Uso semanal" />
-              <p className="mt-2 text-center text-[11px] tabular text-slate-400">
-                Consumido {Math.round(usage?.weeklyUtilization ?? 0)}% · Restante{' '}
-                {Math.round(100 - (usage?.weeklyUtilization ?? 0))}%
-              </p>
-            </div>
-            <div className="flex flex-col justify-center gap-3 rounded-2xl border border-white/10 bg-slate-950/40 p-3">
-              {hasSessionWindow ? (
-                <div>
-                  <p className="text-[11px] uppercase tracking-[0.2em] text-slate-500">
-                    {provider.provider === 'gemini' ? 'Reset uso actual' : 'Reset sesión (5h)'}
-                  </p>
-                  <p className="mt-1 text-xl font-semibold tabular text-cyan-300">
-                    {formatRelativeTime(usage?.sessionResetsAt) ?? '—'}
-                  </p>
-                </div>
-              ) : null}
-              <div>
-                <p className="text-[11px] uppercase tracking-[0.2em] text-slate-500">Reset semanal</p>
-                <p className="mt-1 text-xl font-semibold tabular text-fuchsia-300">
-                  {formatRelativeTime(usage?.weeklyResetsAt) ?? '—'}
-                </p>
-              </div>
-            </div>
-          </div>
-          <div className="space-y-4">
-            {hasSessionWindow ? (
-              <UsageBar
-                progress={usage?.sessionUtilization ?? 0}
-                color="#38bdf8"
-                label={provider.provider === 'gemini' ? 'Uso actual' : 'Sesión actual (5h)'}
-                secondary={
-                  usage?.sessionUtilization !== undefined
-                    ? `${Math.round(usage.sessionUtilization)}% · Restante ${Math.round(100 - usage.sessionUtilization)}%`
-                    : '—'
-                }
-              />
-            ) : null}
-            <UsageBar
-              progress={usage?.weeklyUtilization ?? 0}
-              color="#8b5cf6"
-              label="Límite semanal"
-              secondary={
-                usage?.weeklyUtilization !== undefined
-                  ? `${Math.round(usage.weeklyUtilization)}% · Restante ${Math.round(100 - usage.weeklyUtilization)}%`
-                  : '—'
-              }
-            />
-          </div>
-        </>
-      ) : (
-        <div className="grid gap-3 text-sm text-slate-300 sm:grid-cols-2">
-          {(['balance', 'accumulatedCost', 'tokensUsed', 'requestCount'] as const).map((field) => {
-            const value = usage?.[field];
-            const isUnavailable = unavailable.has(field);
-            return (
-              <div key={field} className="rounded-xl bg-white/5 px-3 py-2">
-                <p className="text-[11px] uppercase tracking-[0.2em] text-slate-500">{FIELD_LABELS[field]}</p>
-                {isUnavailable ? (
-                  <p
-                    className="mt-1 text-sm text-slate-500"
-                    title="Este proveedor no expone este dato en su API pública"
-                  >
-                    No disponible
-                  </p>
-                ) : value === undefined ? (
-                  <p className="mt-1 text-sm text-slate-500">—</p>
-                ) : (
-                  <p className="mt-1 font-medium tabular text-white">
-                    {field === 'balance' || field === 'accumulatedCost'
-                      ? `${currencySymbol(usage?.currency)}${value.toFixed(2)}`
-                      : value.toLocaleString()}
-                  </p>
-                )}
-              </div>
-            );
-          })}
-          {usage?.grantedBalance !== undefined && (
-            <div className="rounded-xl bg-white/5 px-3 py-2">
-              <p className="text-[11px] uppercase tracking-[0.2em] text-slate-500">Saldo regalado</p>
-              <p className="mt-1 font-medium tabular text-white">{`${currencySymbol(usage.currency)}${usage.grantedBalance.toFixed(2)}`}</p>
-            </div>
-          )}
-          {usage?.toppedUpBalance !== undefined && (
-            <div className="rounded-xl bg-white/5 px-3 py-2">
-              <p className="text-[11px] uppercase tracking-[0.2em] text-slate-500">Saldo recargado</p>
-              <p className="mt-1 font-medium tabular text-white">{`${currencySymbol(usage.currency)}${usage.toppedUpBalance.toFixed(2)}`}</p>
-            </div>
-          )}
-        </div>
-      )}
-
-      {provider.provider === 'deepseek' && usage?.currency && (
-        <p className="mt-3 text-[11px] text-slate-500">
-          DeepSeek solo expone el saldo (no su historial de gasto). El saldo total = regalado + recargado. La plataforma
-          reporta en <span className="font-medium text-slate-300">{usage.currency}</span>.
-        </p>
-      )}
-
-      <div className="mt-5 flex flex-col gap-3 border-t border-white/10 pt-4 text-xs text-slate-400 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <span>Última actualización</span>
-          <span className="ml-2 font-medium tabular text-white">
-            {usage?.fetchedAt ? new Date(usage.fetchedAt).toLocaleTimeString('es-ES') : 'Nunca'}
-          </span>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          {onBrowserLogin && definition.browserLoginSupported && (
-            <button
-              type="button"
-              onClick={() => onBrowserLogin(provider)}
-              className="rounded-xl border border-fuchsia-400/30 bg-fuchsia-500/10 px-3 py-2 text-xs font-medium text-fuchsia-200 transition hover:bg-fuchsia-500/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-fuchsia-400/60"
-              title="Abre el navegador web para iniciar sesión y detectar automáticamente tu gasto"
-            >
-              Iniciar sesión web
-            </button>
-          )}
-          {onRefresh && connected && definition.usageImplemented && (
-            <button
-              type="button"
-              onClick={handleRefresh}
-              disabled={refreshing}
-              className="rounded-xl border border-emerald-400/30 bg-emerald-500/10 px-3 py-2 text-xs font-medium text-emerald-200 transition hover:bg-emerald-500/20 disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/60"
-            >
-              {refreshing ? 'Actualizando…' : 'Actualizar'}
-            </button>
-          )}
-          {onConnect && (
-            <button
-              type="button"
-              onClick={() => onConnect(provider)}
-              className="rounded-xl border border-cyan-400/30 bg-cyan-500/10 px-3 py-2 text-xs font-medium text-cyan-200 transition hover:bg-cyan-500/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/60"
-            >
-              {connected ? 'Revisar clave' : 'Conectar API'}
-            </button>
-          )}
+        <div className="flex items-center gap-2">
           {onToggleVisibility && (
             <button
-              type="button"
               onClick={() => onToggleVisibility(provider.id)}
-              className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs font-medium text-slate-200 transition hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40"
+              className="rounded-lg px-2 py-1 text-xs text-slate-400 hover:text-slate-200 hover:bg-white/5 transition"
             >
               {hidden ? 'Mostrar' : 'Ocultar'}
             </button>
           )}
+
+          <button
+            onClick={handleRefresh}
+            disabled={refreshing}
+            className="inline-flex items-center gap-1 rounded-lg bg-white/10 px-3 py-1.5 text-xs font-medium text-white hover:bg-white/15 transition disabled:opacity-50"
+          >
+            <span className={refreshing ? 'animate-spin' : ''}>↻</span>
+            <span>{refreshing ? 'Actualizando...' : 'Actualizar'}</span>
+          </button>
         </div>
       </div>
     </div>

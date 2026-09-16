@@ -1,0 +1,23 @@
+{
+  "name": "Monitor de APIs de IA",
+  "short_name": "Monitor APIs",
+  "description": "Dashboard local de cuotas, saldos y límites de IA",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0d0f18",
+  "theme_color": "#0d0f18",
+  "icons": [
+    {
+      "src": "/app-icon.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/app-icon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

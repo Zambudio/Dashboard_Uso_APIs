@@ -126,6 +126,19 @@ npm run dev
 
 Después abre `http://127.0.0.1:3000`. En este modo de desarrollo sin Electron, las credenciales usan el `.env` local heredado; no es la modalidad recomendada para usuarios finales.
 
+### Despliegue con Docker (PC personal o servidor)
+
+Si prefieres ejecutar el dashboard como servicio contenedorizado continuo en tu equipo personal, servidor o NAS (sin necesidad de compilar Electron ni instalar Node.js):
+
+```bash
+docker compose up -d --build
+```
+
+- El servicio se iniciará en `http://localhost:3000`.
+- Tus credenciales, orden de tarjetas y caché de consumo persisten automáticamente en el volumen Docker `dashboard-data`.
+- Puedes instalarlo como aplicación independiente (PWA) con su propio icono en la barra de tareas desde Brave, Chrome o Edge.
+- Consulta la [guía completa de Docker](./Docs/DOCKER.md) para más detalles.
+
 ## Arquitectura en breve
 
 ```text
@@ -182,6 +195,7 @@ Una firma no garantiza por sí sola la reputación inmediata del editor, pero ap
 | Quiero…                                 | Documento                                                                                                                  |
 | --------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
 | Instalar o resolver un problema         | [Instalación Windows](./Docs/INSTALLATION_WINDOWS.md) · [Operación](./Docs/OPERATIONS_TROUBLESHOOTING.md)                  |
+| Desplegar con Docker                    | [Guía de despliegue Docker](./Docs/DOCKER.md)                                                                              |
 | Entender la seguridad                   | [Seguridad y credenciales](./Docs/SECURITY.md)                                                                             |
 | Conocer arquitectura y API              | [Arquitectura](./Docs/ARCHITECTURE.md) · [API local](./Docs/API_REFERENCE.md)                                              |
 | Revisar proveedores y métricas          | [Proveedores](./Docs/PROVIDERS.md)                                                                                         |

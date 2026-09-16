@@ -1,9 +1,7 @@
-// Turbopack/Watchpack sobre rutas UNC (NAS/SMB) falla por latencia y ausencia
-// de junctions. Se activa el polling de forma genérica cuando el cwd es una
-// ruta UNC (\\servidor\recurso).
-if (/^\\\\/.test(process.cwd())) {
-  process.env.WATCHPACK_POLLING = 'true';
-}
+// Turbopack/Watchpack sobre rutas UNC o unidades de red mapeadas (como Z: en NAS/SMB)
+// falla en Windows por ausencia de eventos nativos de sistema de archivos.
+// Se activa polling para evitar 'Watchpack Error: UNKNOWN: unknown error, watch'.
+process.env.WATCHPACK_POLLING = 'true';
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {

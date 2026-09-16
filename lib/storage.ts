@@ -94,3 +94,30 @@ export function savePreferences(preferences: DashboardPreferences): Promise<void
   if (typeof window === 'undefined') return Promise.resolve();
   return saveServerConfig({ preferences });
 }
+
+export async function fetchSyncedCache(): Promise<Record<string, { providerId: string; provider: ProviderKey; snapshot: ApiUsageSnapshot; updatedAt: string }>> {
+  try {
+    const res = await fetch('/api/usage/sync', { cache: 'no-store' });
+    if (!res.ok) return {};
+    return await res.json();
+  } catch {
+    return {};
+  }
+}
+
+export async function syncProviderUsage(
+  providerId: string,
+  provider: ProviderKey,
+  snapshot: ApiUsageSnapshot
+): Promise<boolean> {
+  try {
+    const res = await fetch('/api/usage/sync', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ providerId, provider, snapshot }),
+    });
+    return res.ok;
+  } catch {
+    return false;
+  }
+}

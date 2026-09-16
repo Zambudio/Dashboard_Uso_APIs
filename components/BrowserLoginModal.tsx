@@ -200,13 +200,31 @@ export function BrowserLoginModal({ provider, onSuccess, onClose }: BrowserLogin
               <span className="text-cyan-400 font-bold">3.</span>
               <span>Al iniciar sesión, extraeremos tus datos de consumo automáticamente y cerraremos la ventana.</span>
             </div>
+            <div className="flex items-start gap-2">
+              <span className="text-cyan-400 font-bold">4.</span>
+              <span>
+                Si Google muestra «Este navegador o aplicación no es seguro», no insistas: cierra y pega la credencial
+                manualmente (ver el aviso si falla).
+              </span>
+            </div>
           </div>
         </div>
 
         {errorMsg && (
           <div className="mb-4 rounded-xl border border-rose-400/30 bg-rose-500/10 p-3 text-xs text-rose-200">
-            <p className="font-semibold">Aviso:</p>
+            <p className="font-semibold">No se pudo completar el inicio web:</p>
             <p className="mt-1">{errorMsg}</p>
+
+            {definition.manualHint && (
+              <div className="mt-3 rounded-lg border border-cyan-400/20 bg-cyan-500/5 p-3 text-slate-200">
+                <p className="font-semibold text-cyan-200">En su lugar, pega la credencial manualmente</p>
+                <p className="mt-1 whitespace-pre-line leading-relaxed">{definition.manualHint}</p>
+                <p className="mt-2 text-[11px] text-slate-400">
+                  Después, cierra esta ventana, abre la tarjeta «{definition.label}» y pega el valor en el campo de
+                  credencial.
+                </p>
+              </div>
+            )}
           </div>
         )}
 

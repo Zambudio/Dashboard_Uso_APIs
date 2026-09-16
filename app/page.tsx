@@ -11,10 +11,12 @@ import {
   fetchCredentialStatus,
   fetchProviderUsage,
   fetchServerConfig,
+  fetchSyncedCache,
   savePreferences,
   saveProviderCredential,
   saveProviders,
 } from '@/lib/storage';
+import { SyncModal } from '@/components/SyncModal';
 import { getProviderDefinition } from '@/lib/providers';
 import {
   ApiProviderConfig,
@@ -47,11 +49,12 @@ const initialProviders: ApiProviderConfig[] = [
     id: 'gemini',
     name: 'Google Gemini',
     provider: 'gemini',
-    kind: 'api',
+    kind: 'subscription',
     apiKey: '',
     status: 'unconfigured',
     visibility: 'visible',
   },
+
   {
     id: 'anthropic',
     name: 'Anthropic Claude (API)',
@@ -110,6 +113,7 @@ export default function HomePage() {
   const [selectedProvider, setSelectedProvider] = useState<ApiProviderConfig | null>(null);
   const [browserLoginProvider, setBrowserLoginProvider] = useState<ApiProviderConfig | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [syncModalOpen, setSyncModalOpen] = useState(false);
   const [initialLoadingIds, setInitialLoadingIds] = useState<Set<string>>(new Set());
   // La carga inicial (config + claves + uso por proveedor) es asíncrona y el
   // último paso puede tardar varios segundos porque llama a APIs externas
@@ -120,8 +124,12 @@ export default function HomePage() {
 
   useEffect(() => {
     async function loadData() {
-      // 1. Get configs from server & local
-      const [serverConfig, configuredIds] = await Promise.all([fetchServerConfig(), fetchCredentialStatus()]);
+      // 1. Get configs, keys and synced usage cache
+      const [serverConfig, configuredIds, syncedCache] = await Promise.all([
+        fetchServerConfig(),
+        fetchCredentialStatus(),
+        fetchSyncedCache(),
+      ]);
 
       // 2. Resolve preferences
       const effectivePrefs = serverConfig.preferences || defaultPreferences;
@@ -140,21 +148,30 @@ export default function HomePage() {
         saveProviders(baseProviders);
       }
 
-      // 4. Merge credential presence without exposing credential values.
-      const providersWithStatus = baseProviders.map((provider) => ({
-        ...provider,
-        apiKey: '',
-        connected: configuredIds.has(provider.id),
-      }));
+      // 4. Merge credential presence and synced browser data
+      const providersWithStatus = baseProviders.map((provider) => {
+        const cached = syncedCache[provider.id]?.snapshot || syncedCache[provider.provider]?.snapshot;
+        const hasCred = configuredIds.has(provider.id);
+        const definition = getProviderDefinition(provider.provider);
+        return {
+          ...provider,
+          kind: definition.kind,
+          apiKey: '',
+          connected: hasCred || Boolean(cached),
+          usage: cached || provider.usage,
+          status: cached ? ('online' as const) : hasCred ? ('online' as const) : ('unconfigured' as const),
+        };
+      });
 
-      // 5. Fetch usage
+
+      // 5. Fetch usage for providers with credentials configured
       const toRefresh = providersWithStatus.filter(
-        (provider) => provider.connected && getProviderDefinition(provider.provider).usageImplemented
+        (provider) => configuredIds.has(provider.id) && getProviderDefinition(provider.provider).usageImplemented
       );
 
       if (toRefresh.length) {
         setInitialLoadingIds(new Set(toRefresh.map((p) => p.id)));
-        if (!providersEditedRef.current) setProviders(providersWithStatus); // Update state immediately before fetch
+        if (!providersEditedRef.current) setProviders(providersWithStatus);
         const results = await Promise.all(
           toRefresh.map((provider) =>
             fetchProviderUsage(provider.id, provider.provider).then((snapshot) => ({ id: provider.id, snapshot }))
@@ -163,9 +180,6 @@ export default function HomePage() {
         const byId = new Map(results.map((r) => [r.id, r.snapshot]));
 
         if (providersEditedRef.current) {
-          // El usuario ya borró/editó una tarjeta mientras esto seguía en
-          // vuelo: solo aplicamos el uso recién obtenido a lo que siga
-          // existiendo, sin resucitar nada.
           setProviders((current) => {
             const next = current.map((provider) => {
               const snapshot = byId.get(provider.id);
@@ -195,6 +209,32 @@ export default function HomePage() {
     }
 
     loadData();
+  }, []);
+
+  // Polling automático cada 10s para reflejar sincronizaciones desde la extensión o bookmarklet
+  useEffect(() => {
+    const interval = setInterval(async () => {
+      const synced = await fetchSyncedCache();
+      if (!synced || Object.keys(synced).length === 0) return;
+      setProviders((current) => {
+        let changed = false;
+        const next = current.map((p) => {
+          const cached = synced[p.id]?.snapshot || synced[p.provider]?.snapshot;
+          if (cached && (!p.usage || p.usage.fetchedAt !== cached.fetchedAt)) {
+            changed = true;
+            return {
+              ...p,
+              connected: true,
+              usage: cached,
+              status: 'online' as const,
+            };
+          }
+          return p;
+        });
+        return changed ? next : current;
+      });
+    }, 10000);
+    return () => clearInterval(interval);
   }, []);
 
   const saveAllProviders = useCallback((updated: ApiProviderConfig[]) => {
@@ -227,7 +267,50 @@ export default function HomePage() {
     });
   }, []);
 
-  const totalBalance = useMemo(() => providers.reduce((sum, item) => sum + (item.usage?.balance ?? 0), 0), [providers]);
+  const refreshAll = useCallback(async () => {
+    const synced = await fetchSyncedCache();
+    setProviders((current) => {
+      const next = current.map((p) => {
+        const cached = synced[p.id]?.snapshot || synced[p.provider]?.snapshot;
+        if (cached) {
+          return {
+            ...p,
+            connected: true,
+            usage: cached,
+            status: 'online' as const,
+          };
+        }
+        return p;
+      });
+      return next;
+    });
+
+    setProviders((current) => {
+      current.forEach((p) => {
+        if (p.connected) {
+          void refreshProvider(p.id);
+        }
+      });
+      return current;
+    });
+  }, [refreshProvider]);
+
+  const totalBalance = useMemo(
+    () =>
+      providers
+        .filter(
+          (item) =>
+            item.visibility !== 'hidden' &&
+            item.kind === 'api' &&
+            item.provider !== 'gemini' &&
+            item.provider !== 'claude-pro' &&
+            item.usage?.currency !== 'créditos'
+        )
+        .reduce((sum, item) => sum + (item.usage?.balance ?? 0), 0),
+    [providers]
+  );
+
+
   const totalCost = useMemo(
     () => providers.reduce((sum, item) => sum + (item.usage?.accumulatedCost ?? 0), 0),
     [providers]
@@ -450,49 +533,44 @@ export default function HomePage() {
   };
 
   return (
-    <main className="min-h-screen bg-[radial-gradient(circle_at_top_left,_rgba(139,92,246,0.14),_transparent_35%),radial-gradient(circle_at_top_right,_rgba(56,189,248,0.14),_transparent_30%)] px-4 py-8 text-slate-100 sm:px-6 lg:px-8">
+    <main className="min-h-screen bg-[radial-gradient(circle_at_top_left,_rgba(139,92,246,0.14),_transparent_35%),radial-gradient(circle_at_top_right,_rgba(56,189,248,0.14),_transparent_30%)] px-4 py-6 text-slate-100 sm:px-6 lg:px-8">
       <div className="mx-auto flex max-w-7xl flex-col gap-6">
-        <header className="rounded-2xl border border-white/10 bg-[#171722]/90 p-6 shadow-card">
-          <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
-            <div>
-              <h1 className="text-3xl font-semibold text-white sm:text-4xl">Monitor de uso de APIs de IA</h1>
-              <p className="mt-3 max-w-2xl text-sm text-slate-400 sm:text-base">
-                Datos reales de saldo, coste y consumo de tus proveedores de API, con inicio de sesión web automático
-                para Claude, ChatGPT y Gemini.
-              </p>
-            </div>
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-              <button
-                onClick={() => setShowForm(true)}
-                className="rounded-full border border-cyan-400/30 bg-cyan-500/10 px-4 py-2 text-sm font-medium text-cyan-200 transition hover:bg-cyan-500/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/60"
-              >
-                + Añadir integración
-              </button>
-              <button
-                onClick={() => setSettingsOpen(true)}
-                className="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm font-medium text-slate-200 transition hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40"
-              >
-                Ajustes del panel
-              </button>
-            </div>
+        {/* Barra superior compacta con acciones rápidas */}
+        <div className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-white/10 bg-[#171722]/80 px-5 py-3 shadow-card backdrop-blur-md">
+          <div className="flex items-center gap-3">
+            <img src="/app-icon.png" alt="Logo" className="h-8 w-8 rounded-lg shadow-sm" />
+            <span className="text-lg font-bold tracking-tight text-white">Monitor APIs</span>
           </div>
 
-          {preferences.showSummaryCards && (
-            <div className="mt-6 grid gap-4 md:grid-cols-3">
-              <SummaryCard
-                title="Saldo total"
-                value={`$${totalBalance.toFixed(2)}`}
-                subtitle={`${visibleCount} proveedores activos`}
-              />
-              <SummaryCard
-                title="Coste acumulado (7 días)"
-                value={`$${totalCost.toFixed(2)}`}
-                subtitle={`${connectedCount} conectados`}
-              />
-              <SummaryCard title="Tarjetas ocultas" value={`${hiddenCount}`} subtitle="Visibles en ajustes" />
-            </div>
-          )}
-        </header>
+          <div className="flex flex-wrap items-center gap-2.5">
+            <button
+              onClick={() => setSyncModalOpen(true)}
+              className="flex items-center gap-2 rounded-xl border border-cyan-400/40 bg-gradient-to-r from-cyan-500/20 to-blue-500/20 px-3.5 py-1.5 text-xs font-bold text-cyan-300 shadow-lg shadow-cyan-500/10 transition hover:brightness-125 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400"
+            >
+              <span>⚡</span>
+              <span>Sincronizar Navegador</span>
+            </button>
+            <button
+              onClick={() => void refreshAll()}
+              className="flex items-center gap-1.5 rounded-xl border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-medium text-slate-200 transition hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40"
+            >
+              <span>↻</span>
+              <span>Actualizar todo</span>
+            </button>
+            <button
+              onClick={() => setShowForm(true)}
+              className="rounded-xl border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-medium text-slate-200 transition hover:bg-white/10"
+            >
+              + Añadir IA
+            </button>
+            <button
+              onClick={() => setSettingsOpen(true)}
+              className="rounded-xl border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-medium text-slate-200 transition hover:bg-white/10"
+            >
+              Ajustes
+            </button>
+          </div>
+        </div>
 
         {showForm && (
           <AddProviderForm
@@ -532,9 +610,10 @@ export default function HomePage() {
           />
         )}
 
-        <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+        {/* SECCIÓN PRINCIPAL: TARJETAS DE PROVEEDORES ARRIBA */}
+        <section className="grid gap-5 md:grid-cols-2 xl:grid-cols-3 items-stretch">
           {displayProviders.length === 0 ? (
-            <div className="rounded-2xl border border-white/10 bg-[#151521]/90 p-8 text-center text-slate-300 shadow-card">
+            <div className="rounded-2xl border border-white/10 bg-[#151521]/90 p-8 text-center text-slate-300 shadow-card col-span-full">
               <p className="text-xl font-semibold text-white">No hay proveedores visibles</p>
               <p className="mt-2 text-sm text-slate-400">
                 Activa &quot;Mostrar proveedores ocultos&quot; en ajustes o añade una nueva integración.
@@ -548,7 +627,7 @@ export default function HomePage() {
                   if (el) cardRefs.current.set(provider.id, el);
                   else cardRefs.current.delete(provider.id);
                 }}
-                className={`transition-transform duration-200 ease-out ${dragId === provider.id ? 'z-10 scale-[1.02]' : ''}`}
+                className={`h-full transition-transform duration-200 ease-out ${dragId === provider.id ? 'z-10 scale-[1.02]' : ''}`}
               >
                 <ProviderCard
                   provider={provider}
@@ -556,6 +635,7 @@ export default function HomePage() {
                   onToggleVisibility={toggleProviderVisibility}
                   onConnect={connectProvider}
                   onRefresh={refreshProvider}
+                  onOpenSync={() => setSyncModalOpen(true)}
                   onBrowserLogin={(p) => setBrowserLoginProvider(p)}
                   loading={initialLoadingIds.has(provider.id)}
                   dragHandleProps={{ onPointerDown: startDrag(provider.id) }}
@@ -565,6 +645,58 @@ export default function HomePage() {
             ))
           )}
         </section>
+
+        {/* BLOQUE INFORMATIVO Y RESUMEN EN LA PARTE INFERIOR */}
+        <div className="mt-4 rounded-2xl border border-white/10 bg-[#171722]/90 p-6 shadow-card">
+          <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+            <div>
+              <h2 className="text-2xl font-bold text-white sm:text-3xl">Monitor de uso de APIs de IA</h2>
+              <p className="mt-2 max-w-2xl text-sm text-slate-400">
+                Datos reales de saldo, coste y consumo de tus proveedores de API, con sincronización de navegador
+                para Claude, ChatGPT, Antigravity y Gemini.
+              </p>
+            </div>
+            <div className="flex flex-wrap items-center gap-2.5">
+              <button
+                onClick={() => setSyncModalOpen(true)}
+                className="flex items-center gap-2 rounded-xl border border-cyan-400/40 bg-gradient-to-r from-cyan-500/20 to-blue-500/20 px-3.5 py-1.5 text-xs font-bold text-cyan-300 shadow-lg shadow-cyan-500/10 transition hover:brightness-125 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400"
+              >
+                <span>⚡</span>
+                <span>Sincronizar Navegador</span>
+              </button>
+              <button
+                onClick={() => void refreshAll()}
+                className="flex items-center gap-1.5 rounded-xl border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-medium text-slate-200 transition hover:bg-white/10"
+              >
+                <span>↻</span>
+                <span>Actualizar todo</span>
+              </button>
+            </div>
+          </div>
+
+          {preferences.showSummaryCards && (
+            <div className="mt-6 grid gap-4 md:grid-cols-3">
+              <SummaryCard
+                title="Saldo total"
+                value={`$${totalBalance.toFixed(2)}`}
+                subtitle={`${visibleCount} proveedores activos`}
+              />
+              <SummaryCard
+                title="Coste acumulado (7 días)"
+                value={`$${totalCost.toFixed(2)}`}
+                subtitle={`${connectedCount} conectados`}
+              />
+              <SummaryCard title="Tarjetas ocultas" value={`${hiddenCount}`} subtitle="Visibles en ajustes" />
+            </div>
+          )}
+        </div>
+
+
+        <SyncModal
+          isOpen={syncModalOpen}
+          onClose={() => setSyncModalOpen(false)}
+          onRefreshAll={refreshAll}
+        />
       </div>
     </main>
   );

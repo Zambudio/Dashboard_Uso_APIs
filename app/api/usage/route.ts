@@ -7,6 +7,8 @@ import { fetchOpenAIUsage } from '@/lib/usage/openai.server';
 import { fetchAnthropicUsage } from '@/lib/usage/anthropic.server';
 import { fetchClaudeProUsage } from '@/lib/usage/claude-pro.server';
 import { fetchGeminiUsage } from '@/lib/usage/gemini.server';
+import { fetchAntigravityUsage } from '@/lib/usage/antigravity.server';
+import { getSyncedSnapshot, saveSyncedSnapshot } from '@/lib/synced-cache.server';
 
 export const dynamic = 'force-dynamic';
 
@@ -40,10 +42,31 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  const cached = getSyncedSnapshot(id) || (provider ? getSyncedSnapshot(provider) : null);
+
+  // Si es Gemini, intentar siempre consultar el Language Server local de Antigravity en tiempo real
+  if (provider === 'gemini') {
+    try {
+      const antigravitySnapshot = await fetchAntigravityUsage();
+      if (antigravitySnapshot) {
+        saveSyncedSnapshot(id, provider, antigravitySnapshot);
+        return NextResponse.json(antigravitySnapshot);
+      }
+    } catch (err) {
+      console.warn('[usage-route] Antigravity auto-fetch warning:', err);
+    }
+    if (cached?.snapshot?.planType?.includes('Antigravity')) {
+      return NextResponse.json(cached.snapshot);
+    }
+  }
+
   const keys = await readEnvKeys();
-  const secret = keys[id];
+  const secret = keys[id] || (provider ? keys[provider] : undefined);
   if (!secret) {
-    return NextResponse.json({ error: 'No hay clave/cookie guardada para este proveedor.' }, { status: 400 });
+    if (cached?.snapshot) {
+      return NextResponse.json(cached.snapshot);
+    }
+    return NextResponse.json({ error: 'No hay clave/cookie guardada ni datos sincronizados para este proveedor.' }, { status: 400 });
   }
 
   try {
@@ -69,7 +92,21 @@ export async function POST(request: NextRequest) {
     }
     return NextResponse.json(snapshot);
   } catch (error) {
+    if (cached?.snapshot) {
+      return NextResponse.json(cached.snapshot);
+    }
     const message = error instanceof Error ? error.message : 'Error desconocido consultando el proveedor.';
+    if (
+      message.includes('browserType.launch') ||
+      message.includes('msedge') ||
+      message.includes('Chromium') ||
+      message.includes('Executable')
+    ) {
+      return NextResponse.json(
+        { error: 'Sincroniza tus datos de uso pulsando el botón ⚡ Sincronizar Navegador de arriba.' },
+        { status: 502 }
+      );
+    }
     return NextResponse.json({ error: message }, { status: 502 });
   }
 }

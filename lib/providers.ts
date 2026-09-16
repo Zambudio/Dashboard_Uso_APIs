@@ -13,6 +13,8 @@ export interface ProviderDefinition {
   /** Si true, permite iniciar sesión abriendo una ventana de navegador interactiva */
   browserLoginSupported?: boolean;
   browserLoginUrl?: string;
+  /** Instrucciones paso a paso para pegar la credencial manualmente cuando el login web es bloqueado (p. ej. por Google). */
+  manualHint?: string;
 }
 
 export const PROVIDER_DEFINITIONS: Record<ProviderKey, ProviderDefinition> = {
@@ -23,11 +25,20 @@ export const PROVIDER_DEFINITIONS: Record<ProviderKey, ProviderDefinition> = {
     secretLabel: 'Admin API Key (sk-admin-...) o Sesión Web',
     secretPlaceholder: 'sk-admin-...',
     helpText:
-      'Para ver el consumo de tokens y costes necesitas una Admin API Key de la organización (platform.openai.com/settings/organization/admin-keys) o pulsar "Iniciar sesión web". Las claves de proyecto (sk-proj-...) no tienen permisos de lectura de costes.',
+      'Puedes conectar OpenAI de dos formas (crea una tarjeta por cada una):\n' +
+      '• SUSCRIPCIÓN (ChatGPT Plus): pega la cookie/token de sesión — ver pasos abajo.\n' +
+      '• API: pega una Admin API Key (sk-admin-...) de platform.openai.com/settings/organization/admin-keys, que sí permite ver costes y uso. Las claves de proyecto (sk-proj-...) no tienen permisos de lectura de costes.',
     helpUrl: 'https://platform.openai.com/settings/organization/admin-keys',
     usageImplemented: true,
     browserLoginSupported: true,
     browserLoginUrl: 'https://platform.openai.com/login',
+    manualHint:
+      'Cómo copiar la credencial de SUSCRIPCIÓN (sin más herramientas que tu navegador):\n' +
+      '1) Abre chatgpt.com y asegúrate de haber iniciado sesión en tu navegador.\n' +
+      '2) Pulsa F12 → se abre "Herramientas de desarrollo" → pestaña "Aplicación" → menú "Cookies" → elige "https://chatgpt.com".\n' +
+      '3) Verás una tabla (Nombre / Valor). Copia el Valor de la fila "__Secure-next-auth.session-token" (o "session-token").\n' +
+      '4) Pega ese valor en el campo "Admin API Key o Sesión Web" de la tarjeta de OpenAI y Guardar.\n' +
+      'Para la API no hace falta cookie: pega la Admin API Key (sk-admin-...).',
   },
   anthropic: {
     key: 'anthropic',
@@ -41,6 +52,8 @@ export const PROVIDER_DEFINITIONS: Record<ProviderKey, ProviderDefinition> = {
     usageImplemented: true,
     browserLoginSupported: true,
     browserLoginUrl: 'https://claude.ai/login',
+    manualHint:
+      'Pega una Admin API Key (sk-ant-admin01-...) desde console.anthropic.com/settings/admin-keys. Para Claude Pro/Code, usa en su lugar la tarjeta "Claude Pro / Code (suscripción)" con su cookie sessionKey.',
   },
   deepseek: {
     key: 'deepseek',
@@ -54,6 +67,8 @@ export const PROVIDER_DEFINITIONS: Record<ProviderKey, ProviderDefinition> = {
     usageImplemented: true,
     browserLoginSupported: true,
     browserLoginUrl: 'https://platform.deepseek.com/usage',
+    manualHint:
+      'Pega tu API Key (sk-...) de platform.deepseek.com para el saldo; o, si te interesa el coste y el uso, la cookie de sesión de la consola (DevTools → Aplicación → Cookies → platform.deepseek.com).',
   },
   gemini: {
     key: 'gemini',
@@ -67,6 +82,8 @@ export const PROVIDER_DEFINITIONS: Record<ProviderKey, ProviderDefinition> = {
     usageImplemented: true,
     browserLoginSupported: true,
     browserLoginUrl: 'https://gemini.google.com',
+    manualHint:
+      'Gemini suele conectarse solo a través de Antigravity (Language Server). Si no, usa tu API Key (AIza...) de AI Studio en aistudio.google.com/apikey y pégala en el campo manual.',
   },
   'claude-pro': {
     key: 'claude-pro',
@@ -75,11 +92,17 @@ export const PROVIDER_DEFINITIONS: Record<ProviderKey, ProviderDefinition> = {
     secretLabel: 'Cookie de sesión (sessionKey)',
     secretPlaceholder: 'sk-ant-sid01-...',
     helpText:
-      'Inicia sesión directamente con tu cuenta en claude.ai con el botón de "Iniciar sesión con navegador", o pega manualmente la cookie sessionKey.',
+      'Claude por suscripción: usa esta tarjeta con la cookie sessionKey de claude.ai. Para la API de Anthropic (Admin API Key) usa la tarjeta "Anthropic Claude (API)".',
     helpUrl: 'https://claude.ai',
     usageImplemented: true,
     browserLoginSupported: true,
     browserLoginUrl: 'https://claude.ai/login',
+    manualHint:
+      'Cómo copiar la cookie sessionKey (sin más herramientas que tu navegador):\n' +
+      '1) Abre claude.ai e inicia sesión en tu navegador.\n' +
+      '2) Pulsa F12 → "Herramientas de desarrollo" → pestaña "Aplicación" → menú "Cookies" → "https://claude.ai".\n' +
+      '3) En la tabla (Nombre / Valor) copia el Valor de la fila "sessionKey".\n' +
+      '4) Pega ese valor en el campo "Cookie de sesión (sessionKey)" de la tarjeta y Guardar.',
   },
   custom: {
     key: 'custom',

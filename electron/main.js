@@ -11,6 +11,8 @@ const { createTray } = require('./tray');
 const { createWidgetWindow, revealWidgetWindow } = require('./widget-window');
 const { startUsagePolling } = require('./usage-poller');
 const { WIDGET_SCHEME, registerWidgetProtocol } = require('./lib/widget-protocol');
+const { setSessionChromeUserAgent, captureSessionCookie, setCookies } = require('./lib/session-login');
+const { fetchViaWindow } = require('./lib/fetch-via-window');
 
 protocol.registerSchemesAsPrivileged([
   {
@@ -97,6 +99,10 @@ if (!gotLock) {
   app
     .whenReady()
     .then(async () => {
+      // User-agent Chrome en la sesión por defecto para que los proveedores no
+      // detecten Electron como automatización en el login y el fetch.
+      setSessionChromeUserAgent();
+
       await registerWidgetProtocol({
         protocol,
         net,
@@ -108,6 +114,7 @@ if (!gotLock) {
         filePath: path.join(app.getPath('userData'), 'credentials.enc'),
         legacyEnvPath: envFilePath(),
         configStore: store,
+        sessionService: { captureSessionCookie, fetchViaWindow, setCookies },
       });
       console.log('[widget] Broker de credenciales escuchando en ' + broker.url);
 

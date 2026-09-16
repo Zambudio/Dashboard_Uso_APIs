@@ -1,0 +1,30 @@
+{
+  "manifest_version": 3,
+  "name": "Dashboard Uso APIs - Sincronizador",
+  "version": "1.0.0",
+  "description": "Sincroniza automáticamente los límites de uso de ChatGPT, Claude y Gemini con tu Dashboard local.",
+  "permissions": [
+    "activeTab"
+  ],
+  "host_permissions": [
+    "https://claude.ai/*",
+    "https://chatgpt.com/*",
+    "https://gemini.google.com/*",
+    "http://localhost:3000/*"
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "Sincronizar límites de IAs con Dashboard"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://claude.ai/*",
+        "https://chatgpt.com/settings/usage*",
+        "https://gemini.google.com/usage*"
+      ],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ]
+}

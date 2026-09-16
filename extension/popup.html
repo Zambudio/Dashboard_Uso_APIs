@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Dashboard Sincronizador</title>
+  <style>
+    body {
+      width: 280px;
+      margin: 0;
+      padding: 16px;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #0f172a;
+      color: #f8fafc;
+    }
+    h2 {
+      font-size: 14px;
+      margin: 0 0 12px 0;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: #38bdf8;
+    }
+    .btn {
+      display: block;
+      width: 100%;
+      box-sizing: border-box;
+      padding: 10px 14px;
+      border: none;
+      border-radius: 8px;
+      background: #2563eb;
+      color: white;
+      font-weight: 600;
+      font-size: 13px;
+      cursor: pointer;
+      text-align: center;
+      text-decoration: none;
+      margin-bottom: 8px;
+      transition: background 0.2s;
+    }
+    .btn:hover {
+      background: #1d4ed8;
+    }
+    .btn-outline {
+      background: #1e293b;
+      color: #94a3b8;
+      border: 1px solid #334155;
+      font-size: 12px;
+      padding: 8px 12px;
+    }
+    .btn-outline:hover {
+      background: #334155;
+      color: #f8fafc;
+    }
+    .status {
+      font-size: 12px;
+      padding: 8px;
+      border-radius: 6px;
+      background: #1e293b;
+      margin-bottom: 12px;
+      text-align: center;
+      color: #94a3b8;
+    }
+    .status.success {
+      background: #064e3b;
+      color: #6ee7b7;
+    }
+    .status.error {
+      background: #881337;
+      color: #fda4af;
+    }
+    .links {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      margin-top: 12px;
+      border-top: 1px solid #334155;
+      padding-top: 12px;
+    }
+    .links a {
+      color: #38bdf8;
+      font-size: 12px;
+      text-decoration: none;
+    }
+    .links a:hover {
+      text-decoration: underline;
+    }
+  </style>
+</head>
+<body>
+  <h2>⚡ Sincronizar IAs</h2>
+  <div id="status" class="status">Listo para sincronizar</div>
+  <button id="syncBtn" class="btn">Sincronizar Pestaña Actual</button>
+  <a href="http://localhost:3000" target="_blank" class="btn btn-outline">Abrir Dashboard Web</a>
+
+  <div class="links">
+    <span style="font-size: 11px; color: #64748b; text-transform: uppercase;">Abrir páginas de uso:</span>
+    <a href="https://claude.ai/settings/usage" target="_blank">↗ Claude (Límites de uso)</a>
+    <a href="https://chatgpt.com/settings/usage" target="_blank">↗ ChatGPT (Settings / Usage)</a>
+    <a href="https://gemini.google.com/usage" target="_blank">↗ Google Gemini (Límites de uso)</a>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>
