@@ -6,11 +6,11 @@ Mantener una aplicación local Windows, en español y sin datos simulados, que a
 
 ## Estado de continuidad
 
-Desarrollo funcional cerrado temporalmente en `0.2.2` el 14 de agosto de 2026.
-No iniciar nuevas iteraciones salvo reapertura explícita, corrección de seguridad
-o rotura causada por un proveedor. La única deuda bloqueante para una release
-pública es la firma Authenticode con certificado reconocido y su validación
-corporativa, descrita en `Docs/PROJECT_CLOSURE.md`.
+Línea base `0.3.0` activa y operativa:
+1. Servidor web Next.js 16 ejecutándose en contenedor Docker 24/7 en el NAS Synology (`192.168.1.3:3000`).
+2. Sincronizador en segundo plano en Windows (`sync-subscriptions.js`) con ejecución silenciosa permanente (VBScript oculto, loopback mutex y auto-arranque en Windows).
+3. Conexión de cuotas reales para Google Gemini (Language Server de Antigravity IDE), Claude Pro (OAuth de Claude Code) y ChatGPT Plus (Codex).
+4. El empaquetado Electron y el modo standalone siguen soportados y probados con 50/50 tests unitarios pasando.
 
 ## Lectura obligatoria
 

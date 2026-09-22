@@ -1,5 +1,6 @@
 import { ApiUsageSnapshot } from '@/types/api';
 import { fetchClaudeProUsage } from './claude-pro.server';
+import { fetchClaudeOAuthUsage } from './claude-oauth.server';
 
 interface AnthropicUsageResult {
   uncached_input_tokens?: number;
@@ -67,6 +68,11 @@ async function anthropicGet<T>(url: string, adminKey: string): Promise<T> {
 export async function fetchAnthropicUsage(adminKey: string): Promise<ApiUsageSnapshot> {
   const cleanKey = adminKey.trim();
 
+  // Si es un token OAuth o credencial de Claude Code
+  if (cleanKey.startsWith('sk-ant-oat') || cleanKey.startsWith('oauth_')) {
+    return await fetchClaudeOAuthUsage(cleanKey);
+  }
+
   // If the secret is actually a Claude.ai web session cookie (starts with sk-ant-sid)
   if (cleanKey.startsWith('sk-ant-sid')) {
     return await fetchClaudeProUsage(cleanKey);
@@ -76,6 +82,9 @@ export async function fetchAnthropicUsage(adminKey: string): Promise<ApiUsageSna
   if (cleanKey.startsWith('{')) {
     try {
       const parsed = JSON.parse(cleanKey);
+      if (parsed.token && typeof parsed.token === 'string') {
+        return await fetchClaudeOAuthUsage(parsed.token);
+      }
       if (parsed.sessionKey && typeof parsed.sessionKey === 'string' && parsed.sessionKey.startsWith('sk-ant-sid')) {
         return await fetchClaudeProUsage(parsed.sessionKey);
       }

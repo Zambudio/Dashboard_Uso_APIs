@@ -50,7 +50,35 @@ function parseBody<T>(bodyText: string): T {
   }
 }
 
+function normalizeUtilization(val?: number): number | undefined {
+  if (val === undefined || val === null || Number.isNaN(val)) return undefined;
+  if (val > 0 && val <= 1) {
+    return Math.round(val * 100);
+  }
+  return Math.min(100, Math.max(0, Math.round(val)));
+}
+
+import { fetchClaudeOAuthUsage } from './claude-oauth.server';
+
 export async function fetchClaudeProUsage(sessionKey: string): Promise<ApiUsageSnapshot> {
+  const cleanKey = sessionKey.trim();
+
+  // Si se pasa un token OAuth o si no es una sessionKey estricta, o si hay credenciales locales de Claude
+  if (cleanKey.startsWith('sk-ant-oat') || cleanKey.startsWith('oauth_') || !cleanKey.startsWith('sk-ant-sid')) {
+    try {
+      return await fetchClaudeOAuthUsage(cleanKey);
+    } catch {
+      // continuar con fallback
+    }
+  }
+
+  // Intento preferente de OAuth local incluso si la key en dashboard era una sessionKey caducada
+  try {
+    return await fetchClaudeOAuthUsage();
+  } catch {
+    // continuar con sessionKey
+  }
+
   const fetchedAt = new Date().toISOString();
 
   // Ruta 1 (widget Electron / broker): se fija la cookie en la sesión del
@@ -85,10 +113,11 @@ export async function fetchClaudeProUsage(sessionKey: string): Promise<ApiUsageS
       });
       return {
         fetchedAt,
-        sessionUtilization: usage?.five_hour?.utilization,
-        weeklyUtilization: usage?.seven_day?.utilization,
+        sessionUtilization: normalizeUtilization(usage?.five_hour?.utilization),
+        weeklyUtilization: normalizeUtilization(usage?.seven_day?.utilization),
         sessionResetsAt: usage?.five_hour?.resets_at,
         weeklyResetsAt: usage?.seven_day?.resets_at,
+        planType: 'Claude Pro',
         unavailable: ['balance', 'accumulatedCost', 'tokensUsed', 'requestCount'],
       };
     } catch (error) {
@@ -134,10 +163,11 @@ export async function fetchClaudeProUsage(sessionKey: string): Promise<ApiUsageS
 
     return {
       fetchedAt,
-      sessionUtilization: usage.five_hour?.utilization,
-      weeklyUtilization: usage.seven_day?.utilization,
+      sessionUtilization: normalizeUtilization(usage.five_hour?.utilization),
+      weeklyUtilization: normalizeUtilization(usage.seven_day?.utilization),
       sessionResetsAt: usage.five_hour?.resets_at,
       weeklyResetsAt: usage.seven_day?.resets_at,
+      planType: 'Claude Pro',
       unavailable: ['balance', 'accumulatedCost', 'tokensUsed', 'requestCount'],
     };
   } finally {

@@ -15,13 +15,15 @@ Este directorio es la fuente de verdad técnica y operativa de Dashboard_Uso_API
 ### Desarrollo y mantenimiento
 
 1. [Arquitectura y flujos](./ARCHITECTURE.md)
-2. [Referencia de API local](./API_REFERENCE.md)
-3. [Desarrollo y ampliación](./DEVELOPMENT.md)
-4. [Compilación y empaquetado](./PACKAGING.md)
-5. [Estado actual e historial técnico](./PROJECT_STATUS.md)
-6. [Cierre temporal y deuda pendiente](./PROJECT_CLOSURE.md)
-7. [Limpieza única del historial de Git](./REPOSITORY_CLEANUP.md)
-8. [Contexto de continuación](../PROJECT_CONTEXT.md)
+2. [Sincronización de suscripciones (PC -> NAS)](./SYNC_SUBSCRIPTIONS.md)
+3. [Referencia de API local](./API_REFERENCE.md)
+4. [Desarrollo y ampliación](./DEVELOPMENT.md)
+5. [Compilación y empaquetado](./PACKAGING.md)
+6. [Guía de conexión SSH al NAS](../Guia_Conexion_ssh_NAS.md)
+7. [Estado actual e historial técnico](./PROJECT_STATUS.md)
+8. [Cierre temporal y deuda pendiente](./PROJECT_CLOSURE.md)
+9. [Limpieza única del historial de Git](./REPOSITORY_CLEANUP.md)
+10. [Contexto de continuación](../PROJECT_CONTEXT.md)
 
 ## Regla de mantenimiento
 

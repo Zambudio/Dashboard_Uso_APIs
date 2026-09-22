@@ -90,13 +90,23 @@
   <h2>⚡ Sincronizar IAs</h2>
   <div id="status" class="status">Listo para sincronizar</div>
   <button id="syncBtn" class="btn">Sincronizar Pestaña Actual</button>
-  <a href="http://localhost:3000" target="_blank" class="btn btn-outline">Abrir Dashboard Web</a>
+
+  <div style="margin-bottom: 8px;">
+    <label style="font-size: 11px; color: #94a3b8; display: block; margin-bottom: 4px;">URL Servidor Dashboard (NAS / Local):</label>
+    <div style="display: flex; gap: 4px;">
+      <input id="dashboardUrl" type="text" value="http://192.168.1.3:3000" style="flex: 1; background: #1e293b; border: 1px solid #334155; color: #38bdf8; font-family: monospace; font-size: 11px; padding: 6px 8px; border-radius: 6px;" />
+      <button id="saveUrlBtn" style="background: #334155; border: none; color: white; border-radius: 6px; padding: 0 8px; font-size: 11px; cursor: pointer;">Guardar</button>
+    </div>
+  </div>
+
+  <a id="openDashboardLink" href="http://192.168.1.3:3000" target="_blank" class="btn btn-outline">Abrir Dashboard Web</a>
 
   <div class="links">
     <span style="font-size: 11px; color: #64748b; text-transform: uppercase;">Abrir páginas de uso:</span>
     <a href="https://claude.ai/settings/usage" target="_blank">↗ Claude (Límites de uso)</a>
     <a href="https://chatgpt.com/settings/usage" target="_blank">↗ ChatGPT (Settings / Usage)</a>
     <a href="https://gemini.google.com/usage" target="_blank">↗ Google Gemini (Límites de uso)</a>
+    <a href="https://platform.deepseek.com/usage" target="_blank">↗ DeepSeek (Uso y saldo)</a>
   </div>
 
   <script src="popup.js"></script>

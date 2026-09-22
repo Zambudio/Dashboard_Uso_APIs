@@ -1,16 +1,20 @@
 {
   "manifest_version": 3,
   "name": "Dashboard Uso APIs - Sincronizador",
-  "version": "1.0.0",
-  "description": "Sincroniza automáticamente los límites de uso de ChatGPT, Claude y Gemini con tu Dashboard local.",
+  "version": "1.1.0",
+  "description": "Sincroniza automáticamente los límites de uso de ChatGPT, Claude, Gemini y DeepSeek con tu Dashboard en local o NAS.",
   "permissions": [
-    "activeTab"
+    "activeTab",
+    "storage"
   ],
   "host_permissions": [
     "https://claude.ai/*",
     "https://chatgpt.com/*",
     "https://gemini.google.com/*",
-    "http://localhost:3000/*"
+    "https://platform.deepseek.com/*",
+    "http://192.168.*/*",
+    "http://localhost:*/*",
+    "http://127.0.0.1:*/*"
   ],
   "action": {
     "default_popup": "popup.html",
@@ -20,8 +24,9 @@
     {
       "matches": [
         "https://claude.ai/*",
-        "https://chatgpt.com/settings/usage*",
-        "https://gemini.google.com/usage*"
+        "https://chatgpt.com/*",
+        "https://gemini.google.com/*",
+        "https://platform.deepseek.com/*"
       ],
       "js": ["content.js"],
       "run_at": "document_idle"

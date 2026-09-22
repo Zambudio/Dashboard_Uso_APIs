@@ -1,6 +1,6 @@
 {
   "name": "dashboard-uso-apis",
-  "version": "0.2.2",
+  "version": "0.3.0",
   "description": "Dashboard local para supervisar uso, costes y límites reales de proveedores de IA.",
   "private": true,
   "license": "MIT",
@@ -30,6 +30,9 @@
     "smoke": "node scripts/smoke-test.js",
     "check": "npm run lint && npm run typecheck && npm test && npm run format:check",
     "icons": "node scripts/generate-icons.js",
+    "sync": "node scripts/sync-subscriptions.js",
+    "sync:daemon": "node scripts/sync-subscriptions.js --daemon",
+    "sync:antigravity": "node scripts/sync-antigravity.js",
     "exe": "npm run electron:build",
     "electron:dev": "node scripts/run-electron-dev.js",
     "electron:build": "node scripts/build-electron-package.js",

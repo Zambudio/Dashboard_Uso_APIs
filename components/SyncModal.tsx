@@ -11,11 +11,18 @@ interface SyncModalProps {
 export function SyncModal({ isOpen, onClose, onRefreshAll }: SyncModalProps) {
   const [activeTab, setActiveTab] = useState<'bookmarklet' | 'extension' | 'console'>('bookmarklet');
   const [copied, setCopied] = useState(false);
+  const [serverUrl, setServerUrl] = useState(() => {
+    if (typeof window !== 'undefined' && window.location.origin && !window.location.origin.includes('null')) {
+      return window.location.origin;
+    }
+    return 'http://localhost:3000';
+  });
 
   if (!isOpen) return null;
 
-  const bookmarkletCode = `javascript:(function(){const s=document.createElement('script');s.src='http://localhost:3000/bookmarklet.js?t='+Date.now();document.body.appendChild(s);})();`;
-  const consoleCode = `fetch('http://localhost:3000/bookmarklet.js?t='+Date.now()).then(r=>r.text()).then(eval);`;
+  const normalizedOrigin = serverUrl.replace(/\/+$/, '');
+  const bookmarkletCode = `javascript:(function(){const s=document.createElement('script');s.src='${normalizedOrigin}/bookmarklet.js?origin=${encodeURIComponent(normalizedOrigin)}&t='+Date.now();document.body.appendChild(s);})();`;
+  const consoleCode = `fetch('${normalizedOrigin}/bookmarklet.js?origin=${encodeURIComponent(normalizedOrigin)}&t='+Date.now()).then(r=>r.text()).then(eval);`;
 
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
@@ -46,31 +53,43 @@ export function SyncModal({ isOpen, onClose, onRefreshAll }: SyncModalProps) {
           </button>
         </div>
 
+        {/* Configuración de URL del Dashboard */}
+        <div className="mt-4 flex items-center gap-2 rounded-xl bg-white/[0.04] p-3 border border-white/10 text-xs">
+          <span className="text-slate-400 shrink-0 font-medium">Servidor destino (NAS / Red):</span>
+          <input
+            type="text"
+            value={serverUrl}
+            onChange={(e) => setServerUrl(e.target.value)}
+            placeholder="http://192.168.1.50:3000"
+            className="flex-1 rounded-lg bg-black/40 border border-white/15 px-2.5 py-1 text-xs font-mono text-cyan-300 focus:outline-none focus:border-cyan-400"
+          />
+        </div>
+
         {/* Pestañas de métodos */}
-        <div className="mt-5 flex gap-2 border-b border-white/10 pb-3">
-          <button
-            onClick={() => setActiveTab('bookmarklet')}
-            className={`rounded-xl px-4 py-2 text-sm font-semibold transition-all ${
-              activeTab === 'bookmarklet'
-                ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 shadow-sm'
-                : 'text-slate-400 hover:text-slate-200 hover:bg-white/5'
-            }`}
-          >
-            📌 Marcador 1-Clic (Recomendado)
-          </button>
+        <div className="mt-4 flex gap-2 border-b border-white/10 pb-3 overflow-x-auto">
           <button
             onClick={() => setActiveTab('extension')}
-            className={`rounded-xl px-4 py-2 text-sm font-semibold transition-all ${
+            className={`rounded-xl px-3.5 py-2 text-sm font-semibold whitespace-nowrap transition-all ${
               activeTab === 'extension'
                 ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 shadow-sm'
                 : 'text-slate-400 hover:text-slate-200 hover:bg-white/5'
             }`}
           >
-            🧩 Extensión Automática
+            🧩 Extensión Web (Automática)
+          </button>
+          <button
+            onClick={() => setActiveTab('bookmarklet')}
+            className={`rounded-xl px-3.5 py-2 text-sm font-semibold whitespace-nowrap transition-all ${
+              activeTab === 'bookmarklet'
+                ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 shadow-sm'
+                : 'text-slate-400 hover:text-slate-200 hover:bg-white/5'
+            }`}
+          >
+            📌 Marcador 1-Clic
           </button>
           <button
             onClick={() => setActiveTab('console')}
-            className={`rounded-xl px-4 py-2 text-sm font-semibold transition-all ${
+            className={`rounded-xl px-3.5 py-2 text-sm font-semibold whitespace-nowrap transition-all ${
               activeTab === 'console'
                 ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 shadow-sm'
                 : 'text-slate-400 hover:text-slate-200 hover:bg-white/5'
@@ -82,6 +101,36 @@ export function SyncModal({ isOpen, onClose, onRefreshAll }: SyncModalProps) {
 
         {/* Contenido según pestaña */}
         <div className="mt-5 space-y-4">
+          {activeTab === 'extension' && (
+            <div className="space-y-4">
+              <div className="rounded-xl bg-slate-900/60 border border-white/10 p-4 space-y-3">
+                <p className="text-sm font-semibold text-white">Instalación y actualización en Brave / Chrome / Edge:</p>
+                <ol className="list-decimal list-inside space-y-2 text-xs text-slate-300">
+                  <li>
+                    Abre en tu navegador:{' '}
+                    <code className="rounded bg-black/40 px-2 py-0.5 text-cyan-300">brave://extensions</code> o{' '}
+                    <code className="rounded bg-black/40 px-2 py-0.5 text-cyan-300">chrome://extensions</code>
+                  </li>
+                  <li>
+                    Activa el interruptor <span className="text-white font-semibold">&quot;Modo de desarrollador&quot;</span> arriba a la derecha.
+                  </li>
+                  <li>
+                    Haz clic en <span className="text-white font-semibold">&quot;Cargar descomprimida&quot;</span> (o si ya la tenías, pulsa el icono de recargar 🔄) y selecciona la carpeta:
+                    <div className="mt-1.5 font-mono text-[11px] bg-black/50 p-2.5 rounded border border-white/10 text-cyan-400 select-all">
+                      z:\IA\02_Proyectos\Dashboard_Uso_APIs\extension
+                    </div>
+                  </li>
+                  <li>
+                    Abre el icono de la extensión y verifica que apunta al servidor: <code className="text-cyan-300">{normalizedOrigin}</code>
+                  </li>
+                </ol>
+                <p className="text-xs text-emerald-400 pt-1">
+                  ✓ Al abrir Claude, ChatGPT o DeepSeek, la extensión sincronizará automáticamente el uso en segundo plano.
+                </p>
+              </div>
+            </div>
+          )}
+
           {activeTab === 'bookmarklet' && (
             <div className="space-y-4">
               <div className="rounded-xl bg-cyan-950/30 border border-cyan-500/30 p-4">
@@ -107,7 +156,7 @@ export function SyncModal({ isOpen, onClose, onRefreshAll }: SyncModalProps) {
                 <p className="font-semibold text-white">Paso 2: Ve a la pestaña de tu IA y pulsa el marcador</p>
                 <ul className="space-y-1.5 text-slate-300 text-xs list-disc list-inside">
                   <li>
-                    En <span className="text-cyan-300 font-medium">Claude</span> (en cualquier pantalla o en Ajustes).
+                    En <span className="text-cyan-300 font-medium">Claude</span> (en Ajustes &gt; Uso o en el chat).
                   </li>
                   <li>
                     En <span className="text-emerald-300 font-medium">ChatGPT</span> (en{' '}
@@ -123,36 +172,16 @@ export function SyncModal({ isOpen, onClose, onRefreshAll }: SyncModalProps) {
                     </a>
                     ).
                   </li>
+                  <li>
+                    En <span className="text-blue-300 font-medium">DeepSeek</span> (en{' '}
+                    <a href="https://platform.deepseek.com/usage" target="_blank" rel="noreferrer" className="underline text-blue-400">
+                      platform.deepseek.com/usage
+                    </a>
+                    ).
+                  </li>
                 </ul>
                 <p className="text-xs text-emerald-400 pt-1">
-                  ✓ Verás aparecer una notificación verde en la pestaña confirmando la sincronización.
-                </p>
-              </div>
-            </div>
-          )}
-
-          {activeTab === 'extension' && (
-            <div className="space-y-4">
-              <div className="rounded-xl bg-slate-900/60 border border-white/10 p-4 space-y-3">
-                <p className="text-sm font-semibold text-white">Instalación en 1 minuto en Brave o Chrome:</p>
-                <ol className="list-decimal list-inside space-y-2 text-xs text-slate-300">
-                  <li>
-                    Abre en una nueva pestaña:{' '}
-                    <code className="rounded bg-black/40 px-2 py-0.5 text-cyan-300">brave://extensions</code> o{' '}
-                    <code className="rounded bg-black/40 px-2 py-0.5 text-cyan-300">chrome://extensions</code>
-                  </li>
-                  <li>
-                    Activa el interruptor <span className="text-white font-semibold">&quot;Modo de desarrollador&quot;</span> arriba a la derecha.
-                  </li>
-                  <li>
-                    Haz clic en <span className="text-white font-semibold">&quot;Cargar descomprimida&quot;</span> y selecciona la carpeta del proyecto:
-                    <div className="mt-1 font-mono text-[11px] bg-black/50 p-2 rounded border border-white/10 text-cyan-400 select-all">
-                      z:\IA\02_Proyectos\Dashboard_Uso_APIs\extension
-                    </div>
-                  </li>
-                </ol>
-                <p className="text-xs text-emerald-400 pt-1">
-                  ✓ La extensión sincronizará automáticamente el uso en segundo plano cada vez que tengas abiertas las webs de las IAs.
+                  ✓ Verás aparecer una notificación verde en la pestaña confirmando la sincronización hacia {normalizedOrigin}.
                 </p>
               </div>
             </div>
@@ -176,7 +205,7 @@ export function SyncModal({ isOpen, onClose, onRefreshAll }: SyncModalProps) {
                   </button>
                 </div>
                 <p className="text-xs text-slate-400">
-                  Abre la pestaña de Claude, ChatGPT o Gemini, pulsa <kbd className="px-1.5 py-0.5 bg-white/10 rounded">F12</kbd>, selecciona la pestaña <b>Consola</b>, pega el código anterior y pulsa Enter.
+                  Abre la pestaña de Claude, ChatGPT o DeepSeek, pulsa <kbd className="px-1.5 py-0.5 bg-white/10 rounded">F12</kbd>, selecciona la pestaña <b>Consola</b>, pega el código anterior y pulsa Enter.
                 </p>
               </div>
             </div>
@@ -209,6 +238,14 @@ export function SyncModal({ isOpen, onClose, onRefreshAll }: SyncModalProps) {
                 className="rounded-lg bg-white/5 px-2.5 py-1 text-slate-300 hover:bg-white/10 hover:text-white transition"
               >
                 Gemini ↗
+              </a>
+              <a
+                href="https://platform.deepseek.com/usage"
+                target="_blank"
+                rel="noreferrer"
+                className="rounded-lg bg-white/5 px-2.5 py-1 text-slate-300 hover:bg-white/10 hover:text-white transition"
+              >
+                DeepSeek ↗
               </a>
             </div>
           </div>

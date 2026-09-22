@@ -140,8 +140,9 @@ async function scrapeLiveDeepSeekUsage(
   const USER_AGENT =
     'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36';
 
-  const browser = await launchDeepSeekChromium();
+  let browser: import('playwright').Browser | null = null;
   try {
+    browser = await launchDeepSeekChromium();
     const context = await browser.newContext({
       userAgent: USER_AGENT,
       viewport: null,
@@ -271,7 +272,9 @@ async function scrapeLiveDeepSeekUsage(
     console.warn('[deepseek-scrape] excepción durante el scraping:', err instanceof Error ? err.message : String(err));
     return null;
   } finally {
-    await browser.close();
+    if (browser) {
+      await browser.close();
+    }
   }
 }
 

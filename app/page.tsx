@@ -115,6 +115,8 @@ export default function HomePage() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [syncModalOpen, setSyncModalOpen] = useState(false);
   const [initialLoadingIds, setInitialLoadingIds] = useState<Set<string>>(new Set());
+  const [detecting, setDetecting] = useState(false);
+  const [detectNotification, setDetectNotification] = useState<{ type: 'success' | 'info' | 'error'; message: string } | null>(null);
   // La carga inicial (config + claves + uso por proveedor) es asíncrona y el
   // último paso puede tardar varios segundos porque llama a APIs externas
   // reales. Si el usuario edita la lista de proveedores (p.ej. borra una
@@ -294,6 +296,46 @@ export default function HomePage() {
       return current;
     });
   }, [refreshProvider]);
+
+  const handleAutoDetect = async () => {
+    setDetecting(true);
+    setDetectNotification(null);
+    try {
+      const res = await fetch('/api/subscriptions/auto-detect', { method: 'POST' });
+      const data = await res.json();
+      if (data.providers) {
+        setProviders(data.providers);
+      }
+      const syncKeys = Object.keys(data.syncResults || {});
+      const successful = syncKeys.filter((k) => data.syncResults[k]?.success);
+      if (successful.length > 0) {
+        const names = successful.map((k) => {
+          if (k === 'claude') return 'Claude Pro / Code';
+          if (k === 'openai') return 'ChatGPT Plus / Codex';
+          if (k === 'gemini') return 'Google AI Pro (Antigravity)';
+          return k;
+        });
+        setDetectNotification({
+          type: 'success',
+          message: `¡Suscripciones locales detectadas y sincronizadas con éxito: ${names.join(', ')}!`,
+        });
+      } else {
+        setDetectNotification({
+          type: 'info',
+          message: 'No se encontraron nuevas suscripciones locales en ~/.claude o ~/.codex.',
+        });
+      }
+      void refreshAll();
+    } catch {
+      setDetectNotification({
+        type: 'error',
+        message: 'Error al conectar con el detector de suscripciones locales.',
+      });
+    } finally {
+      setDetecting(false);
+      setTimeout(() => setDetectNotification(null), 6000);
+    }
+  };
 
   const totalBalance = useMemo(
     () =>
@@ -544,10 +586,19 @@ export default function HomePage() {
 
           <div className="flex flex-wrap items-center gap-2.5">
             <button
+              onClick={() => void handleAutoDetect()}
+              disabled={detecting}
+              title="Detecta automáticamente cuentas de Claude Code, ChatGPT Plus / Codex y Gemini en tu equipo"
+              className="flex items-center gap-2 rounded-xl border border-emerald-400/50 bg-gradient-to-r from-emerald-500/25 to-teal-500/25 px-3.5 py-1.5 text-xs font-bold text-emerald-300 shadow-lg shadow-emerald-500/10 transition hover:brightness-125 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 disabled:opacity-50"
+            >
+              <span className={detecting ? 'inline-block animate-spin' : ''}>⚡</span>
+              <span>{detecting ? 'Detectando suscripciones...' : 'Auto-detectar Suscripciones'}</span>
+            </button>
+            <button
               onClick={() => setSyncModalOpen(true)}
               className="flex items-center gap-2 rounded-xl border border-cyan-400/40 bg-gradient-to-r from-cyan-500/20 to-blue-500/20 px-3.5 py-1.5 text-xs font-bold text-cyan-300 shadow-lg shadow-cyan-500/10 transition hover:brightness-125 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400"
             >
-              <span>⚡</span>
+              <span>🌐</span>
               <span>Sincronizar Navegador</span>
             </button>
             <button
@@ -571,6 +622,26 @@ export default function HomePage() {
             </button>
           </div>
         </div>
+
+        {detectNotification && (
+          <div
+            className={`flex items-center justify-between rounded-xl border px-4 py-3 text-sm backdrop-blur-sm transition ${
+              detectNotification.type === 'success'
+                ? 'border-emerald-500/40 bg-emerald-500/15 text-emerald-200'
+                : detectNotification.type === 'error'
+                ? 'border-rose-500/40 bg-rose-500/15 text-rose-200'
+                : 'border-cyan-500/40 bg-cyan-500/15 text-cyan-200'
+            }`}
+          >
+            <span>{detectNotification.message}</span>
+            <button
+              onClick={() => setDetectNotification(null)}
+              className="ml-3 text-xs opacity-70 hover:opacity-100"
+            >
+              ✕
+            </button>
+          </div>
+        )}
 
         {showForm && (
           <AddProviderForm

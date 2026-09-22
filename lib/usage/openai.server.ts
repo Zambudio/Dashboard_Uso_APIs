@@ -1,4 +1,5 @@
 import { ApiUsageSnapshot } from '@/types/api';
+import { getLocalCodexCredentials } from '@/lib/local-subscriptions.server';
 
 interface OpenAIUsageResult {
   input_tokens?: number;
@@ -126,57 +127,92 @@ export async function fetchOpenAIUsage(secret: string): Promise<ApiUsageSnapshot
     }
   }
 
+  // Si no hay token o es sesión vacía, intentar credenciales locales de Codex (~/.codex/auth.json)
+  if (!token || token === '{}') {
+    const localCodex = getLocalCodexCredentials();
+    if (localCodex?.accessToken) {
+      token = localCodex.accessToken;
+      if (localCodex.accountId) organizationId = localCodex.accountId;
+    }
+  }
+
   const customHeaders: Record<string, string> = {};
   if (organizationId) {
     customHeaders['OpenAI-Organization'] = organizationId;
+    customHeaders['ChatGPT-Account-Id'] = organizationId;
   }
   if (sessionCookie) {
     customHeaders['Cookie'] = sessionCookie;
   }
 
-  // Session Token / Browser session flow
-  const isSessionToken = token.startsWith('sess-') || Boolean(sessionCookie) || token.startsWith('eyJ');
-
-  if (isSessionToken) {
-    // 1. Try ChatGPT subscription limits (wham/usage)
+  // Helper para consultar ChatGPT Plus / Codex limits con las cabeceras exactas de Orca
+  async function queryChatGptWham(authToken: string, accountId?: string): Promise<ApiUsageSnapshot | null> {
     try {
+      const headers: Record<string, string> = {
+        Authorization: authToken.startsWith('Bearer ') ? authToken : `Bearer ${authToken}`,
+        'User-Agent': 'codex-cli',
+        'OpenAI-Beta': 'codex-1',
+        originator: 'Codex Desktop',
+      };
+      if (accountId) {
+        headers['ChatGPT-Account-Id'] = accountId;
+      }
+      if (sessionCookie) {
+        headers['Cookie'] = sessionCookie;
+      }
+
       const whamRes = await fetch('https://chatgpt.com/backend-api/wham/usage', {
-        headers: {
-          Authorization: token.startsWith('Bearer ') ? token : `Bearer ${token}`,
-          ...(sessionCookie ? { Cookie: sessionCookie } : {}),
-          'User-Agent':
-            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        },
+        headers,
         cache: 'no-store',
       });
 
       if (whamRes.ok) {
         const wham = await whamRes.json();
-        const weeklyUtil = wham.rate_limit?.primary_window?.used_percent ?? 0;
-        const resetAtSeconds = wham.rate_limit?.primary_window?.reset_at;
-        const weeklyResetsAt = resetAtSeconds ? new Date(resetAtSeconds * 1000).toISOString() : undefined;
-        const planName = wham.plan_type
-          ? `ChatGPT ${wham.plan_type.charAt(0).toUpperCase() + wham.plan_type.slice(1)}`
-          : 'ChatGPT Plus';
-        const balanceInfo = await tryFetchBalance(token, customHeaders);
+        const primary = wham.rate_limit?.primary_window;
+        const secondary = wham.rate_limit?.secondary_window;
+
+        const sessionUtil = typeof primary?.used_percent === 'number' ? primary.used_percent : undefined;
+        const weeklyUtil = typeof secondary?.used_percent === 'number' ? secondary.used_percent : undefined;
+        const sessionResetsAt = primary?.reset_at ? new Date(primary.reset_at * 1000).toISOString() : undefined;
+        const weeklyResetsAt = secondary?.reset_at ? new Date(secondary.reset_at * 1000).toISOString() : undefined;
+
+        const rawPlan = wham.plan_type ? String(wham.plan_type) : 'plus';
+        const planName = `ChatGPT ${rawPlan.charAt(0).toUpperCase() + rawPlan.slice(1)}`;
+
+        const resetCredits = wham.rate_limit_reset_credits?.available_count;
+        const planWithCredits = resetCredits !== undefined && resetCredits > 0
+          ? `${planName} (${resetCredits} créditos de reseteo)`
+          : planName;
 
         return {
           fetchedAt,
+          sessionUtilization: sessionUtil,
           weeklyUtilization: weeklyUtil,
+          sessionResetsAt,
           weeklyResetsAt,
-          planType: planName,
-          balance: balanceInfo.balance,
-          currency: balanceInfo.currency,
-          unavailable: [
-            'accumulatedCost',
-            'tokensUsed',
-            'requestCount',
-            ...(balanceInfo.balance === undefined ? ['balance'] : []),
-          ],
+          planType: planWithCredits,
+          unavailable: ['accumulatedCost', 'tokensUsed', 'requestCount', 'balance'],
         };
       }
     } catch {
-      // ignore
+      // continuar
+    }
+    return null;
+  }
+
+  // Session Token / Browser session flow o token JWT / Codex
+  const isSessionToken = token.startsWith('sess-') || Boolean(sessionCookie) || token.startsWith('eyJ');
+
+  if (isSessionToken) {
+    // 1. Probar ChatGPT wham con el token actual
+    const whamResult = await queryChatGptWham(token, organizationId);
+    if (whamResult) return whamResult;
+
+    // 2. Si falló, intentar con credenciales locales de Codex si existen
+    const localCodex = getLocalCodexCredentials();
+    if (localCodex?.accessToken && localCodex.accessToken !== token) {
+      const localWham = await queryChatGptWham(localCodex.accessToken, localCodex.accountId);
+      if (localWham) return localWham;
     }
 
     const startTime = Math.floor(Date.now() / 1000) - SEVEN_DAYS_SECONDS;

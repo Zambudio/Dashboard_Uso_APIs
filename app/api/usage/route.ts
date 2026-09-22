@@ -10,6 +10,8 @@ import { fetchGeminiUsage } from '@/lib/usage/gemini.server';
 import { fetchAntigravityUsage } from '@/lib/usage/antigravity.server';
 import { getSyncedSnapshot, saveSyncedSnapshot } from '@/lib/synced-cache.server';
 
+import { fetchClaudeOAuthUsage } from '@/lib/usage/claude-oauth.server';
+
 export const dynamic = 'force-dynamic';
 
 export async function POST(request: NextRequest) {
@@ -34,10 +36,16 @@ export async function POST(request: NextRequest) {
   }
 
   const state = await readDashboardState<{ providers?: Array<{ id: string; provider: ProviderKey }> }>();
-  const configuredProvider = state.providers?.find((item) => item.id === id);
-  if (!configuredProvider || configuredProvider.provider !== provider) {
+  const isClaudeFamily = (p?: string) => p === 'claude-pro' || p === 'anthropic';
+  const configuredProvider = state.providers?.find(
+    (item) =>
+      item.id === id ||
+      item.provider === provider ||
+      (isClaudeFamily(provider) && isClaudeFamily(item.provider))
+  );
+  if (!configuredProvider) {
     return NextResponse.json(
-      { error: 'La integraciÃ³n solicitada no existe o no coincide con el proveedor.' },
+      { error: 'La integración solicitada no existe o no coincide con el proveedor.' },
       { status: 400 }
     );
   }
@@ -47,7 +55,7 @@ export async function POST(request: NextRequest) {
   // Si es Gemini, intentar siempre consultar el Language Server local de Antigravity en tiempo real
   if (provider === 'gemini') {
     try {
-      const antigravitySnapshot = await fetchAntigravityUsage();
+      const antigravitySnapshot = await fetchAntigravityUsage('gemini');
       if (antigravitySnapshot) {
         saveSyncedSnapshot(id, provider, antigravitySnapshot);
         return NextResponse.json(antigravitySnapshot);
@@ -55,18 +63,52 @@ export async function POST(request: NextRequest) {
     } catch (err) {
       console.warn('[usage-route] Antigravity auto-fetch warning:', err);
     }
-    if (cached?.snapshot?.planType?.includes('Antigravity')) {
+    if (cached?.snapshot?.planType?.includes('Antigravity') || cached?.snapshot?.planType?.includes('Google AI')) {
       return NextResponse.json(cached.snapshot);
     }
   }
 
   const keys = await readEnvKeys();
   const secret = keys[id] || (provider ? keys[provider] : undefined);
+
+  // Si no hay clave guardada, intentar detección local directa de suscripciones
   if (!secret) {
+    if (provider === 'claude-pro' || provider === 'anthropic') {
+      try {
+        const snap = await fetchClaudeOAuthUsage();
+        if (snap) {
+          saveSyncedSnapshot(id, provider, snap);
+          return NextResponse.json(snap);
+        }
+      } catch {}
+    } else if (provider === 'openai') {
+      try {
+        const snap = await fetchOpenAIUsage('');
+        if (snap) {
+          saveSyncedSnapshot(id, provider, snap);
+          return NextResponse.json(snap);
+        }
+      } catch {}
+    }
+
+    // Intentar Language Server si está activo para Claude o GPT
+    try {
+      const antigravitySnapshot = await fetchAntigravityUsage(provider);
+      if (antigravitySnapshot) {
+        saveSyncedSnapshot(id, provider, antigravitySnapshot);
+        return NextResponse.json(antigravitySnapshot);
+      }
+    } catch {
+      // continuar
+    }
+
     if (cached?.snapshot) {
       return NextResponse.json(cached.snapshot);
     }
-    return NextResponse.json({ error: 'No hay clave/cookie guardada ni datos sincronizados para este proveedor.' }, { status: 400 });
+    return NextResponse.json(
+      { error: 'No hay clave guardada ni suscripción local detectada para este proveedor.' },
+      { status: 400 }
+    );
   }
 
   try {
@@ -92,21 +134,30 @@ export async function POST(request: NextRequest) {
     }
     return NextResponse.json(snapshot);
   } catch (error) {
+    // Si la llamada falló pero podemos recurrir a suscripciones locales
+    if (provider === 'claude-pro' || provider === 'anthropic') {
+      try {
+        const fallbackSnap = await fetchClaudeOAuthUsage();
+        if (fallbackSnap) {
+          saveSyncedSnapshot(id, provider, fallbackSnap);
+          return NextResponse.json(fallbackSnap);
+        }
+      } catch {}
+    } else if (provider === 'openai') {
+      try {
+        const fallbackSnap = await fetchOpenAIUsage('');
+        if (fallbackSnap) {
+          saveSyncedSnapshot(id, provider, fallbackSnap);
+          return NextResponse.json(fallbackSnap);
+        }
+      } catch {}
+    }
+
     if (cached?.snapshot) {
       return NextResponse.json(cached.snapshot);
     }
+
     const message = error instanceof Error ? error.message : 'Error desconocido consultando el proveedor.';
-    if (
-      message.includes('browserType.launch') ||
-      message.includes('msedge') ||
-      message.includes('Chromium') ||
-      message.includes('Executable')
-    ) {
-      return NextResponse.json(
-        { error: 'Sincroniza tus datos de uso pulsando el botón ⚡ Sincronizar Navegador de arriba.' },
-        { status: 502 }
-      );
-    }
     return NextResponse.json({ error: message }, { status: 502 });
   }
 }

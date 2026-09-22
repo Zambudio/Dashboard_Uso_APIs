@@ -8,11 +8,23 @@ Antes de modificar comportamiento o arquitectura, leer:
 
 - [README.md](./README.md)
 - [PROJECT_CONTEXT.md](./PROJECT_CONTEXT.md)
+- [Guia_Conexion_ssh_NAS.md](./Guia_Conexion_ssh_NAS.md)
 - [Docs/README.md](./Docs/README.md)
+- [Docs/DOCKER.md](./Docs/DOCKER.md)
 - [Docs/PROJECT_STATUS.md](./Docs/PROJECT_STATUS.md)
 - [Docs/PROJECT_CLOSURE.md](./Docs/PROJECT_CLOSURE.md)
 
 La documentación forma parte del cambio. Actualizar el documento especializado y el estado en el mismo commit.
+
+## Conexión SSH y Docker en el NAS (Synology DS224+)
+
+- Host: `192.168.1.3`, Puerto: `32`, Alias SSH: `nas-zambu`.
+- Conexión: `ssh -o BatchMode=yes nas-zambu "<comando>"`
+- Binario Docker: `sudo -n /volume1/@appstore/ContainerManager/usr/bin/docker`
+- Binario Docker Compose: `sudo -n /volume1/@appstore/ContainerManager/usr/bin/docker-compose` (usar `docker-compose` con guion, NO `docker compose`).
+- Ruta del proyecto en el NAS: `/volume1/NAS-DRIVE-PEDRO/IA/02_Proyectos/Dashboard_Uso_APIs`
+- Despliegue/rebuild en NAS:
+  `ssh -o BatchMode=yes nas-zambu "cd /volume1/NAS-DRIVE-PEDRO/IA/02_Proyectos/Dashboard_Uso_APIs && sudo -n /volume1/@appstore/ContainerManager/usr/bin/docker-compose up -d --build"`
 
 ## Arquitectura
 

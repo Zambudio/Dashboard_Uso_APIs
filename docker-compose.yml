@@ -3,7 +3,8 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: monitor-apis-ia
+    image: dashboard-uso-apis:latest
+    container_name: dashboard-uso-apis
     restart: unless-stopped
     ports:
       - "3000:3000"
@@ -12,10 +13,17 @@ services:
       - PORT=3000
       - DASHBOARD_ENV_FILE=/app/.data/.env
     volumes:
-      # Volumen gestionado por Docker (máximo rendimiento y persistencia total entre reinicios)
+      # Persistencia de configuraciones, credenciales y caché sincronizada
       - dashboard-data:/app/.data
     extra_hosts:
       - "host.docker.internal:host-gateway"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:3000/api/health || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
 
 volumes:
   dashboard-data:
+    name: dashboard-uso-apis-data

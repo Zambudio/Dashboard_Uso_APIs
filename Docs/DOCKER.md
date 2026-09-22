@@ -1,6 +1,6 @@
-# Despliegue con Docker y Docker Compose
+# Despliegue con Docker y Docker Compose (NAS / Servidor Local / PC)
 
-Esta guía detalla cómo ejecutar **Dashboard Uso APIs** en cualquier entorno (incluyendo tu PC personal, servidor doméstico o NAS) utilizando Docker sin necesidad de instalar Node.js ni configurar Electron.
+Esta guía detalla cómo ejecutar **Dashboard Uso APIs** en cualquier entorno (incluyendo tu NAS Synology, QNAP, TrueNAS, Unraid, servidor doméstico o PC) utilizando Docker para tener el servicio activo 24/7 en tu red local.
 
 ---
 
@@ -8,47 +8,38 @@ Esta guía detalla cómo ejecutar **Dashboard Uso APIs** en cualquier entorno (i
 
 - **Autocontenido y ligero**: Basado en imagen oficial `node:22-alpine` multi-etapa con compilación `standalone` de Next.js 16.
 - **Seguridad**: Se ejecuta bajo usuario de sistema sin privilegios (`nextjs:1001`, grupo `nodejs:1001`).
-- **Persistencia total**: Las credenciales, configuración de tarjetas y los snapshots de uso se guardan en el volumen nombrado de Docker `dashboard-data` montado en `/app/.data`.
-- **Acceso universal**: Expuesto en el puerto `3000` (`http://localhost:3000` o la IP de red local del equipo).
-- **Instalable como aplicación (PWA)**: Compatible con instalación de escritorio nativa desde navegadores como Brave, Chrome o Edge.
+- **Persistencia total**: Las credenciales, configuración de tarjetas y los snapshots de uso se guardan en el volumen de Docker `dashboard-data` montado en `/app/.data`.
+- **Acceso universal en red local**: Expuesto en el puerto `3000` (`http://localhost:3000` o `http://<IP-DE-TU-NAS>:3000`).
+- **Sincronización multi-dispositivo**: El Bookmarklet y la extensión detectan automáticamente la IP/host del NAS o permiten configurarla para enviar las métricas de uso desde cualquier PC de la red.
+- **Healthcheck integrado**: Monitorización de salud automática cada 30 segundos.
 
 ---
 
-## 2. Requisitos previos
+## 2. Puesta en marcha rápida en tu NAS o Servidor
 
-- Tener instalado **Docker Desktop** (en Windows/macOS) o el motor **Docker Engine con plugin Compose** (en Linux).
-- Verificar que Docker está en funcionamiento:
-  ```bash
-  docker compose version
-  ```
-
----
-
-## 3. Puesta en marcha rápida (Un solo comando)
-
-Desde la raíz del proyecto (`Dashboard_Uso_APIs`):
+### Opción A: Desde la terminal del NAS (SSH / Docker Compose)
 
 ```bash
-# Construir la imagen e iniciar el contenedor en segundo plano
+# 1. Clonar o copiar la carpeta del proyecto en tu NAS
+cd /ruta/hacia/Dashboard_Uso_APIs
+
+# 2. Construir la imagen e iniciar el contenedor en segundo plano
 docker compose up -d --build
 ```
 
-Una vez levantado, abre en tu navegador:
-👉 **`http://localhost:3000`** (o `http://<IP-DE-TU-PC>:3000` desde cualquier otro dispositivo de tu red local).
+Una vez levantado, abre en cualquier navegador de tu red local:
+👉 **`http://<IP-DE-TU-NAS>:3000`** (por ejemplo: `http://192.168.1.50:3000`).
 
-Para comprobar el estado y logs del contenedor:
-```bash
-docker compose logs -f
-```
+### Opción B: En Synology (Container Manager) / QNAP (Container Station) / Portainer
 
-Para detener el servicio:
-```bash
-docker compose down
-```
+1. Abre **Container Manager** (Synology) o **Portainer**.
+2. Ve a la sección **Proyecto** / **Stacks** y selecciona **Crear**.
+3. Selecciona la carpeta del proyecto con el `docker-compose.yml` o pega el contenido del archivo.
+4. Pulsa **Iniciar / Implementar**.
 
 ---
 
-## 4. Persistencia de datos
+## 3. Persistencia de datos
 
 El archivo [`docker-compose.yml`](../docker-compose.yml) define:
 
@@ -58,7 +49,8 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: monitor-apis-ia
+    image: dashboard-uso-apis:latest
+    container_name: dashboard-uso-apis
     restart: unless-stopped
     ports:
       - "3000:3000"
@@ -70,9 +62,16 @@ services:
       - dashboard-data:/app/.data
     extra_hosts:
       - "host.docker.internal:host-gateway"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:3000/api/health || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
 
 volumes:
   dashboard-data:
+    name: dashboard-uso-apis-data
 ```
 
 ### ¿Qué se almacena en el volumen `dashboard-data`?
@@ -80,24 +79,23 @@ volumes:
 2. `/app/.data/usage-cache.json`: Datos reales y snapshots de consumo de cada proveedor (Claude Pro, OpenAI, Gemini, DeepSeek).
 
 > [!NOTE]
-> Gracias al volumen `dashboard-data`, puedes reiniciar el contenedor, actualizar la imagen o reiniciar tu PC sin perder ninguna clave ni el histórico de uso.
+> Gracias al volumen `dashboard-data`, puedes reiniciar el contenedor, actualizar la imagen o reiniciar tu NAS sin perder ninguna clave ni el histórico de uso.
 
 ---
 
-## 5. Sincronización de proveedores en Docker
+## 4. Sincronización de proveedores desde tu navegador al NAS
 
-Al correr dentro de un contenedor Linux Alpine (sin interfaz gráfica de escritorio), el contenedor no ejecuta navegadores de escritorio locales (como Microsoft Edge o Google Chrome de Windows). 
+Para proveedores de suscripción (como **Claude Pro**, **ChatGPT Plus**, **Google Gemini** o **DeepSeek**):
 
-Para proveedores que dependen de sesiones web (como **Claude Pro** o **DeepSeek**):
+1. **Desde tu navegador habitual (Brave, Chrome, Edge)**:
+   - Abre el Dashboard en tu navegador: `http://<IP-DE-TU-NAS>:3000`.
+   - Pulsa el botón **⚡ Sincronizar** (en la barra superior o en cualquier tarjeta).
+2. **Usa el Bookmarklet 1-Clic o la Extensión**:
+   - **Bookmarklet**: Arrastra el botón a tus marcadores. Cuando estés en `claude.ai`, `chatgpt.com`, `gemini.google.com` o `platform.deepseek.com`, haz clic en el marcador. Enviará las métricas directamente a la IP de tu NAS.
+   - **Extensión**: Carga la carpeta `extension/` en `chrome://extensions` y en el popup configura la URL de tu NAS (`http://<IP-NAS>:3000`). Sincronizará automáticamente en segundo plano.
+3. **API Keys estándar**:
+   - Si utilizas API Keys directas (OpenAI API, Anthropic API, DeepSeek API, Google AI Studio API), puedes introducirlas directamente en la interfaz del Dashboard alojado en el NAS y las consultará de forma autónoma.
 
-1. **Sincronización inicial o periódica**:
-   - En la interfaz web, pulsa el botón **⚡ Sincronizar Navegador** (en la barra superior o en cada tarjeta).
-   - Puedes usar el **Bookmarklet** o la **Extensión local** incluida en la carpeta `extension/`.
-   - Al pulsar el bookmarklet desde la pestaña de uso oficial de Claude, ChatGPT o DeepSeek en tu navegador habitual, los datos se enviarán inmediatamente a la API del contenedor (`/api/usage/sync`) y quedarán persistidos en el volumen.
-2. **Fallback automático sin errores**:
-   - Si se pulsa "Actualizar" en una tarjeta y el backend detecta un entorno sin navegador gráfico, responde de forma segura utilizando el snapshot persistido más reciente en caché, sin mostrar fallos de Playwright ni errores en rojo.
-
----
 
 ## 6. Instalar como Aplicación Independiente en Windows (Brave / Chrome / Edge)
 

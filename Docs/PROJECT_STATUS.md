@@ -1,40 +1,23 @@
 # Estado del proyecto
 
-## Línea base de cierre
+## Línea base actual
 
-`0.2.2` — corrección de carga del renderer del widget en el paquete endurecido.
+`0.3.0` — Despliegue Web Docker en NAS Synology y Sincronizador Automático de Suscripciones IA en segundo plano.
 
-Estado: **desarrollo funcional cerrado temporalmente el 14 de agosto de 2026**.
-La aplicación está validada en el equipo de referencia. La publicación para
-cualquier PC sigue bloqueada por la firma de código pendiente; véase
-[PROJECT_CLOSURE.md](./PROJECT_CLOSURE.md).
+Estado: **desarrollo funcional y sincronización continua validados y operativos**.
+La aplicación web se ejecuta 24/7 en Docker sobre el NAS Synology (`192.168.1.3:3000`), mientras un servicio demonio silencioso en segundo plano en Windows mantiene las métricas de Claude Pro, ChatGPT Plus y Antigravity (Gemini) sincronizadas automáticamente cada 60 segundos sin intervención manual.
 
 ## Implementado
 
-- Widget Electron, bandeja, instancia única y servidor Next.js standalone.
-- Integración nativa con Antigravity IDE (Google AI Pro): sincronización de cuotas reales (restante y tiempo de reset) mediante el Language Server local en la tarjeta de Google Gemini.
-- Panel de configuración integrado: tema, opacidad, intervalo, inicio con Windows, siempre visible y proveedores visibles.
-- Credenciales cifradas con DPAPI y fallo seguro sin cifrado.
-- Separación entre credenciales y configuración no sensible.
-- El renderer solo recibe presencia de credencial, nunca su contenido.
-- Eliminación de `localStorage` como respaldo de configuración.
-- Login web con contextos efímeros, sin perfil persistente en disco.
-- Migración única desde `.env` heredado al almacén cifrado de Electron.
-- Next.js 16.3, React 19.2, Electron 43.4, TypeScript 5.9 y ESLint 9.39.
-- CI, Dependabot, licencia MIT, guía de contribución y política de seguridad.
-- Actions actualizadas y Dependabot limitado a cambios compatibles; los saltos mayores requieren migración planificada.
-- Workflow de release Windows que exige firma válida y publica SHA-256.
-- `dist/`, ejecutables, runtime y diagnósticos locales excluidos de Git.
-- Historial Git saneado: `dist/` eliminado de todas las revisiones y procedimiento documentado.
-- Empaquetado sin duplicar Next, React y Playwright entre `app.asar` y el bundle standalone.
-- Fuses de Electron endurecidos y servidor migrado de `runAsNode` a `utilityProcess`.
-- Empaquetado antiguo `pkg` + tray C# retirado; `npm run exe` es alias de Electron Builder.
-- Navegador de producción resuelto mediante Edge/Chrome sin reactivar `runAsNode`.
-- Staging NTFS compatible con borrados pendientes del árbol de trabajo.
-- Docker y Docker Compose: despliegue contenedorizado oficial (`node:22-alpine` multi-etapa, usuario no-root `nextjs:1001`), con persistencia de configuración y uso en volumen `dashboard-data`.
-- PWA y modo Web App independiente: manifiesto completo con iconos dedicados (192x192, 512x512 y favicon) para instalación como ventana de escritorio desacoplada del navegador.
-- Sincronización de cuotas y uso web: soporte de extensiones/bookmarklet hacia `/api/usage/sync` y tolerancia ante entornos sin navegador gráfico de escritorio (fallback limpio en Docker sin errores de Playwright).
-- Normalización visual y unificación de tarjetas: cuadrículas alineadas en 4 niveles, visualización de cuota Pro en Claude/OpenAI/Gemini y panel de resumen recolocado.
+- **Despliegue Web en Docker (NAS Synology)**: Operativo en `http://192.168.1.3:3000` con persistencia en volumen Docker de snapshots de uso y configuración.
+- **Ingeniería Inversa de Antigravity IDE (Gemini)**: Descubrimiento y conexión con el RPC interno `/exa.language_server_pb.LanguageServerService/RetrieveUserQuotaSummary` del Language Server de Antigravity (`language_server_windows_x64.exe`), extrayendo métricas exactas de cuota semanal (`gemini-weekly`), cuota de 5 horas (`gemini-5h`), fechas de reseteo y saldo de créditos.
+- **Sincronización Automática de Suscripciones (Claude Code & ChatGPT Plus)**: Extracción local de credenciales OAuth de Claude Code (`~/.claude/.credentials.json`) y sesión de ChatGPT Plus (`~/.codex/auth.json`), con consulta periódica a sus APIs de uso y desglose de consumo (Claude Code, Chats web, Cowork).
+- **Servicio Silencioso en Segundo Plano para Windows**: Demonio en Node.js ejecutado mediante `sync-daemon-silent.vbs` con estilo de ventana 0 (completamente invisible, sin ventanas de consola ni popups en el escritorio).
+- **Auto-reinicio y Resiliencia**: Bucle de supervisión que relanza el servicio si ocurre una caída imprevista, y espera inteligente de hasta 60s por si la unidad de red `Z:` tarda en montar al iniciar sesión en Windows.
+- **Mutex de Instancia Única por Loopback**: Prevención infalible de instancias duplicadas mediante enlace al puerto TCP local `127.0.0.1:37482` (evitando los problemas de reciclaje de PIDs típicos de Windows).
+- **Registro con Windows y Herramientas**: Integración en `HKCU\Software\Microsoft\Windows\CurrentVersion\Run` y carpeta `Startup`. Scripts auxiliares: `instalar-sincronizacion-automatica.bat`, `scripts/estado-servicio.bat` y `scripts/desinstalar-inicio-automatico.bat`.
+- **Widget Electron, bandeja e instalador standalone**: Mantenidos y soportados para ejecución local aislada.
+- **Eliminación de datos simulados**: Todas las métricas mostradas corresponden a mediciones reales de cuota y saldo de los proveedores.
 
 ## Validación de esta entrega
 

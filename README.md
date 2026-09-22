@@ -2,214 +2,176 @@
   <img src="./assets/app-icon.png" width="112" alt="Icono de Dashboard Uso APIs">
 </p>
 
-<h1 align="center">Dashboard Uso APIs</h1>
+<h1 align="center">Dashboard de Uso y Cuotas de APIs de IA</h1>
 
 <p align="center">
-  Tu consumo de IA, visible de un vistazo.<br>
-  Widget de escritorio y dashboard local para Windows, en español y sin datos simulados.
+  <b>Supervisión en tiempo real de consumo, costes y cuotas de suscripción de IA para desarrolladores.</b><br>
+  Datos reales de <b>OpenAI / ChatGPT Plus</b>, <b>Claude Pro / Code</b>, <b>Google Gemini (Antigravity IDE)</b> y <b>DeepSeek</b>.<br>
+  <i>Despliegue web 24/7 en Docker (NAS Synology), sincronizador silencioso en segundo plano y widget de escritorio Windows.</i>
 </p>
 
 <p align="center">
   <a href="https://github.com/Zambudio/Dashboard_Uso_APIs/actions/workflows/ci.yml"><img src="https://github.com/Zambudio/Dashboard_Uso_APIs/actions/workflows/ci.yml/badge.svg" alt="Estado de CI"></a>
+  <img src="https://img.shields.io/badge/version-0.3.0-blue.svg" alt="Versión 0.3.0">
+  <img src="https://img.shields.io/badge/Next.js-16.3-black?logo=next.js" alt="Next.js 16">
+  <img src="https://img.shields.io/badge/Docker-Synology%20NAS-2496ED?logo=docker" alt="Docker NAS">
+  <img src="https://img.shields.io/badge/Windows-10%2F11-0078D6?logo=windows" alt="Windows 10/11">
   <a href="./LICENSE"><img src="https://img.shields.io/badge/licencia-MIT-yellow.svg" alt="Licencia MIT"></a>
 </p>
 
 ---
 
-> [!IMPORTANT]
-> **Estado de distribución:** la versión `0.2.2` está compilada y validada en el equipo de desarrollo, pero sus binarios locales **no tienen firma digital** (`NotSigned`). Todavía no deben presentarse como instalables universalmente ni publicarse como release para terceros. SmartScreen, Smart App Control o un EDR corporativo pueden bloquearlos hasta que se firme la release con un certificado reconocido. Consulta [la deuda de firma](#firma-digital-pendiente).
+## 🚀 Novedades de la versión 0.3.0
 
-Dashboard Uso APIs reúne la información real que cada proveedor permite consultar de **OpenAI/ChatGPT**, **Anthropic/Claude**, **Google Gemini** y **DeepSeek**. Vive en la bandeja de Windows, muestra un widget compacto sobre el escritorio y abre un dashboard local cuando necesitas más detalle.
+- 🐳 **Despliegue Web 24/7 en Docker / NAS Synology**: El dashboard ahora se ejecuta como servicio web autónomo en tu red local (por ejemplo `http://192.168.1.3:3000`), accesible desde tu PC, móvil o tablet.
+- ⚡ **Ingeniería Inversa de Antigravity IDE (Gemini)**: Conexión directa mediante RPC gRPC (`RetrieveUserQuotaSummary`) con el Language Server local de Antigravity en Windows. Lee con exactitud matemática el límite de 5 horas, el límite semanal, los tiempos de reseteo y los créditos de sobreuso.
+- 🔄 **Sincronización Silenciosa 100% Automática**: Demonio en segundo plano para Windows sin ventanas ni consolas molestas. Arranca solo al iniciar sesión, se auto-recupera ante fallos y empuja tus métricas al NAS cada 60 segundos.
+- 🔐 **Autenticación Real sin Datos Simulados**: Integración directa con las credenciales locales de Claude Code (`~/.claude/.credentials.json`), ChatGPT Plus (`~/.codex/auth.json`) y API Keys oficiales.
 
-## Dos vistas, una sola aplicación
+---
 
-| Widget de escritorio                               | Dashboard local                                       |
-| -------------------------------------------------- | ----------------------------------------------------- |
-| Resumen siempre a mano desde la bandeja de Windows | Vista completa de uso, costes, saldos y límites       |
-| Panel propio de configuración                      | Gestión de proveedores y conexiones                   |
-| Tema, opacidad, refresco y proveedores visibles    | Errores accionables en español                        |
-| Recuperación inteligente en el monitor activo      | Datos reales o `unavailable`; nunca cifras inventadas |
+## 🏗️ Arquitectura del Sistema
 
-El widget puede iniciarse con Windows, permanecer siempre visible y recordar sus preferencias. Si queda minimizado o fuera de pantalla, el icono de bandeja lo restaura en el monitor donde se encuentra el cursor.
-
-## Lo más importante
-
-- **Configuración desde el propio widget:** tema, opacidad, intervalo de actualización, inicio con Windows, modo siempre visible y proveedores visibles.
-- **Credenciales protegidas en Windows:** Electron usa `safeStorage` y DPAPI; los secretos quedan ligados al usuario del sistema.
-- **Renderer sin secretos:** la interfaz solo sabe si una conexión está configurada. Nunca recibe claves, cookies ni tokens.
-- **Sesiones protegidas y sin datos personales:** el login interactivo usa un perfil de navegador
-  persistente fuera del paquete (cifrado del sistema/DPAPI en `%LOCALAPPDATA%\Dashboard_Uso_APIs\browser-profile`)
-  solo para que Google OAuth y otros proveedores recuerden la autenticación; la consulta automática de uso
-  navega en contextos efímeros sin perfil en disco. Si un proveedor exige cookies o tokens, se capturan como
-  bloque opaco y cifrado.
-- **Ejecución local:** el servidor escucha exclusivamente en `127.0.0.1`.
-- **Superficie reducida:** el renderer se carga mediante un protocolo interno con una lista cerrada de recursos, sin privilegios generales para `file://`.
-- **Automatización verificable:** lint, TypeScript y tests se ejecutan en [GitHub Actions](https://github.com/Zambudio/Dashboard_Uso_APIs/actions/workflows/ci.yml).
-
-## Proveedores y datos
-
-| Integración       | Fuente                                           | Información disponible                                                            |
-| ----------------- | ------------------------------------------------ | --------------------------------------------------------------------------------- |
-| OpenAI / ChatGPT  | API y sesión web, cuando el proveedor lo permite | Uso, costes, plan y saldo según los permisos reales                               |
-| Anthropic API     | API oficial                                      | Uso y costes según los permisos de la organización                                |
-| Claude Pro / Code | Sesión web                                       | Límites de sesión y semanales                                                     |
-| Google Gemini     | API, sesión web o Antigravity IDE                | Cuota en tiempo real (restante y resets de sesión/semanal), plan y disponibilidad |
-| DeepSeek          | API y consola web                                | Saldo y métricas visibles en la cuenta                                            |
-
-Los endpoints internos y las medidas anti-bot de los proveedores pueden cambiar. Cuando una métrica no existe, no está autorizada o no puede consultarse de forma fiable, la aplicación la representa como `unavailable`.
-
-> [!CAUTION]
-> El inicio de sesión web automatiza la consola del propio usuario (ChatGPT, Claude, DeepSeek, Google OAuth). Esto
-> puede incumplir los términos de servicio del proveedor y, en casos extremos, activar medidas anti-bot o bloqueos de
-> cuenta. Es una decisión responsable de quien instala la app: úsala solo sobre tus propias cuentas y con las claves o
-> sesiones que tú mismo aportas.
-
-## Seguridad y privacidad
+El sistema implementa una arquitectura híbrida optimizada para el flujo de trabajo real con IA:
 
 ```mermaid
-flowchart LR
-    Widget[Widget] -->|IPC validado sin secretos| Electron[Proceso principal Electron]
-    Dashboard[Dashboard local] -->|API loopback| Next[Servidor Next.js]
-    Electron --> Poller[Poller local]
-    Poller --> Next
-    Next -->|Token efímero por loopback| Broker[Broker de credenciales]
-    Broker -->|safeStorage| DPAPI[DPAPI de Windows]
-    Next --> APIs[APIs y sesiones de proveedores]
-    APIs --> Next
-    Next -->|Métricas normalizadas| Dashboard
-    Electron -->|Snapshots sin credenciales| Widget
+flowchart TD
+  subgraph PC_Local ["Tu PC de Desarrollo (Windows)"]
+    subgraph Apps_IA ["Herramientas de IA Locales"]
+      AG["Antigravity IDE<br/>(Language Server gRPC)"]
+      CC["Claude Code CLI<br/>(OAuth ~/.claude)"]
+      CG["ChatGPT Plus / Codex<br/>(Auth ~/.codex)"]
+    end
+
+    subgraph Service ["Servicio en Segundo Plano"]
+      Daemon["Sincronizador Silencioso<br/>(sync-subscriptions.js)<br/>Loopback Mutex :37482"]
+      VBS["Lanzador Oculto<br/>(sync-daemon-silent.vbs)"]
+      WinStart["Inicio con Windows<br/>(HKCU\\Run + Startup)"]
+
+      WinStart --> VBS --> Daemon
+      AG -.->|RPC RetrieveUserQuotaSummary| Daemon
+      CC -.->|Refresh Token & Usage API| Daemon
+      CG -.->|backend-api/wham/usage| Daemon
+    end
+  end
+
+  subgraph Servidor_NAS ["Servidor / NAS Synology (192.168.1.3)"]
+    subgraph DockerContainer ["Contenedor Docker (Puerto 3000)"]
+      SyncAPI["POST /api/usage/sync"]
+      Store["Cache de Uso Persistente<br/>(/app/.data/usage-cache.json)"]
+      WebUI["Servidor Web Next.js 16"]
+
+      SyncAPI --> Store --> WebUI
+    end
+  end
+
+  Daemon ==>|Push automático cada 60s| SyncAPI
+  WebUI -.->|Acceso Web en tiempo real| Browser["Navegador Web (PC / Móvil / Tablet)"]
 ```
 
-- Las credenciales Electron se almacenan cifradas en `%APPDATA%\dashboard-uso-apis\credentials.enc`.
-- Las preferencias no sensibles se guardan por separado mediante `electron-store`.
-- No se usa `localStorage` ni una cookie propia de la aplicación para persistir sesiones.
-- En el modo Electron, si `safeStorage` no está disponible, la persistencia falla de forma segura.
-- El `.env` se mantiene únicamente como compatibilidad para desarrollo web local y nunca debe entrar en Git.
+---
 
-La explicación completa está en el [modelo de seguridad](./Docs/SECURITY.md). Para comunicar una vulnerabilidad, consulta la [política de seguridad](./SECURITY.md).
+## 📊 Matriz de Proveedores y Métricas Reales
 
-## Instalación y ejecución
+| Proveedor | Fuente de Datos | Métricas Monitorizadas | Actualización |
+|---|---|---|:---:|
+| **Google Gemini** | Language Server local de Antigravity IDE | • Límite de sesión (5 horas)<br>• Límite semanal restante (%)<br>• Tiempos exactos de reseteo<br>• Saldo de créditos de sobreuso | Automática cada 60s |
+| **Claude Pro / Code** | OAuth oficial de Claude Code y organizaciones | • Límite de sesión de 5 horas (%)<br>• Límite semanal (%)<br>• Desglose por herramienta (Code, Chats, Cowork)<br>• Coste acumulado de créditos extra (€) | Automática cada 60s |
+| **OpenAI / ChatGPT** | Backend API autenticada de ChatGPT Plus | • Límite de sesión primaria (%)<br>• Límite semanal secundario (%)<br>• Créditos de reseteo disponibles<br>• Saldo de créditos API ($) | Automática cada 60s |
+| **DeepSeek** | API oficial de saldo y consola | • Saldo restante ($)<br>• Coste acumulado (€/$)<br>• Millones de tokens consumidos<br>• Total de peticiones realizadas | Automática / Web |
 
-### Release pública para Windows
+> [!NOTE]
+> **Filosofía de Datos Reales:** Si un proveedor no expone una métrica o las credenciales no tienen permisos suficientes, la aplicación muestra `unavailable`. **Bajo ninguna circunstancia se inventan o simulan datos.**
 
-La vía prevista es descargar el instalador o el portable desde [GitHub Releases](https://github.com/Zambudio/Dashboard_Uso_APIs/releases), comprobar la firma del editor y comparar su SHA-256 con `SHA256SUMS.txt`.
+---
 
-**Aún no hay una release pública universalmente instalable:** los artefactos locales `0.2.2` no están firmados. No se recomienda distribuirlos, pedir excepciones al antivirus ni indicar a otros usuarios que ignoren un aviso de seguridad.
+## ⚡ Guía Rápida de Instalación
 
-Cuando exista certificado, el proceso autorizado será:
+### Opción A: Despliegue en NAS Synology / Docker (Recomendado 24/7)
+
+1. **Clona el repositorio** en tu servidor o NAS:
+   ```bash
+   git clone https://github.com/Zambudio/Dashboard_Uso_APIs.git
+   cd Dashboard_Uso_APIs
+   ```
+
+2. **Levanta el contenedor con Docker Compose**:
+   ```bash
+   # En Synology NAS (Container Manager)
+   sudo -n /volume1/@appstore/ContainerManager/usr/bin/docker-compose up -d --build
+
+   # En Linux / Docker estándar
+   docker compose up -d --build
+   ```
+
+3. **Accede a la interfaz web**:
+   Abre en tu navegador `http://<IP_DE_TU_NAS>:3000` (por ejemplo `http://192.168.1.3:3000`).
+
+---
+
+### Opción B: Automatización Silenciosa en tu PC Windows
+
+Para que el servidor del NAS reciba automáticamente las cuotas de **Antigravity**, **Claude Code** y **ChatGPT** sin que tengas que abrir consolas ni ejecutar nada a mano:
+
+1. **Instalación con 1 Clic**:
+   Haz doble clic sobre el archivo en la raíz del proyecto:
+   ```
+   instalar-sincronizacion-automatica.bat
+   ```
+   *¿Qué hace automáticamente?*
+   - Registra el lanzador silencioso en `HKCU\Software\Microsoft\Windows\CurrentVersion\Run` y en tu carpeta de Inicio.
+   - Arranca el servicio en segundo plano de forma 100% invisible (cero ventanas de consola).
+   - Se asegura de sincronizar cada 60 segundos con el NAS.
+   - Se auto-reinicia si ocurre cualquier desconexión temporal de red.
+
+2. **Comprobar el Estado o Historial de Sincronización**:
+   Haz doble clic en:
+   ```
+   scripts/estado-servicio.bat
+   ```
+   Te mostrará el estado actual (`ACTIVO`), el PID del proceso y las últimas sincronizaciones registradas en `%APPDATA%\Dashboard_Uso_APIs\sync.log`.
+
+3. **Desactivar el Servicio**:
+   Si en algún momento deseas detenerlo, ejecuta:
+   ```
+   scripts/desinstalar-inicio-automatico.bat
+   ```
+
+---
+
+## 🛠️ Desarrollo Local
+
+Si deseas modificar el código o ejecutarlo en modo desarrollo:
 
 ```powershell
-npm run release:windows
-```
-
-Ese flujo exige una firma Authenticode válida y genera los hashes SHA-256 antes de publicar. Más detalles en [empaquetado y firma](./Docs/PACKAGING.md) e [instalación en Windows](./Docs/INSTALLATION_WINDOWS.md).
-
-### Desde el código fuente
-
-Requisitos: Windows 10/11, Node.js 22.12 o posterior y npm 10 o posterior.
-
-```powershell
-git clone https://github.com/Zambudio/Dashboard_Uso_APIs.git
-cd Dashboard_Uso_APIs
+# Instalar dependencias
 npm ci
-npm run check
-npm run electron:dev
-```
 
-`electron:dev` detecta si el repositorio está en NAS/SMB y crea automáticamente una copia de trabajo sin secretos en `%LOCALAPPDATA%\DashboardUsoAPIs\dev-worktree`. Usa el puerto `32123` y un almacén DPAPI independiente, por lo que puede convivir con una instalación abierta en el puerto `3000`.
-
-Para ejecutar únicamente el dashboard web:
-
-```powershell
+# Ejecutar el servidor web de desarrollo
 npm run dev
-```
 
-Después abre `http://127.0.0.1:3000`. En este modo de desarrollo sin Electron, las credenciales usan el `.env` local heredado; no es la modalidad recomendada para usuarios finales.
-
-### Despliegue con Docker (PC personal o servidor)
-
-Si prefieres ejecutar el dashboard como servicio contenedorizado continuo en tu equipo personal, servidor o NAS (sin necesidad de compilar Electron ni instalar Node.js):
-
-```bash
-docker compose up -d --build
-```
-
-- El servicio se iniciará en `http://localhost:3000`.
-- Tus credenciales, orden de tarjetas y caché de consumo persisten automáticamente en el volumen Docker `dashboard-data`.
-- Puedes instalarlo como aplicación independiente (PWA) con su propio icono en la barra de tareas desde Brave, Chrome o Edge.
-- Consulta la [guía completa de Docker](./Docs/DOCKER.md) para más detalles.
-
-## Arquitectura en breve
-
-```text
-electron/                 Proceso principal, bandeja, widget y broker seguro
-app/ + components/        Dashboard Next.js 16 y API local
-lib/usage/                Adaptadores reales para cada proveedor
-lib/storage.ts            Cliente de la API local, sin localStorage
-scripts/                  Staging NTFS, standalone y release firmada
-Docs/                     Arquitectura, seguridad, operación y estado
-```
-
-Electron es la distribución principal. Inicia el servidor Next.js standalone como `utilityProcess`, mantiene una sola instancia en la bandeja y expone al renderer únicamente contratos IPC limitados. Consulta [Arquitectura](./Docs/ARCHITECTURE.md) para ver los flujos completos.
-
-## Desarrollo y validación
-
-```powershell
-npm ci
-npm run lint
+# Pasar suite completa de validación (ESLint, TypeScript y Tests)
 npm run typecheck
 npm test
-npm run build
-```
-
-Atajo para las comprobaciones estáticas y unitarias:
-
-```powershell
 npm run check
 ```
 
-Los artefactos de `dist/` no se versionan. Para generar instalador y portable localmente:
+---
 
-```powershell
-npm run electron:build
-```
+## 📁 Documentación Especializada
 
-Una build local puede quedar sin firma. `npm run exe` es solo un alias compatible de `electron:build`; el proyecto ya no usa los antiguos `dashboard.exe` ni `DashboardTray.exe`.
+Toda la documentación técnica se encuentra en el directorio [`Docs/`](./Docs/):
 
-Si un build manual desde NAS/SMB falla con Watchpack, `EPERM`, error 4390 o bloqueos de `.next`, trabaja desde una copia NTFS local. `electron:dev` ya automatiza ese staging.
+- [Arquitectura Detallada y Flujos](./Docs/ARCHITECTURE.md)
+- [Sincronización PC -> NAS (Ingeniería Inversa y Daemon)](./Docs/SYNC_SUBSCRIPTIONS.md)
+- [Despliegue con Docker y Docker Compose](./Docs/DOCKER.md)
+- [Guía de Conexión SSH al NAS Synology](./Guia_Conexion_ssh_NAS.md)
+- [Proveedores, Métricas y Límites](./Docs/PROVIDERS.md)
+- [Modelo de Seguridad y Cifrado de Credenciales](./Docs/SECURITY.md)
+- [Historial Técnico y Estado del Proyecto](./Docs/PROJECT_STATUS.md)
 
-## Firma digital pendiente
+---
 
-La firma es la deuda necesaria para cerrar la distribución pública de Windows:
+## 📄 Licencia
 
-1. Obtener un certificado de firma de código reconocido para el mantenedor.
-2. Configurar `WIN_CSC_LINK` y `WIN_CSC_KEY_PASSWORD` como secretos del workflow de release.
-3. Ejecutar `npm run release:windows` y verificar la firma Authenticode tanto del instalador como del portable.
-4. Publicar exclusivamente los binarios firmados junto a `SHA256SUMS.txt`.
-5. Probar instalación limpia, SmartScreen/EDR, arranque, bandeja, widget y dashboard antes de declarar la release estable.
-
-Una firma no garantiza por sí sola la reputación inmediata del editor, pero aporta identidad e integridad verificables. Una firma autofirmada no cumple el criterio de release pública de este proyecto.
-
-## Documentación
-
-| Quiero…                                 | Documento                                                                                                                  |
-| --------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
-| Instalar o resolver un problema         | [Instalación Windows](./Docs/INSTALLATION_WINDOWS.md) · [Operación](./Docs/OPERATIONS_TROUBLESHOOTING.md)                  |
-| Desplegar con Docker                    | [Guía de despliegue Docker](./Docs/DOCKER.md)                                                                              |
-| Entender la seguridad                   | [Seguridad y credenciales](./Docs/SECURITY.md)                                                                             |
-| Conocer arquitectura y API              | [Arquitectura](./Docs/ARCHITECTURE.md) · [API local](./Docs/API_REFERENCE.md)                                              |
-| Revisar proveedores y métricas          | [Proveedores](./Docs/PROVIDERS.md)                                                                                         |
-| Compilar y firmar                       | [Empaquetado](./Docs/PACKAGING.md) · [Desarrollo](./Docs/DEVELOPMENT.md) · [Firma con Azure](./Docs/CODE_SIGNING_AZURE.md) |
-| Ver qué está realmente validado         | [Estado del proyecto](./Docs/PROJECT_STATUS.md) · [Changelog](./CHANGELOG.md)                                              |
-| Entender el cierre y la deuda pendiente | [Cierre temporal](./Docs/PROJECT_CLOSURE.md)                                                                               |
-| Colaborar                               | [Guía de contribución](./CONTRIBUTING.md)                                                                                  |
-
-## Estado actual
-
-`0.2.2` está validada localmente con el widget, sus cuatro proveedores, el panel de configuración, el dashboard, el servidor en localhost y los fuses endurecidos. La distribución pública permanece pendiente de firma digital reconocida.
-
-El desarrollo funcional queda cerrado temporalmente. Solo debe reabrirse de forma explícita, por una corrección de seguridad o por una rotura causada por cambios de un proveedor. El detalle verificable —incluidas limitaciones y condiciones de reapertura— vive en [PROJECT_STATUS.md](./Docs/PROJECT_STATUS.md) y [PROJECT_CLOSURE.md](./Docs/PROJECT_CLOSURE.md).
-
-## Licencia
-
-[MIT](./LICENSE) © 2026 Pedro Zambudio.
+Este proyecto está bajo la licencia [MIT](./LICENSE).

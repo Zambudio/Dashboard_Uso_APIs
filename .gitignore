@@ -25,20 +25,6 @@ curl-output.txt
 search-trace-output.txt
 borrar.txt
 *.tsbuildinfo
-dist/*.log
-dev-run.log
-.msys*
-.DS_Store
-Thumbs.db
-
-# Scripts de prueba sueltos, no forman parte de la app.
-/scratch/
-
-# Proyecto de widget Claude como ejemplo para la IA
-/claude-usage-widget-main/
-
-# Bundle intermedio del servidor standalone para el empaquetado con
-# Electron (scripts/prepare-standalone.js) — se regenera con cada build,
 # no aporta nada versionado.
 /build/
 
@@ -55,3 +41,7 @@ dist/latest.yml
 
 coverage/
 *.blockmap
+/scratch/
+/claude-usage-widget-main/
+Thumbs.db
+*.tar

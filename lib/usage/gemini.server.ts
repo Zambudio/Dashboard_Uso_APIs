@@ -6,7 +6,7 @@ export async function fetchGeminiUsage(apiKey: string): Promise<ApiUsageSnapshot
 
   // 1. Intenta obtener datos en tiempo real desde el Language Server local de Antigravity
   try {
-    const antigravitySnapshot = await fetchAntigravityUsage();
+    const antigravitySnapshot = await fetchAntigravityUsage('gemini');
     if (antigravitySnapshot) {
       return antigravitySnapshot;
     }

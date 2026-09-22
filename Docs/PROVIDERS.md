@@ -34,16 +34,20 @@ Los totales superiores suman únicamente `balance` y `accumulatedCost` presentes
 
 ## Anthropic y Claude
 
-- `anthropic` acepta Admin API Key, `sessionKey` o un JSON generado por el login web.
+- `anthropic` y `claude-pro` aceptan Admin API Key, tokens OAuth de Claude Code (`~/.claude/.credentials.json`), cookie `sessionKey` o un JSON generado por el login web.
 - Si el secreto representa una sesión Claude, reutiliza `fetchClaudeProUsage`.
-- Claude consulta primero las organizaciones y después `/api/organizations/{id}/usage`.
-- Los porcentajes se muestran tal como los devuelve el proveedor.
+- Claude consulta las organizaciones y después `/api/organizations/{id}/usage`.
+- Desglosa el porcentaje de utilización en la ventana de 5 horas y semanal, especificando el uso por herramienta (Claude Code, Chats, Cowork) y costes extra en EUR.
+- Si el token OAuth expira, se refresca automáticamente utilizando el `refreshToken` contra el endpoint oficial de autenticación.
 
-## Gemini
+## Gemini y Antigravity
 
-- La integración sincroniza en tiempo real las cuotas y límites desde el Language Server local de Antigravity IDE (`GetUserStatus`).
-- Extrae el plan activo (`Google AI Pro`), el porcentaje de cuota consumido/restante y la hora exacta de restablecimiento (`resetTime`).
-- Si Antigravity no está en ejecución, el login web captura un snapshot de los límites visibles en la interfaz de Gemini.
+- La integración sincroniza en tiempo real las cuotas y límites desde el Language Server local de Antigravity IDE (`language_server_windows_x64.exe`).
+- Utiliza el método gRPC interno `/exa.language_server_pb.LanguageServerService/RetrieveUserQuotaSummary` con los buckets:
+  - `gemini-5h`: ventana de 5 horas restante (`remainingFraction`) y hora exacta de reseteo (`resetTime`).
+  - `gemini-weekly`: ventana semanal restante (`remainingFraction`) y hora exacta de reseteo (`resetTime`).
+- Con fallback a `GetUserStatus` para detectar modelos en cascada y saldo de créditos.
+- Los datos se transmiten al NAS de manera continua mediante el demonio en segundo plano de Windows (`sync-subscriptions.js`).
 - Una API Key de AI Studio clásica se valida consultando la lista de modelos, sin producir métricas inventadas.
 
 ## DeepSeek
