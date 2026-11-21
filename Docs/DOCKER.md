@@ -10,6 +10,7 @@ Esta guía detalla cómo ejecutar **Dashboard Uso APIs** en cualquier entorno (i
 - **Seguridad**: Se ejecuta bajo usuario de sistema sin privilegios (`nextjs:1001`, grupo `nodejs:1001`).
 - **Persistencia total**: Las credenciales, configuración de tarjetas y los snapshots de uso se guardan en el volumen de Docker `dashboard-data` montado en `/app/.data`.
 - **Acceso universal en red local**: Expuesto en el puerto `3000` (`http://localhost:3000` o `http://<IP-DE-TU-NAS>:3000`).
+  > ⚠️ El contenedor escucha en `0.0.0.0:3000` **sin autenticación**: cualquier equipo de la LAN puede ver el dashboard. No publiques este puerto a Internet ni lo reenvíes desde el router sin añadir autenticación y revisión de seguridad.
 - **Sincronización multi-dispositivo**: El Bookmarklet y la extensión detectan automáticamente la IP/host del NAS o permiten configurarla para enviar las métricas de uso desde cualquier PC de la red.
 - **Healthcheck integrado**: Monitorización de salud automática cada 30 segundos.
 
@@ -53,7 +54,7 @@ services:
     container_name: dashboard-uso-apis
     restart: unless-stopped
     ports:
-      - "3000:3000"
+      - '3000:3000'
     environment:
       - NODE_ENV=production
       - PORT=3000
@@ -61,9 +62,9 @@ services:
     volumes:
       - dashboard-data:/app/.data
     extra_hosts:
-      - "host.docker.internal:host-gateway"
+      - 'host.docker.internal:host-gateway'
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:3000/api/health || exit 1"]
+      test: ['CMD-SHELL', 'wget -qO- http://127.0.0.1:3000/api/health || exit 1']
       interval: 30s
       timeout: 5s
       retries: 3
@@ -75,6 +76,7 @@ volumes:
 ```
 
 ### ¿Qué se almacena en el volumen `dashboard-data`?
+
 1. `/app/.data/.env`: Claves cifradas de proveedores, orden de tarjetas y preferencias del dashboard.
 2. `/app/.data/usage-cache.json`: Datos reales y snapshots de consumo de cada proveedor (Claude Pro, OpenAI, Gemini, DeepSeek).
 
@@ -95,7 +97,6 @@ Para proveedores de suscripción (como **Claude Pro**, **ChatGPT Plus**, **Googl
    - **Extensión**: Carga la carpeta `extension/` en `chrome://extensions` y en el popup configura la URL de tu NAS (`http://<IP-NAS>:3000`). Sincronizará automáticamente en segundo plano.
 3. **API Keys estándar**:
    - Si utilizas API Keys directas (OpenAI API, Anthropic API, DeepSeek API, Google AI Studio API), puedes introducirlas directamente en la interfaz del Dashboard alojado en el NAS y las consultará de forma autónoma.
-
 
 ## 6. Instalar como Aplicación Independiente en Windows (Brave / Chrome / Edge)
 

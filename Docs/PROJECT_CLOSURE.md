@@ -1,5 +1,12 @@
 # Cierre temporal del proyecto
 
+> **Actualización (22 de septiembre de 2026):** el cierre funcional de `0.2.2`
+> se levantó con la versión `0.3.0` (despliegue Docker en NAS, sincronizador de
+> suscripciones y cuotas de Antigravity). Este documento se conserva como
+> registro histórico del cierre; la **deuda de firma de código sigue abierta** y
+> sus condiciones de publicación continúan vigentes. Estado actual en
+> [PROJECT_STATUS.md](./PROJECT_STATUS.md).
+
 ## Estado a 14 de agosto de 2026
 
 El desarrollo funcional queda **cerrado temporalmente en la versión `0.2.2`**.

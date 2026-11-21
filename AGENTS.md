@@ -58,8 +58,9 @@ La documentación forma parte del cambio. Actualizar el documento especializado 
 - No editar ni versionar artefactos compilados; regenerarlos con `npm run electron:build`.
 - No usar `require.resolve('playwright')` en código empaquetado por Next para construir la ruta de su CLI.
 - Las releases públicas requieren firma reconocida y SHA-256.
-- Respetar el cierre temporal de `0.2.2`: no iniciar nuevas iteraciones salvo
-  reapertura explícita, corrección de seguridad o rotura de un proveedor.
+- El cierre temporal de `0.2.2` se levantó con la versión `0.3.0` (22-sep-2026);
+  la firma de código sigue siendo deuda bloqueante para publicar binarios
+  (ver [Docs/PROJECT_CLOSURE.md](./Docs/PROJECT_CLOSURE.md)).
 
 ## Desarrollo y build
 
@@ -91,6 +92,23 @@ copia NTFS local y desplegar después `dist/`.
 - interacción básica de UI;
 - ningún secreto staged;
 - documentación sincronizada y sin presentar trabajo planificado como validado.
+
+## 🧠 Base de Conocimiento Global (OBSIDIAN VAULT)
+
+Este proyecto está formalmente integrado con nuestra base de conocimiento general para todos los proyectos:
+📁 **`z:\IA\02_Proyectos\OBSIDIAN VAULT`**
+
+### Reglas Obligatorias para Cualquier Agente de IA:
+
+1. **Consulta Previa Obligatoria al Desarrollar**: Siempre que estemos desarrollando nuevas características, modificando la arquitectura, añadiendo fetchers de APIs (OpenAI, Claude, Gemini, DeepSeek) o tocando empaquetado Electron, **el agente DEBE buscar y consultar información primero en `OBSIDIAN VAULT`** (`OBSIDIAN VAULT/index.md`).
+   - Ficha de entidad: `Entities/Proyecto-Dashboard-Uso-APIs.md`.
+   - Infraestructura y conceptos clave: `Entities/Infraestructura-NAS-Synology-DS224.md`, `Concepts/Empaquetado-Electron-Nextjs-Standalone.md`, `Concepts/Gestion-Segura-Secretos-Electron-DPAPI.md`, `Concepts/Procedimiento-Conexion-SSH-NAS.md` y `Concepts/Arquitectura-Comprobacion-Motores-IA-L1-L2.md`.
+2. **Referencias entre proyectos**: Si el usuario indica _"Hazlo como en el proyecto X"_, consulta las fichas correspondientes en `OBSIDIAN VAULT/Entities/` y `OBSIDIAN VAULT/Concepts/`.
+3. **Reutilización**: Reutiliza patrones existentes de seguridad DPAPI, IPC y Docker antes de crear soluciones aisladas.
+4. **Documentar y Relacionar Obligatoriamente Nuevos Desarrollos e Implementaciones**:
+   - Si se diseña una nueva implementación relevante (e.g. nuevo fetcher de cuotas/costes, mejoras en empaquetado Electron standalone, persistencia segura):
+   - **DEBE documentarse e interrelacionarse de inmediato en `OBSIDIAN VAULT`**.
+   - Seguir estrictamente la metodología Wiki-Base (`OBSIDIAN VAULT/SCHEMA.md`): fuentes inmutables en `RAW/`, frontmatter YAML (`tags`, `updated: YYYY-MM-DD`, `fuentes`), `## Cross-references` con Wikilinks nativos `[[...]]` enlazando a las notas relevantes y SIEMPRE a `[[index]]`, `[[SCHEMA]]` y `[[log]]`, regla de Vault cerrado (sin enlaces externos en Markdown), y actualización obligatoria de `index.md` y `log.md`.
 
 <!-- BEGIN:nextjs-agent-rules -->
 

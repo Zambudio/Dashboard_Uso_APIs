@@ -4,6 +4,30 @@ Este proyecto sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) 
 
 ## [Sin publicar]
 
+### Documentación
+
+- `AGENTS.md` incorpora la integración con la Base de Conocimiento Global (`OBSIDIAN VAULT`) y deja de exigir el cierre temporal de `0.2.2`.
+- `CLAUDE.md` importa `AGENTS.md` (`@AGENTS.md`) en lugar de duplicar sus instrucciones.
+- Estado, contexto y cierre reflejan la línea base `0.3.0` y la exposición en LAN del despliegue Docker.
+
+## [0.3.0] - 2026-09-22
+
+### Añadido
+
+- Despliegue web 24/7 en Docker sobre el NAS Synology (`192.168.1.3:3000`) con volumen persistente (`Docs/DOCKER.md`).
+- Cuotas reales de Gemini (5 h y semanal) mediante el RPC `RetrieveUserQuotaSummary` del Language Server de Antigravity IDE.
+- Sincronizador en segundo plano para Windows (`scripts/sync-subscriptions.js`) con arranque silencioso (`sync-daemon-silent.vbs`), mutex por loopback (`127.0.0.1:37482`) y scripts de instalación/estado/desinstalación (`Docs/SYNC_SUBSCRIPTIONS.md`).
+- Extracción automática de cuotas de Claude Code (OAuth) y ChatGPT Plus (Codex) y ruta `/api/subscriptions/auto-detect`.
+- `Guia_Conexion_ssh_NAS.md` con el procedimiento de conexión y despliegue en el NAS.
+
+### Cambiado
+
+- README modernizado y documentación de `Docs/` actualizada para la versión `0.3.0`.
+
+### Cambios previos incluidos en 0.3.0
+
+Los cambios siguientes estaban acumulados como «sin publicar» desde la línea base `0.2.2` y forman parte de `0.3.0`.
+
 ### Añadido
 
 - Panel de configuración integrado en el widget de escritorio.
