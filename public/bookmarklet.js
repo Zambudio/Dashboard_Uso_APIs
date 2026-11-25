@@ -84,7 +84,9 @@
           const orgs = await orgsRes.json();
           const orgId = Array.isArray(orgs) ? orgs[0]?.uuid : orgs?.uuid;
           if (orgId) {
-            const usageRes = await fetch(`https://claude.ai/api/organizations/${orgId}/usage`, { credentials: 'include' });
+            const usageRes = await fetch(`https://claude.ai/api/organizations/${orgId}/usage`, {
+              credentials: 'include',
+            });
             if (usageRes.ok) {
               const usage = await usageRes.json();
               if (usage.five_hour?.utilization !== undefined) {
@@ -102,21 +104,31 @@
 
       // Intento 2: DOM de la página
       const text = document.body.innerText || '';
-      const mSession = text.match(/(?:Sesión actual|Current session)[\s\S]*?(?:Se restablece en|Resets in)\s+([^\n\r]+)[\s\S]*?(\d+(?:[.,]\d+)?)\s*%\s*(usado|used|restante|remaining)/i);
+      const mSession = text.match(
+        /(?:Sesión actual|Current session)[\s\S]*?(?:Se restablece en|Resets in)\s+([^\n\r]+)[\s\S]*?(\d+(?:[.,]\d+)?)\s*%\s*(usado|used|restante|remaining)/i
+      );
       if (mSession) {
         if (!sessionResets) sessionResets = mSession[1].trim();
         if (sessionUtil === undefined) {
           const num = parseFloat(mSession[2].replace(',', '.'));
-          sessionUtil = mSession[3].toLowerCase().startsWith('rest') || mSession[3].toLowerCase().startsWith('rem') ? Math.max(0, 100 - num) : num;
+          sessionUtil =
+            mSession[3].toLowerCase().startsWith('rest') || mSession[3].toLowerCase().startsWith('rem')
+              ? Math.max(0, 100 - num)
+              : num;
         }
       }
 
-      const mWeekly = text.match(/(?:Límites semanales|Weekly limit|Todos los modelos|All models)[\s\S]*?(?:Se restablece el|Se restablece en|Resets)\s+([^\n\r]+)[\s\S]*?(\d+(?:[.,]\d+)?)\s*%\s*(usado|used|restante|remaining)/i);
+      const mWeekly = text.match(
+        /(?:Límites semanales|Weekly limit|Todos los modelos|All models)[\s\S]*?(?:Se restablece el|Se restablece en|Resets)\s+([^\n\r]+)[\s\S]*?(\d+(?:[.,]\d+)?)\s*%\s*(usado|used|restante|remaining)/i
+      );
       if (mWeekly) {
         if (!weeklyResets) weeklyResets = mWeekly[1].trim();
         if (weeklyUtil === undefined) {
           const num = parseFloat(mWeekly[2].replace(',', '.'));
-          weeklyUtil = mWeekly[3].toLowerCase().startsWith('rest') || mWeekly[3].toLowerCase().startsWith('rem') ? Math.max(0, 100 - num) : num;
+          weeklyUtil =
+            mWeekly[3].toLowerCase().startsWith('rest') || mWeekly[3].toLowerCase().startsWith('rem')
+              ? Math.max(0, 100 - num)
+              : num;
         }
       }
 
@@ -159,7 +171,9 @@
       // 5-hour limit
       let sessionUtil = undefined;
       let sessionResets = undefined;
-      const m5h = text.match(/(?:5-hour limit|L[íi]mite de 5 horas|L[íi]mite de 3 horas|5 hours)[\s\S]*?(?:Resets in|Se restablece en|Resets at|Se restablece a las)\s+([^\n\r]+)[\s\S]*?(\d+(?:[.,]\d+)?)\s*%\s*(restante|remaining|usado|used)/i);
+      const m5h = text.match(
+        /(?:5-hour limit|L[íi]mite de 5 horas|L[íi]mite de 3 horas|5 hours)[\s\S]*?(?:Resets in|Se restablece en|Resets at|Se restablece a las)\s+([^\n\r]+)[\s\S]*?(\d+(?:[.,]\d+)?)\s*%\s*(restante|remaining|usado|used)/i
+      );
       if (m5h) {
         sessionResets = m5h[1].trim();
         const num = parseFloat(m5h[2].replace(',', '.'));
@@ -170,7 +184,9 @@
       // Weekly limit
       let weeklyUtil = undefined;
       let weeklyResets = undefined;
-      const mWeek = text.match(/(?:Weekly limit|L[íi]mite semanal)[\s\S]*?(?:Resets in|Se restablece en|Resets at|Se restablece a las)\s+([^\n\r]+)[\s\S]*?(\d+(?:[.,]\d+)?)\s*%\s*(restante|remaining|usado|used)/i);
+      const mWeek = text.match(
+        /(?:Weekly limit|L[íi]mite semanal)[\s\S]*?(?:Resets in|Se restablece en|Resets at|Se restablece a las)\s+([^\n\r]+)[\s\S]*?(\d+(?:[.,]\d+)?)\s*%\s*(restante|remaining|usado|used)/i
+      );
       if (mWeek) {
         weeklyResets = mWeek[1].trim();
         const num = parseFloat(mWeek[2].replace(',', '.'));
@@ -180,7 +196,9 @@
 
       // Credits
       let credits = undefined;
-      const mCred = text.match(/(\d+(?:[.,]\d+)?)\s*(?:credits? remaining|cr[ée]ditos? restantes|cr[ée]ditos?|Saldo actual)/i);
+      const mCred = text.match(
+        /(\d+(?:[.,]\d+)?)\s*(?:credits? remaining|cr[ée]ditos? restantes|cr[ée]ditos?|Saldo actual)/i
+      );
       if (mCred) {
         credits = parseFloat(mCred[1].replace(',', '.'));
       }
@@ -212,17 +230,27 @@
       let weeklyUtil = undefined;
       let weeklyResets = undefined;
 
-      const mCur = text.match(/(?:Uso actual|Current usage|Five Hour Limit|Límite de 5 horas)[\s\S]*?(\d+(?:[.,]\d+)?)\s*%\s*(?:usado|used|restante|remaining)[\s\S]*?(?:Se restablece|Resets|refresh in)\s+([^\n\r]+)/i);
+      const mCur = text.match(
+        /(?:Uso actual|Current usage|Five Hour Limit|Límite de 5 horas)[\s\S]*?(\d+(?:[.,]\d+)?)\s*%\s*(?:usado|used|restante|remaining)[\s\S]*?(?:Se restablece|Resets|refresh in)\s+([^\n\r]+)/i
+      );
       if (mCur) {
         const num = parseFloat(mCur[1].replace(',', '.'));
-        sessionUtil = mCur[0].toLowerCase().includes('restante') || mCur[0].toLowerCase().includes('remaining') ? Math.max(0, 100 - num) : num;
+        sessionUtil =
+          mCur[0].toLowerCase().includes('restante') || mCur[0].toLowerCase().includes('remaining')
+            ? Math.max(0, 100 - num)
+            : num;
         sessionResets = mCur[2].trim();
       }
 
-      const mWeek = text.match(/(?:L[íi]mite semanal|Weekly limit|Weekly Limit Remaining)[\s\S]*?(\d+(?:[.,]\d+)?)\s*%\s*(?:usado|used|restante|remaining)[\s\S]*?(?:Se restablece|Resets|refresh in)\s+([^\n\r]+)/i);
+      const mWeek = text.match(
+        /(?:L[íi]mite semanal|Weekly limit|Weekly Limit Remaining)[\s\S]*?(\d+(?:[.,]\d+)?)\s*%\s*(?:usado|used|restante|remaining)[\s\S]*?(?:Se restablece|Resets|refresh in)\s+([^\n\r]+)/i
+      );
       if (mWeek) {
         const num = parseFloat(mWeek[1].replace(',', '.'));
-        weeklyUtil = mWeek[0].toLowerCase().includes('restante') || mWeek[0].toLowerCase().includes('remaining') ? Math.max(0, 100 - num) : num;
+        weeklyUtil =
+          mWeek[0].toLowerCase().includes('restante') || mWeek[0].toLowerCase().includes('remaining')
+            ? Math.max(0, 100 - num)
+            : num;
         weeklyResets = mWeek[2].trim();
       }
 
@@ -248,7 +276,9 @@
       let balance = undefined;
       let cost = undefined;
 
-      const mBalance = text.match(/(?:Topped-up balance|Saldo disponible|Saldo actual)[\s\S]*?([$¥€])\s*(\d+(?:[.,]\d+)?)/i);
+      const mBalance = text.match(
+        /(?:Topped-up balance|Saldo disponible|Saldo actual)[\s\S]*?([$¥€])\s*(\d+(?:[.,]\d+)?)/i
+      );
       if (mBalance) {
         balance = parseFloat(mBalance[2].replace(',', '.'));
       }

@@ -180,9 +180,10 @@ export async function fetchOpenAIUsage(secret: string): Promise<ApiUsageSnapshot
         const planName = `ChatGPT ${rawPlan.charAt(0).toUpperCase() + rawPlan.slice(1)}`;
 
         const resetCredits = wham.rate_limit_reset_credits?.available_count;
-        const planWithCredits = resetCredits !== undefined && resetCredits > 0
-          ? `${planName} (${resetCredits} créditos de reseteo)`
-          : planName;
+        const planWithCredits =
+          resetCredits !== undefined && resetCredits > 0
+            ? `${planName} (${resetCredits} créditos de reseteo)`
+            : planName;
 
         return {
           fetchedAt,

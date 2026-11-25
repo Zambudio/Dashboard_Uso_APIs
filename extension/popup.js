@@ -7,7 +7,7 @@ const DEFAULT_DASHBOARD_URL = 'http://192.168.1.3:3000';
 // Cargar URL guardada
 if (typeof chrome !== 'undefined' && chrome.storage?.local) {
   chrome.storage.local.get(['dashboard_url'], (res) => {
-    const current = (res && res.dashboard_url) ? res.dashboard_url : DEFAULT_DASHBOARD_URL;
+    const current = res && res.dashboard_url ? res.dashboard_url : DEFAULT_DASHBOARD_URL;
     urlInput.value = current;
     openLink.href = current;
   });

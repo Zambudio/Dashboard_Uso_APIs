@@ -42,7 +42,8 @@ export function SyncModal({ isOpen, onClose, onRefreshAll }: SyncModalProps) {
               Sincronizar Uso desde tu Navegador
             </h2>
             <p className="mt-1 text-sm text-slate-400">
-              Conecta directamente con tus pestañas abiertas en Brave/Chrome sin introducir contraseñas ni bloqueos de login.
+              Conecta directamente con tus pestañas abiertas en Brave/Chrome sin introducir contraseñas ni bloqueos de
+              login.
             </p>
           </div>
           <button
@@ -104,7 +105,9 @@ export function SyncModal({ isOpen, onClose, onRefreshAll }: SyncModalProps) {
           {activeTab === 'extension' && (
             <div className="space-y-4">
               <div className="rounded-xl bg-slate-900/60 border border-white/10 p-4 space-y-3">
-                <p className="text-sm font-semibold text-white">Instalación y actualización en Brave / Chrome / Edge:</p>
+                <p className="text-sm font-semibold text-white">
+                  Instalación y actualización en Brave / Chrome / Edge:
+                </p>
                 <ol className="list-decimal list-inside space-y-2 text-xs text-slate-300">
                   <li>
                     Abre en tu navegador:{' '}
@@ -112,20 +115,25 @@ export function SyncModal({ isOpen, onClose, onRefreshAll }: SyncModalProps) {
                     <code className="rounded bg-black/40 px-2 py-0.5 text-cyan-300">chrome://extensions</code>
                   </li>
                   <li>
-                    Activa el interruptor <span className="text-white font-semibold">&quot;Modo de desarrollador&quot;</span> arriba a la derecha.
+                    Activa el interruptor{' '}
+                    <span className="text-white font-semibold">&quot;Modo de desarrollador&quot;</span> arriba a la
+                    derecha.
                   </li>
                   <li>
-                    Haz clic en <span className="text-white font-semibold">&quot;Cargar descomprimida&quot;</span> (o si ya la tenías, pulsa el icono de recargar 🔄) y selecciona la carpeta:
+                    Haz clic en <span className="text-white font-semibold">&quot;Cargar descomprimida&quot;</span> (o si
+                    ya la tenías, pulsa el icono de recargar 🔄) y selecciona la carpeta:
                     <div className="mt-1.5 font-mono text-[11px] bg-black/50 p-2.5 rounded border border-white/10 text-cyan-400 select-all">
                       z:\IA\02_Proyectos\Dashboard_Uso_APIs\extension
                     </div>
                   </li>
                   <li>
-                    Abre el icono de la extensión y verifica que apunta al servidor: <code className="text-cyan-300">{normalizedOrigin}</code>
+                    Abre el icono de la extensión y verifica que apunta al servidor:{' '}
+                    <code className="text-cyan-300">{normalizedOrigin}</code>
                   </li>
                 </ol>
                 <p className="text-xs text-emerald-400 pt-1">
-                  ✓ Al abrir Claude, ChatGPT o DeepSeek, la extensión sincronizará automáticamente el uso en segundo plano.
+                  ✓ Al abrir Claude, ChatGPT o DeepSeek, la extensión sincronizará automáticamente el uso en segundo
+                  plano.
                 </p>
               </div>
             </div>
@@ -146,9 +154,7 @@ export function SyncModal({ isOpen, onClose, onRefreshAll }: SyncModalProps) {
                     <span>📊</span>
                     <span>Sincronizar IAs</span>
                   </a>
-                  <span className="text-xs text-slate-400">
-                    ← (Arrastra este botón a tu barra de marcadores)
-                  </span>
+                  <span className="text-xs text-slate-400">← (Arrastra este botón a tu barra de marcadores)</span>
                 </div>
               </div>
 
@@ -160,28 +166,44 @@ export function SyncModal({ isOpen, onClose, onRefreshAll }: SyncModalProps) {
                   </li>
                   <li>
                     En <span className="text-emerald-300 font-medium">ChatGPT</span> (en{' '}
-                    <a href="https://chatgpt.com/settings/usage" target="_blank" rel="noreferrer" className="underline text-blue-400">
+                    <a
+                      href="https://chatgpt.com/settings/usage"
+                      target="_blank"
+                      rel="noreferrer"
+                      className="underline text-blue-400"
+                    >
                       chatgpt.com/settings/usage
                     </a>
                     ).
                   </li>
                   <li>
                     En <span className="text-purple-300 font-medium">Gemini</span> (en{' '}
-                    <a href="https://gemini.google.com/usage" target="_blank" rel="noreferrer" className="underline text-blue-400">
+                    <a
+                      href="https://gemini.google.com/usage"
+                      target="_blank"
+                      rel="noreferrer"
+                      className="underline text-blue-400"
+                    >
                       gemini.google.com/usage
                     </a>
                     ).
                   </li>
                   <li>
                     En <span className="text-blue-300 font-medium">DeepSeek</span> (en{' '}
-                    <a href="https://platform.deepseek.com/usage" target="_blank" rel="noreferrer" className="underline text-blue-400">
+                    <a
+                      href="https://platform.deepseek.com/usage"
+                      target="_blank"
+                      rel="noreferrer"
+                      className="underline text-blue-400"
+                    >
                       platform.deepseek.com/usage
                     </a>
                     ).
                   </li>
                 </ul>
                 <p className="text-xs text-emerald-400 pt-1">
-                  ✓ Verás aparecer una notificación verde en la pestaña confirmando la sincronización hacia {normalizedOrigin}.
+                  ✓ Verás aparecer una notificación verde en la pestaña confirmando la sincronización hacia{' '}
+                  {normalizedOrigin}.
                 </p>
               </div>
             </div>
@@ -205,7 +227,9 @@ export function SyncModal({ isOpen, onClose, onRefreshAll }: SyncModalProps) {
                   </button>
                 </div>
                 <p className="text-xs text-slate-400">
-                  Abre la pestaña de Claude, ChatGPT o DeepSeek, pulsa <kbd className="px-1.5 py-0.5 bg-white/10 rounded">F12</kbd>, selecciona la pestaña <b>Consola</b>, pega el código anterior y pulsa Enter.
+                  Abre la pestaña de Claude, ChatGPT o DeepSeek, pulsa{' '}
+                  <kbd className="px-1.5 py-0.5 bg-white/10 rounded">F12</kbd>, selecciona la pestaña <b>Consola</b>,
+                  pega el código anterior y pulsa Enter.
                 </p>
               </div>
             </div>

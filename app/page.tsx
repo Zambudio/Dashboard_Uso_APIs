@@ -116,7 +116,10 @@ export default function HomePage() {
   const [syncModalOpen, setSyncModalOpen] = useState(false);
   const [initialLoadingIds, setInitialLoadingIds] = useState<Set<string>>(new Set());
   const [detecting, setDetecting] = useState(false);
-  const [detectNotification, setDetectNotification] = useState<{ type: 'success' | 'info' | 'error'; message: string } | null>(null);
+  const [detectNotification, setDetectNotification] = useState<{
+    type: 'success' | 'info' | 'error';
+    message: string;
+  } | null>(null);
   // La carga inicial (config + claves + uso por proveedor) es asíncrona y el
   // último paso puede tardar varios segundos porque llama a APIs externas
   // reales. Si el usuario edita la lista de proveedores (p.ej. borra una
@@ -164,7 +167,6 @@ export default function HomePage() {
           status: cached ? ('online' as const) : hasCred ? ('online' as const) : ('unconfigured' as const),
         };
       });
-
 
       // 5. Fetch usage for providers with credentials configured
       const toRefresh = providersWithStatus.filter(
@@ -351,7 +353,6 @@ export default function HomePage() {
         .reduce((sum, item) => sum + (item.usage?.balance ?? 0), 0),
     [providers]
   );
-
 
   const totalCost = useMemo(
     () => providers.reduce((sum, item) => sum + (item.usage?.accumulatedCost ?? 0), 0),
@@ -629,15 +630,12 @@ export default function HomePage() {
               detectNotification.type === 'success'
                 ? 'border-emerald-500/40 bg-emerald-500/15 text-emerald-200'
                 : detectNotification.type === 'error'
-                ? 'border-rose-500/40 bg-rose-500/15 text-rose-200'
-                : 'border-cyan-500/40 bg-cyan-500/15 text-cyan-200'
+                  ? 'border-rose-500/40 bg-rose-500/15 text-rose-200'
+                  : 'border-cyan-500/40 bg-cyan-500/15 text-cyan-200'
             }`}
           >
             <span>{detectNotification.message}</span>
-            <button
-              onClick={() => setDetectNotification(null)}
-              className="ml-3 text-xs opacity-70 hover:opacity-100"
-            >
+            <button onClick={() => setDetectNotification(null)} className="ml-3 text-xs opacity-70 hover:opacity-100">
               ✕
             </button>
           </div>
@@ -723,8 +721,8 @@ export default function HomePage() {
             <div>
               <h2 className="text-2xl font-bold text-white sm:text-3xl">Monitor de uso de APIs de IA</h2>
               <p className="mt-2 max-w-2xl text-sm text-slate-400">
-                Datos reales de saldo, coste y consumo de tus proveedores de API, con sincronización de navegador
-                para Claude, ChatGPT, Antigravity y Gemini.
+                Datos reales de saldo, coste y consumo de tus proveedores de API, con sincronización de navegador para
+                Claude, ChatGPT, Antigravity y Gemini.
               </p>
             </div>
             <div className="flex flex-wrap items-center gap-2.5">
@@ -762,12 +760,7 @@ export default function HomePage() {
           )}
         </div>
 
-
-        <SyncModal
-          isOpen={syncModalOpen}
-          onClose={() => setSyncModalOpen(false)}
-          onRefreshAll={refreshAll}
-        />
+        <SyncModal isOpen={syncModalOpen} onClose={() => setSyncModalOpen(false)} onRefreshAll={refreshAll} />
       </div>
     </main>
   );

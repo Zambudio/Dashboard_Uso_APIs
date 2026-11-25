@@ -20,9 +20,9 @@ flowchart TD
     subgraph ChatGPT ["ChatGPT Plus"]
       CG_Auth["~/.codex/auth.json"]
     end
-    
+
     Daemon["Daemon Silencioso (sync-subscriptions.js)<br/>Loopback Mutex :37482 • sync-daemon-silent.vbs"]
-    
+
     LS -->|RPC RetrieveUserQuotaSummary| Daemon
     CC_Creds -->|OAuth Refresh & Usage API| Daemon
     CG_Auth -->|backend-api/wham/usage| Daemon
@@ -33,7 +33,7 @@ flowchart TD
       API["POST /api/usage/sync"]
       Cache["usage-cache.json"]
       WebUI["Dashboard Web (Next.js 16)"]
-      
+
       API --> Cache
       Cache --> WebUI
     end
@@ -86,14 +86,19 @@ Google no ofrece un endpoint web público para consultar el estado de cuota de l
 Para garantizar que el usuario nunca tenga que ejecutar comandos manualmente ni sufra interrupciones de ventanas de consola:
 
 ### 3.1 Lanzador Invisible (`sync-daemon-silent.vbs`)
+
 Utiliza `WScript.Shell` con estilo de ventana `0` (completamente oculta) y redirige toda la salida a un archivo de registro:
+
 ```vbs
 WshShell.Run cmd, 0, True
 ```
+
 Si el script se interrumpe por algún motivo, un bucle de supervisión lo reinicia automáticamente tras 10 segundos.
 
 ### 3.2 Registro de Inicio con Windows
+
 El script se registra en dos ubicaciones estándar del usuario:
+
 1. **Registro de Windows**:
    `HKCU\Software\Microsoft\Windows\CurrentVersion\Run` -> `DashboardAPIs_AutoSync`
 2. **Carpeta de Inicio**:
@@ -102,12 +107,15 @@ El script se registra en dos ubicaciones estándar del usuario:
 Al arrancar el equipo, el lanzador incluye una espera inteligente de hasta 60 segundos por si la unidad de red mapeada (`Z:`) tarda unos instantes en conectarse.
 
 ### 3.3 Mecanismo de Instancia Única (Mutex de Red Loopback)
+
 Los esquemas basados únicamente en PID sufren el problema de reciclaje rápido de PIDs en Windows. Para evitar instancias duplicadas o bloqueos por archivos huérfanos:
+
 - El daemon enlaza un servidor TCP local en `127.0.0.1:37482`.
 - Si otra instancia intenta arrancar, recibe inmediatamente el error `EADDRINUSE` y sale de forma limpia.
 - Si el proceso finaliza o el sistema se apaga, el kernel de Windows libera el socket TCP en el acto, garantizando que nunca se produzcan falsos bloqueos.
 
 ### 3.4 Registro y Rotación de Logs
+
 - Ubicación: `%APPDATA%\Dashboard_Uso_APIs\sync.log`.
 - Se rota automáticamente si el archivo supera 1 MB para proteger el espacio en disco.
 
@@ -115,10 +123,10 @@ Los esquemas basados únicamente en PID sufren el problema de reciclaje rápido 
 
 ## 4. Comandos y Herramientas Disponibles
 
-| Script | Ubicación | Descripción |
-|---|---|---|
-| **Instalar sincronización automática** | `instalar-sincronizacion-automatica.bat` | Registra el servicio en Windows y lo arranca inmediatamente. |
-| **Comprobar estado y logs** | `scripts/estado-servicio.bat` | Muestra si el servicio está activo (PID) y las últimas líneas sincronizadas. |
-| **Desinstalar sincronización** | `scripts/desinstalar-inicio-automatico.bat` | Detiene el daemon y elimina las entradas de inicio automático. |
-| **Sincronización manual** | `npm run sync` | Ejecuta un único ciclo de sincronización en consola. |
-| **Demonio en consola** | `npm run sync:daemon` | Ejecuta el sincronizador en primer plano con logs en directo. |
+| Script                                 | Ubicación                                   | Descripción                                                                  |
+| -------------------------------------- | ------------------------------------------- | ---------------------------------------------------------------------------- |
+| **Instalar sincronización automática** | `instalar-sincronizacion-automatica.bat`    | Registra el servicio en Windows y lo arranca inmediatamente.                 |
+| **Comprobar estado y logs**            | `scripts/estado-servicio.bat`               | Muestra si el servicio está activo (PID) y las últimas líneas sincronizadas. |
+| **Desinstalar sincronización**         | `scripts/desinstalar-inicio-automatico.bat` | Detiene el daemon y elimina las entradas de inicio automático.               |
+| **Sincronización manual**              | `npm run sync`                              | Ejecuta un único ciclo de sincronización en consola.                         |
+| **Demonio en consola**                 | `npm run sync:daemon`                       | Ejecuta el sincronizador en primer plano con logs en directo.                |

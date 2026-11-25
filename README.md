@@ -73,12 +73,12 @@ flowchart TD
 
 ## 📊 Matriz de Proveedores y Métricas Reales
 
-| Proveedor | Fuente de Datos | Métricas Monitorizadas | Actualización |
-|---|---|---|:---:|
-| **Google Gemini** | Language Server local de Antigravity IDE | • Límite de sesión (5 horas)<br>• Límite semanal restante (%)<br>• Tiempos exactos de reseteo<br>• Saldo de créditos de sobreuso | Automática cada 60s |
+| Proveedor             | Fuente de Datos                               | Métricas Monitorizadas                                                                                                                                   |    Actualización    |
+| --------------------- | --------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- | :-----------------: |
+| **Google Gemini**     | Language Server local de Antigravity IDE      | • Límite de sesión (5 horas)<br>• Límite semanal restante (%)<br>• Tiempos exactos de reseteo<br>• Saldo de créditos de sobreuso                         | Automática cada 60s |
 | **Claude Pro / Code** | OAuth oficial de Claude Code y organizaciones | • Límite de sesión de 5 horas (%)<br>• Límite semanal (%)<br>• Desglose por herramienta (Code, Chats, Cowork)<br>• Coste acumulado de créditos extra (€) | Automática cada 60s |
-| **OpenAI / ChatGPT** | Backend API autenticada de ChatGPT Plus | • Límite de sesión primaria (%)<br>• Límite semanal secundario (%)<br>• Créditos de reseteo disponibles<br>• Saldo de créditos API ($) | Automática cada 60s |
-| **DeepSeek** | API oficial de saldo y consola | • Saldo restante ($)<br>• Coste acumulado (€/$)<br>• Millones de tokens consumidos<br>• Total de peticiones realizadas | Automática / Web |
+| **OpenAI / ChatGPT**  | Backend API autenticada de ChatGPT Plus       | • Límite de sesión primaria (%)<br>• Límite semanal secundario (%)<br>• Créditos de reseteo disponibles<br>• Saldo de créditos API ($)                   | Automática cada 60s |
+| **DeepSeek**          | API oficial de saldo y consola                | • Saldo restante ($)<br>• Coste acumulado (€/$)<br>• Millones de tokens consumidos<br>• Total de peticiones realizadas                                   |  Automática / Web   |
 
 > [!NOTE]
 > **Filosofía de Datos Reales:** Si un proveedor no expone una métrica o las credenciales no tienen permisos suficientes, la aplicación muestra `unavailable`. **Bajo ninguna circunstancia se inventan o simulan datos.**
@@ -90,12 +90,14 @@ flowchart TD
 ### Opción A: Despliegue en NAS Synology / Docker (Recomendado 24/7)
 
 1. **Clona el repositorio** en tu servidor o NAS:
+
    ```bash
    git clone https://github.com/Zambudio/Dashboard_Uso_APIs.git
    cd Dashboard_Uso_APIs
    ```
 
 2. **Levanta el contenedor con Docker Compose**:
+
    ```bash
    # En Synology NAS (Container Manager)
    sudo -n /volume1/@appstore/ContainerManager/usr/bin/docker-compose up -d --build
@@ -115,10 +117,12 @@ Para que el servidor del NAS reciba automáticamente las cuotas de **Antigravity
 
 1. **Instalación con 1 Clic**:
    Haz doble clic sobre el archivo en la raíz del proyecto:
+
    ```
    instalar-sincronizacion-automatica.bat
    ```
-   *¿Qué hace automáticamente?*
+
+   _¿Qué hace automáticamente?_
    - Registra el lanzador silencioso en `HKCU\Software\Microsoft\Windows\CurrentVersion\Run` y en tu carpeta de Inicio.
    - Arranca el servicio en segundo plano de forma 100% invisible (cero ventanas de consola).
    - Se asegura de sincronizar cada 60 segundos con el NAS.
@@ -126,9 +130,11 @@ Para que el servidor del NAS reciba automáticamente las cuotas de **Antigravity
 
 2. **Comprobar el Estado o Historial de Sincronización**:
    Haz doble clic en:
+
    ```
    scripts/estado-servicio.bat
    ```
+
    Te mostrará el estado actual (`ACTIVO`), el PID del proceso y las últimas sincronizaciones registradas en `%APPDATA%\Dashboard_Uso_APIs\sync.log`.
 
 3. **Desactivar el Servicio**:
