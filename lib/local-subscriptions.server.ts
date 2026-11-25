@@ -182,7 +182,7 @@ export async function detectAvailableLocalSubscriptions(): Promise<LocalSubscrip
     claude: {
       available: Boolean(claudeCreds?.token),
       source: claudeCreds ? '~/.claude/.credentials.json' : undefined,
-      details: claudeCreds ? (claudeCreds.subscriptionType || 'Claude Pro / OAuth') : 'No detectado',
+      details: claudeCreds ? claudeCreds.subscriptionType || 'Claude Pro / OAuth' : 'No detectado',
     },
     openai: {
       available: Boolean(codexCreds?.accessToken),

@@ -234,8 +234,15 @@ export async function fetchAntigravityUsage(providerTarget: string = 'gemini'): 
 
     if (groups.length > 0) {
       let targetGroup: QuotaSummaryGroup | undefined;
-      if (providerTarget === 'claude' || providerTarget === 'claude-pro' || providerTarget === 'anthropic' || providerTarget === 'openai') {
-        targetGroup = groups.find((g) => g.displayName?.toLowerCase().includes('claude') || g.displayName?.toLowerCase().includes('gpt'));
+      if (
+        providerTarget === 'claude' ||
+        providerTarget === 'claude-pro' ||
+        providerTarget === 'anthropic' ||
+        providerTarget === 'openai'
+      ) {
+        targetGroup = groups.find(
+          (g) => g.displayName?.toLowerCase().includes('claude') || g.displayName?.toLowerCase().includes('gpt')
+        );
       } else {
         // Gemini por defecto
         targetGroup = groups.find((g) => g.displayName?.toLowerCase().includes('gemini')) || groups[0];
@@ -243,7 +250,9 @@ export async function fetchAntigravityUsage(providerTarget: string = 'gemini'): 
 
       if (targetGroup?.buckets && targetGroup.buckets.length > 0) {
         const weeklyBucket = targetGroup.buckets.find((b) => b.bucketId?.includes('weekly') || b.window === 'weekly');
-        const sessionBucket = targetGroup.buckets.find((b) => b.bucketId?.includes('5h') || b.window === '5h' || b.bucketId?.includes('session'));
+        const sessionBucket = targetGroup.buckets.find(
+          (b) => b.bucketId?.includes('5h') || b.window === '5h' || b.bucketId?.includes('session')
+        );
 
         const weeklyFraction = weeklyBucket?.remainingFraction ?? 1.0;
         const sessionFraction = sessionBucket?.remainingFraction ?? 1.0;
@@ -288,7 +297,9 @@ export async function fetchAntigravityUsage(providerTarget: string = 'gemini'): 
         claudeConfigs[0];
       detectedPlan = selectedConfig?.label || 'Claude (Antigravity)';
     } else if (providerTarget === 'openai' || providerTarget === 'chatgpt') {
-      const gptConfigs = configs.filter((c) => c.label && (c.label.toLowerCase().includes('gpt') || c.label.toLowerCase().includes('openai')));
+      const gptConfigs = configs.filter(
+        (c) => c.label && (c.label.toLowerCase().includes('gpt') || c.label.toLowerCase().includes('openai'))
+      );
       selectedConfig = gptConfigs[0];
       detectedPlan = selectedConfig?.label || 'GPT (Antigravity)';
     } else {
@@ -309,10 +320,7 @@ export async function fetchAntigravityUsage(providerTarget: string = 'gemini'): 
     }
 
     const quota = selectedConfig?.quotaInfo;
-    const remainingFraction =
-      typeof quota?.remainingFraction === 'number'
-        ? quota.remainingFraction
-        : 1.0;
+    const remainingFraction = typeof quota?.remainingFraction === 'number' ? quota.remainingFraction : 1.0;
 
     // sessionUtilization es el porcentaje USADO (0 a 100)
     const sessionUsed = Math.max(0, Math.min(100, Math.round((1 - remainingFraction) * 100)));
@@ -320,8 +328,7 @@ export async function fetchAntigravityUsage(providerTarget: string = 'gemini'): 
     // Weekly limit aproximado según el ritmo de consumo de la sesión
     const weeklyUsed = Math.max(0, Math.min(100, Math.round(sessionUsed * 0.2)));
 
-    const tierName =
-      userStatus.userTier?.name || userStatus.planStatus?.planInfo?.planName || 'Pro';
+    const tierName = userStatus.userTier?.name || userStatus.planStatus?.planInfo?.planName || 'Pro';
     const planType = `${tierName} • ${detectedPlan}`;
 
     const promptCredits = userStatus.planStatus?.planInfo?.monthlyPromptCredits ?? 50000;

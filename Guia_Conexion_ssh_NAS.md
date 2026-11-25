@@ -28,17 +28,17 @@
 
 ## 1. Datos de conexión
 
-| Campo | Valor |
-|---|---|
-| Modelo NAS | Synology DS224+ (`ZAMBU-NAS`) |
-| Host | `192.168.1.3` |
-| Puerto SSH | `32` |
-| Usuario | `adminzambu` (cuenta DSM `AdminZambu`, pertenece a `administrators`) |
-| Clave privada (lado asistente/IA) | `~/.ssh/id_ed25519_nas` |
-| Alias SSH | `nas-zambu` |
-| Binario Docker | `/volume1/@appstore/ContainerManager/usr/bin/docker` |
-| Binario docker-compose | `/volume1/@appstore/ContainerManager/usr/bin/docker-compose` |
-| Versión de Compose | `v2.20.1` (binario clásico) |
+| Campo                             | Valor                                                                |
+| --------------------------------- | -------------------------------------------------------------------- |
+| Modelo NAS                        | Synology DS224+ (`ZAMBU-NAS`)                                        |
+| Host                              | `192.168.1.3`                                                        |
+| Puerto SSH                        | `32`                                                                 |
+| Usuario                           | `adminzambu` (cuenta DSM `AdminZambu`, pertenece a `administrators`) |
+| Clave privada (lado asistente/IA) | `~/.ssh/id_ed25519_nas`                                              |
+| Alias SSH                         | `nas-zambu`                                                          |
+| Binario Docker                    | `/volume1/@appstore/ContainerManager/usr/bin/docker`                 |
+| Binario docker-compose            | `/volume1/@appstore/ContainerManager/usr/bin/docker-compose`         |
+| Versión de Compose                | `v2.20.1` (binario clásico)                                          |
 
 La clave privada vive en la máquina desde la que trabaja la IA. La clave pública ya
 está autorizada en `~/.ssh/authorized_keys` del usuario en el NAS y el usuario tiene

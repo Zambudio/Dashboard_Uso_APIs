@@ -39,7 +39,9 @@ export async function POST() {
     if (status.claude.available) {
       const claudeCreds = getLocalClaudeCredentials();
       if (claudeCreds?.token) {
-        let providerEntry = currentProviders.find((p) => p.provider === 'claude-pro' || p.id === 'anthropic' || p.provider === 'anthropic');
+        let providerEntry = currentProviders.find(
+          (p) => p.provider === 'claude-pro' || p.id === 'anthropic' || p.provider === 'anthropic'
+        );
         if (!providerEntry) {
           providerEntry = {
             id: 'claude-pro',

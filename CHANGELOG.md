@@ -4,6 +4,14 @@ Este proyecto sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) 
 
 ## [Sin publicar]
 
+### Seguridad
+
+- Dependencias actualizadas para dejar `npm audit --audit-level=high` sin hallazgos: `next` y `eslint-config-next` 16.4.6, `react`/`react-dom` 19.2.9, `electron` 43.8.13, `electron-builder` 26.18.0 y transitivas (`undici`, `brace-expansion`, `js-yaml`, `sharp`, `source-map-js`, `fast-uri`, `zod`) vía `npm audit fix`.
+
+### Cambiado
+
+- Formato Prettier aplicado a los ficheros que hacían fallar `format:check` en CI.
+
 ### Documentación
 
 - `AGENTS.md` incorpora la integración con la Base de Conocimiento Global (`OBSIDIAN VAULT`) y deja de exigir el cierre temporal de `0.2.2`.

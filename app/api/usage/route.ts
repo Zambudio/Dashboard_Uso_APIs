@@ -39,9 +39,7 @@ export async function POST(request: NextRequest) {
   const isClaudeFamily = (p?: string) => p === 'claude-pro' || p === 'anthropic';
   const configuredProvider = state.providers?.find(
     (item) =>
-      item.id === id ||
-      item.provider === provider ||
-      (isClaudeFamily(provider) && isClaudeFamily(item.provider))
+      item.id === id || item.provider === provider || (isClaudeFamily(provider) && isClaudeFamily(item.provider))
   );
   if (!configuredProvider) {
     return NextResponse.json(

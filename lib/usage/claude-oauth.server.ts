@@ -79,7 +79,9 @@ export async function fetchClaudeOAuthUsage(token?: string): Promise<ApiUsageSna
   }
 
   if (!authToken) {
-    throw new Error('No se encontraron credenciales de Claude OAuth (token no disponible ni en ~/.claude/.credentials.json).');
+    throw new Error(
+      'No se encontraron credenciales de Claude OAuth (token no disponible ni en ~/.claude/.credentials.json).'
+    );
   }
 
   const res = await fetch(OAUTH_USAGE_URL, {
@@ -99,7 +101,9 @@ export async function fetchClaudeOAuthUsage(token?: string): Promise<ApiUsageSna
       if (freshLocal?.token && freshLocal.token !== authToken) {
         return fetchClaudeOAuthUsage(freshLocal.token);
       }
-      throw new Error('Token de Claude OAuth caducado o no autorizado (401). Ejecuta "claude" en tu terminal para refrescar tu sesión.');
+      throw new Error(
+        'Token de Claude OAuth caducado o no autorizado (401). Ejecuta "claude" en tu terminal para refrescar tu sesión.'
+      );
     }
     throw new Error(`Claude OAuth API ${res.status}: ${text.slice(0, 200) || res.statusText}`);
   }
@@ -125,9 +129,7 @@ export async function fetchClaudeOAuthUsage(token?: string): Promise<ApiUsageSna
     ?.map((r) => `${r.display_name}: ${r.percent}%`)
     ?.join(' • ');
 
-  const planType = breakdownSummary
-    ? `Claude Pro (${breakdownSummary})`
-    : 'Claude Pro (OAuth)';
+  const planType = breakdownSummary ? `Claude Pro (${breakdownSummary})` : 'Claude Pro (OAuth)';
 
   return {
     fetchedAt,

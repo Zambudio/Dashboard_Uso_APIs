@@ -21,21 +21,16 @@ interface ProviderCardProps {
 
 const PROVIDER_URLS: Record<string, string> = {
   'claude-pro': 'https://claude.ai/settings/usage',
-  'openai': 'https://chatgpt.com/settings/usage',
-  'gemini': 'https://gemini.google.com/usage',
-  'deepseek': 'https://platform.deepseek.com/usage',
-  'anthropic': 'https://console.anthropic.com/settings/cost',
+  openai: 'https://chatgpt.com/settings/usage',
+  gemini: 'https://gemini.google.com/usage',
+  deepseek: 'https://platform.deepseek.com/usage',
+  anthropic: 'https://console.anthropic.com/settings/cost',
 };
 
 function formatRelativeTime(iso?: string): string | null {
   if (!iso) return null;
   // Si ya es un texto descriptivo
-  if (
-    iso.includes('min') ||
-    iso.includes('Resets') ||
-    iso.includes('restablece') ||
-    iso.includes('las')
-  ) {
+  if (iso.includes('min') || iso.includes('Resets') || iso.includes('restablece') || iso.includes('las')) {
     return iso;
   }
   const date = new Date(iso);
@@ -55,7 +50,6 @@ function formatRelativeTime(iso?: string): string | null {
   const remHours = hours % 24;
   return remHours > 0 ? `en ${days} d ${remHours} h` : `en ${days} d`;
 }
-
 
 function formatMinutesAgo(isoDate?: string): string {
   if (!isoDate) return 'Sin sincronizar';
@@ -108,11 +102,11 @@ export function ProviderCard({
 
   const hasUsageData = Boolean(
     usage &&
-      (usage.sessionUtilization !== undefined ||
-        usage.weeklyUtilization !== undefined ||
-        usage.balance !== undefined ||
-        usage.accumulatedCost !== undefined ||
-        usage.tokensUsed !== undefined)
+    (usage.sessionUtilization !== undefined ||
+      usage.weeklyUtilization !== undefined ||
+      usage.balance !== undefined ||
+      usage.accumulatedCost !== undefined ||
+      usage.tokensUsed !== undefined)
   );
 
   const isSubscription =
@@ -137,15 +131,17 @@ export function ProviderCard({
 
   const planBadge =
     usage?.planType ||
-    (provider.provider === 'claude-pro' || provider.id === 'claude-pro' || provider.name.toLowerCase().includes('claude')
+    (provider.provider === 'claude-pro' ||
+    provider.id === 'claude-pro' ||
+    provider.name.toLowerCase().includes('claude')
       ? 'Claude Pro'
       : provider.provider === 'openai'
-      ? 'ChatGPT Plus / Team'
-      : provider.provider === 'gemini'
-      ? 'Google AI Pro (Antigravity)'
-      : provider.provider === 'deepseek'
-      ? 'DeepSeek Platform'
-      : null);
+        ? 'ChatGPT Plus / Team'
+        : provider.provider === 'gemini'
+          ? 'Google AI Pro (Antigravity)'
+          : provider.provider === 'deepseek'
+            ? 'DeepSeek Platform'
+            : null);
 
   return (
     <div
@@ -197,7 +193,6 @@ export function ProviderCard({
             </div>
           </div>
 
-
           <div className="flex shrink-0 items-center gap-1.5">
             {dragHandleProps && <DragHandle onPointerDown={dragHandleProps.onPointerDown} />}
             <button
@@ -245,9 +240,7 @@ export function ProviderCard({
                 label="Límite semanal"
                 resetBadge={formatRelativeTime(usage?.weeklyResetsAt)}
                 secondary={
-                  usage?.weeklyUtilization !== undefined
-                    ? `${Math.round(usage.weeklyUtilization)}% usado`
-                    : 'Sin datos'
+                  usage?.weeklyUtilization !== undefined ? `${Math.round(usage.weeklyUtilization)}% usado` : 'Sin datos'
                 }
               />
 
@@ -296,8 +289,6 @@ export function ProviderCard({
           )}
         </div>
       </div>
-
-
 
       {/* Pie de la tarjeta: Acciones rápidas */}
       <div className="mt-5 flex items-center justify-between border-t border-white/[0.08] pt-3.5">
