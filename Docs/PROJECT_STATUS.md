@@ -31,7 +31,7 @@ La aplicación web se ejecuta 24/7 en Docker sobre el NAS Synology (`192.168.1.3
 | `GET /api/health` + `GET /api/keys` (smoke)     | HTTP 200 y forma esperada en `.next/standalone`                                                                    |
 | `npm run check` con dependencias nuevas         | Correcto en copia NTFS limpia                                                                                      |
 | `npm run build` con Next.js 16                  | Correcto en copia NTFS limpia                                                                                      |
-| Paquete Electron `0.2.2`                        | Setup (110.981.533 bytes) y portable (110.761.113 bytes) generados desde NTFS                                      |
+| Paquete Electron `0.2.2` (último validado)      | Setup (110.981.533 bytes) y portable (110.761.113 bytes) generados desde NTFS                                      |
 | Arranque del paquete previo al sellado de fuses | HTTP 200 en `127.0.0.1:31873` con perfil aislado                                                                   |
 | Arranque del paquete final endurecido `0.2.2`   | Instalado sobre `0.2.1`; servidor HTTP 200, ventana visible y cuatro proveedores renderizados                      |
 | Configuración de fuses del EXE final            | Verificada con `@electron/fuses read`                                                                              |
@@ -47,6 +47,8 @@ La aplicación web se ejecuta 24/7 en Docker sobre el NAS Synology (`192.168.1.3
 - DeepSeek requiere rehidratar el estado web capturado para consultar métricas que no ofrece su API pública.
 - No existe conversión de divisas.
 - El proveedor `custom` no consulta uso automáticamente.
+- El contenedor Docker del NAS escucha en `0.0.0.0:3000` sin autenticación: cualquier equipo de la LAN puede consultar el dashboard. No debe publicarse fuera de la red local sin añadir autenticación y revisión de seguridad.
+- Las validaciones de empaquetado Electron de la tabla corresponden a `0.2.2`; no consta un paquete Electron `0.3.0` generado ni validado.
 - Una build local sin certificado seguirá pudiendo activar SmartScreen/EDR. El código no puede sustituir la reputación y firma del editor.
 - Los artefactos locales `0.1.0`, `dashboard.exe` y `DashboardTray.exe` están retirados y no deben distribuirse.
 

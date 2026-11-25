@@ -7,6 +7,7 @@ Mantener una aplicación local Windows, en español y sin datos simulados, que a
 ## Estado de continuidad
 
 Línea base `0.3.0` activa y operativa:
+
 1. Servidor web Next.js 16 ejecutándose en contenedor Docker 24/7 en el NAS Synology (`192.168.1.3:3000`).
 2. Sincronizador en segundo plano en Windows (`sync-subscriptions.js`) con ejecución silenciosa permanente (VBScript oculto, loopback mutex y auto-arranque en Windows).
 3. Conexión de cuotas reales para Google Gemini (Language Server de Antigravity IDE), Claude Pro (OAuth de Claude Code) y ChatGPT Plus (Codex).
@@ -24,7 +25,10 @@ Línea base `0.3.0` activa y operativa:
 ## Decisiones vigentes
 
 - Electron es la distribución recomendada.
-- El servidor solo escucha en `127.0.0.1`.
+- En Electron/standalone el servidor solo escucha en `127.0.0.1`. El contenedor
+  Docker escucha en `0.0.0.0:3000` y queda expuesto en la LAN del NAS **sin
+  autenticación**: limitación conocida, no apto para exponerse fuera de la red
+  local (ver `Docs/DOCKER.md`).
 - El renderer nunca recibe valores secretos; `/api/keys` solo devuelve IDs configurados.
 - `safeStorage`/DPAPI es obligatorio para persistir credenciales en Electron. Si no está disponible, se falla de forma segura.
 - Proveedores y preferencias se guardan en `electron-store`; no se duplican en `localStorage`.
@@ -57,7 +61,7 @@ git diff --check
 
 Para una release: `npm run release:windows`, comprobación de firma, instalación limpia, una sola instancia, HTTP 200 en `127.0.0.1:3000` e interacción básica del widget.
 
-La build local validada de `0.2.2` sigue sin firma porque no están configurados
+La última build Electron validada (`0.2.2`) sigue sin firma porque no están configurados
 `WIN_CSC_LINK`/`WIN_CSC_KEY_PASSWORD`. No subir sus EXE a Releases ni pedir al
 usuario que ignore el EDR; el código fuente y CI sí pueden publicarse.
 

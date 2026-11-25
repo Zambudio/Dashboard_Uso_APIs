@@ -21,7 +21,7 @@ Este directorio es la fuente de verdad técnica y operativa de Dashboard_Uso_API
 5. [Compilación y empaquetado](./PACKAGING.md)
 6. [Guía de conexión SSH al NAS](../Guia_Conexion_ssh_NAS.md)
 7. [Estado actual e historial técnico](./PROJECT_STATUS.md)
-8. [Cierre temporal y deuda pendiente](./PROJECT_CLOSURE.md)
+8. [Cierre temporal `0.2.2` (histórico) y deuda de firma](./PROJECT_CLOSURE.md)
 9. [Limpieza única del historial de Git](./REPOSITORY_CLEANUP.md)
 10. [Contexto de continuación](../PROJECT_CONTEXT.md)
 
