@@ -17,12 +17,16 @@ export function SyncModal({ isOpen, onClose, onRefreshAll }: SyncModalProps) {
     }
     return 'http://localhost:3000';
   });
+  // Solo en memoria: necesario cuando el servidor (Docker) exige DASHBOARD_AUTH_TOKEN.
+  const [authToken, setAuthToken] = useState('');
 
   if (!isOpen) return null;
 
   const normalizedOrigin = serverUrl.replace(/\/+$/, '');
-  const bookmarkletCode = `javascript:(function(){const s=document.createElement('script');s.src='${normalizedOrigin}/bookmarklet.js?origin=${encodeURIComponent(normalizedOrigin)}&t='+Date.now();document.body.appendChild(s);})();`;
-  const consoleCode = `fetch('${normalizedOrigin}/bookmarklet.js?origin=${encodeURIComponent(normalizedOrigin)}&t='+Date.now()).then(r=>r.text()).then(eval);`;
+  const token = authToken.trim();
+  const tokenPrefix = token ? `window.__DASHBOARD_TOKEN=${JSON.stringify(token)};` : '';
+  const bookmarkletCode = `javascript:(function(){${tokenPrefix}const s=document.createElement('script');s.src='${normalizedOrigin}/bookmarklet.js?origin=${encodeURIComponent(normalizedOrigin)}&t='+Date.now();document.body.appendChild(s);})();`;
+  const consoleCode = `${tokenPrefix}fetch('${normalizedOrigin}/bookmarklet.js?origin=${encodeURIComponent(normalizedOrigin)}&t='+Date.now()).then(r=>r.text()).then(eval);`;
 
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
@@ -62,6 +66,17 @@ export function SyncModal({ isOpen, onClose, onRefreshAll }: SyncModalProps) {
             value={serverUrl}
             onChange={(e) => setServerUrl(e.target.value)}
             placeholder="http://192.168.1.50:3000"
+            className="flex-1 rounded-lg bg-black/40 border border-white/15 px-2.5 py-1 text-xs font-mono text-cyan-300 focus:outline-none focus:border-cyan-400"
+          />
+        </div>
+        <div className="mt-2 flex items-center gap-2 rounded-xl bg-white/[0.04] p-3 border border-white/10 text-xs">
+          <span className="text-slate-400 shrink-0 font-medium">Token (solo Docker):</span>
+          <input
+            type="password"
+            autoComplete="off"
+            value={authToken}
+            onChange={(e) => setAuthToken(e.target.value)}
+            placeholder="DASHBOARD_AUTH_TOKEN si el servidor exige autenticación"
             className="flex-1 rounded-lg bg-black/40 border border-white/15 px-2.5 py-1 text-xs font-mono text-cyan-300 focus:outline-none focus:border-cyan-400"
           />
         </div>

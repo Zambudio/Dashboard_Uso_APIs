@@ -3,6 +3,16 @@
  * Extrae automáticamente métricas de Claude, ChatGPT, Gemini y DeepSeek.
  */
 
+async function getDashboardToken() {
+  return new Promise((resolve) => {
+    if (typeof chrome !== 'undefined' && chrome.storage?.local) {
+      chrome.storage.local.get(['dashboard_token'], (res) => resolve((res && res.dashboard_token) || ''));
+    } else {
+      resolve('');
+    }
+  });
+}
+
 async function getDashboardEndpoint() {
   return new Promise((resolve) => {
     if (typeof chrome !== 'undefined' && chrome.storage?.local) {
@@ -278,12 +288,22 @@ async function extractAndSync() {
     if (!payload) return;
 
     const endpoint = await getDashboardEndpoint();
+    const token = await getDashboardToken();
+    const headers = { 'Content-Type': 'application/json' };
+    if (token) headers.Authorization = 'Bearer ' + token;
 
-    await fetch(endpoint, {
+    const res = await fetch(endpoint, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers,
       body: JSON.stringify(payload),
     });
+    if (!res.ok) {
+      throw new Error(
+        res.status === 401
+          ? 'El Dashboard exige autenticación: guarda el token (DASHBOARD_AUTH_TOKEN) en la extensión.'
+          : 'HTTP ' + res.status
+      );
+    }
 
     console.log('[Extension Dashboard] ✅ Datos sincronizados hacia ' + endpoint + ':', payload.provider);
   } catch (err) {

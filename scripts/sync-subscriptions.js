@@ -21,6 +21,24 @@ const os = require('os');
 const NAS_HOST = process.env.DASHBOARD_HOST || '192.168.1.3';
 const NAS_PORT = parseInt(process.env.DASHBOARD_PORT || '3000', 10);
 const USER_PROFILE = process.env.USERPROFILE || process.env.HOME || os.homedir();
+// Token del despliegue Docker (DASHBOARD_AUTH_TOKEN del contenedor). En Windows:
+// `setx DASHBOARD_AUTH_TOKEN "<token>"` y reiniciar el demonio.
+const AUTH_TOKEN = (process.env.DASHBOARD_AUTH_TOKEN || '').trim();
+let warnedUnauthorized = false;
+
+function authHeaders() {
+  return AUTH_TOKEN ? { Authorization: 'Bearer ' + AUTH_TOKEN } : {};
+}
+
+function warnIfUnauthorized(status) {
+  if (status !== 401 || warnedUnauthorized) return;
+  warnedUnauthorized = true;
+  console.warn(
+    AUTH_TOKEN
+      ? '[Auth] El dashboard rechazó DASHBOARD_AUTH_TOKEN: comprueba que coincide con el del contenedor.'
+      : '[Auth] El dashboard exige autenticación: define DASHBOARD_AUTH_TOKEN (setx) y reinicia el sincronizador.'
+  );
+}
 
 if (process.stdout && typeof process.stdout.on === 'function') {
   process.stdout.on('error', () => {});
@@ -41,13 +59,17 @@ function postJson(pathEndpoint, data) {
         headers: {
           'Content-Type': 'application/json',
           'Content-Length': Buffer.byteLength(payload),
+          ...authHeaders(),
         },
         timeout: 5000,
       },
       (res) => {
         let body = '';
         res.on('data', (c) => (body += c));
-        res.on('end', () => resolve({ status: res.statusCode, body }));
+        res.on('end', () => {
+          warnIfUnauthorized(res.statusCode);
+          resolve({ status: res.statusCode, body });
+        });
       }
     );
     req.on('error', (err) => resolve({ error: err.message }));
@@ -72,13 +94,17 @@ function putJson(pathEndpoint, data) {
         headers: {
           'Content-Type': 'application/json',
           'Content-Length': Buffer.byteLength(payload),
+          ...authHeaders(),
         },
         timeout: 5000,
       },
       (res) => {
         let body = '';
         res.on('data', (c) => (body += c));
-        res.on('end', () => resolve({ status: res.statusCode, body }));
+        res.on('end', () => {
+          warnIfUnauthorized(res.statusCode);
+          resolve({ status: res.statusCode, body });
+        });
       }
     );
     req.on('error', (err) => resolve({ error: err.message }));

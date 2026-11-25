@@ -12,6 +12,11 @@ services:
       - NODE_ENV=production
       - PORT=3000
       - DASHBOARD_ENV_FILE=/app/.data/.env
+      # Autenticación obligatoria (ver Docs/DOCKER.md). Definir en el .env junto
+      # a este fichero; compose no arranca si falta el token.
+      - DASHBOARD_REQUIRE_AUTH=1
+      - DASHBOARD_AUTH_TOKEN=${DASHBOARD_AUTH_TOKEN:?Define DASHBOARD_AUTH_TOKEN en el .env junto a docker-compose.yml (openssl rand -hex 32)}
+      - DASHBOARD_AUTH_USER=${DASHBOARD_AUTH_USER:-admin}
     volumes:
       # Persistencia de configuraciones, credenciales y caché sincronizada
       - dashboard-data:/app/.data

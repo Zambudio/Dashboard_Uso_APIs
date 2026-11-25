@@ -50,6 +50,12 @@ function spawnServer({ standaloneDir, port, host, envFile, forkProcess, brokerUr
     DASHBOARD_CRED_BROKER_TOKEN: brokerToken,
   });
   delete childEnv.ELECTRON_RUN_AS_NODE;
+  // La autenticación HTTP es solo para el despliegue Docker. El servidor del
+  // widget escucha en 127.0.0.1 y no debe heredar el token que el usuario
+  // haya definido para el sincronizador (pediría credenciales a la ventana).
+  delete childEnv.DASHBOARD_AUTH_TOKEN;
+  delete childEnv.DASHBOARD_AUTH_USER;
+  delete childEnv.DASHBOARD_REQUIRE_AUTH;
   delete childEnv.NODE_OPTIONS;
   const child = forkProcess(entryPath, [], {
     cwd: path.join(standaloneDir, 'standalone'),

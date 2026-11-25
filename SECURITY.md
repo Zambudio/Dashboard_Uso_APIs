@@ -12,6 +12,6 @@ Incluye una descripción, impacto, pasos mínimos de reproducción y versión af
 
 ## Modelo de seguridad
 
-La aplicación escucha exclusivamente en `127.0.0.1`. En Electron, las credenciales se cifran con `safeStorage`/DPAPI y nunca se devuelven al renderer; las preferencias no sensibles se guardan por separado. El proyecto no ofrece garantías si se modifica para escuchar en la red sin añadir autenticación y una revisión específica.
+El widget Electron y el modo standalone escuchan exclusivamente en `127.0.0.1`. El despliegue Docker escucha en la LAN y exige `DASHBOARD_AUTH_TOKEN` (HTTP Basic/Bearer, comparación en tiempo constante, fallo seguro con `503` si falta); al ser HTTP sin TLS, no debe publicarse a Internet. En Electron, las credenciales se cifran con `safeStorage`/DPAPI y nunca se devuelven al renderer; las preferencias no sensibles se guardan por separado. El proyecto no ofrece garantías si se modifica para escuchar en la red sin añadir autenticación y una revisión específica.
 
 Las releases públicas para Windows deben estar firmadas con un certificado de firma de código reconocido y acompañadas de sumas SHA-256. Una firma autofirmada no evita SmartScreen, Smart App Control ni las políticas EDR corporativas.

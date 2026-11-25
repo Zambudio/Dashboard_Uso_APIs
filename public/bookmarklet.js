@@ -23,6 +23,8 @@
   } catch {}
 
   const DASHBOARD_ENDPOINT = `${dashboardOrigin}/api/usage/sync`;
+  // Token del despliegue Docker (DASHBOARD_AUTH_TOKEN), inyectado por el marcador.
+  const DASHBOARD_TOKEN = typeof window.__DASHBOARD_TOKEN === 'string' ? window.__DASHBOARD_TOKEN.trim() : '';
 
   function showToast(message, isError = false) {
     const existing = document.getElementById('dashboard-sync-toast');
@@ -308,14 +310,19 @@
     }
 
     // Enviar al Dashboard (Local o en el NAS)
+    const headers = { 'Content-Type': 'application/json' };
+    if (DASHBOARD_TOKEN) headers.Authorization = `Bearer ${DASHBOARD_TOKEN}`;
     const res = await fetch(DASHBOARD_ENDPOINT, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers,
       body: JSON.stringify(payload),
     });
 
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
+      if (res.status === 401) {
+        throw new Error('El Dashboard exige autenticación: genera el marcador con el token (DASHBOARD_AUTH_TOKEN).');
+      }
       throw new Error(err.error || `HTTP ${res.status}`);
     }
 

@@ -96,7 +96,15 @@ flowchart TD
    cd Dashboard_Uso_APIs
    ```
 
-2. **Levanta el contenedor con Docker Compose**:
+2. **Define el token de acceso** (obligatorio en Docker) en el `.env` junto a `docker-compose.yml`:
+
+   ```bash
+   echo "DASHBOARD_AUTH_TOKEN=$(openssl rand -hex 32)" >> .env
+   ```
+
+   El navegador pedirá usuario `admin` y, como contraseña, ese token. El sincronizador de Windows, la extensión y el bookmarklet lo envían como `Authorization: Bearer` (ver [Docs/DOCKER.md](./Docs/DOCKER.md#21-autenticación-obligatoria)).
+
+3. **Levanta el contenedor con Docker Compose**:
 
    ```bash
    # En Synology NAS (Container Manager)
@@ -106,8 +114,8 @@ flowchart TD
    docker compose up -d --build
    ```
 
-3. **Accede a la interfaz web**:
-   Abre en tu navegador `http://<IP_DE_TU_NAS>:3000` (por ejemplo `http://192.168.1.3:3000`).
+4. **Accede a la interfaz web**:
+   Abre en tu navegador `http://<IP_DE_TU_NAS>:3000` (por ejemplo `http://192.168.1.3:3000`) e introduce las credenciales.
 
 ---
 
@@ -115,7 +123,13 @@ flowchart TD
 
 Para que el servidor del NAS reciba automáticamente las cuotas de **Antigravity**, **Claude Code** y **ChatGPT** sin que tengas que abrir consolas ni ejecutar nada a mano:
 
-1. **Instalación con 1 Clic**:
+1. **Token del NAS**: define en Windows el mismo token del contenedor y reinicia sesión (o el demonio):
+
+   ```
+   setx DASHBOARD_AUTH_TOKEN "<el token del .env del NAS>"
+   ```
+
+2. **Instalación con 1 Clic**:
    Haz doble clic sobre el archivo en la raíz del proyecto:
 
    ```
@@ -128,7 +142,7 @@ Para que el servidor del NAS reciba automáticamente las cuotas de **Antigravity
    - Se asegura de sincronizar cada 60 segundos con el NAS.
    - Se auto-reinicia si ocurre cualquier desconexión temporal de red.
 
-2. **Comprobar el Estado o Historial de Sincronización**:
+3. **Comprobar el Estado o Historial de Sincronización**:
    Haz doble clic en:
 
    ```
@@ -137,7 +151,7 @@ Para que el servidor del NAS reciba automáticamente las cuotas de **Antigravity
 
    Te mostrará el estado actual (`ACTIVO`), el PID del proceso y las últimas sincronizaciones registradas en `%APPDATA%\Dashboard_Uso_APIs\sync.log`.
 
-3. **Desactivar el Servicio**:
+4. **Desactivar el Servicio**:
    Si en algún momento deseas detenerlo, ejecuta:
    ```
    scripts/desinstalar-inicio-automatico.bat

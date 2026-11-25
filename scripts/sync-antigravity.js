@@ -10,6 +10,8 @@ const http = require('http');
 
 const NAS_DASHBOARD_URL = process.env.DASHBOARD_URL || 'http://192.168.1.3:3000';
 const SYNC_ENDPOINT = `${NAS_DASHBOARD_URL.replace(/\/+$/, '')}/api/usage/sync`;
+// Token del despliegue Docker (DASHBOARD_AUTH_TOKEN del contenedor).
+const AUTH_TOKEN = (process.env.DASHBOARD_AUTH_TOKEN || '').trim();
 
 function findLanguageServerCredentials() {
   const appData = process.env.APPDATA;
@@ -126,6 +128,7 @@ function sendToDashboard(payload) {
         headers: {
           'Content-Type': 'application/json',
           'Content-Length': Buffer.byteLength(data),
+          ...(AUTH_TOKEN ? { Authorization: 'Bearer ' + AUTH_TOKEN } : {}),
         },
         timeout: 4000,
       },

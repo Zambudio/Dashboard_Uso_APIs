@@ -114,7 +114,19 @@ Los esquemas basados únicamente en PID sufren el problema de reciclaje rápido 
 - Si otra instancia intenta arrancar, recibe inmediatamente el error `EADDRINUSE` y sale de forma limpia.
 - Si el proceso finaliza o el sistema se apaga, el kernel de Windows libera el socket TCP en el acto, garantizando que nunca se produzcan falsos bloqueos.
 
-### 3.4 Registro y Rotación de Logs
+### 3.4 Autenticación contra el Dashboard en Docker
+
+El contenedor exige `DASHBOARD_AUTH_TOKEN`. Los sincronizadores lo leen de la
+variable de entorno del mismo nombre y lo envían como `Authorization: Bearer`:
+
+```
+setx DASHBOARD_AUTH_TOKEN "<token del .env del NAS>"
+```
+
+Después hay que reiniciar el demonio (o cerrar sesión) para que herede la
+variable. Si el token falta o no coincide, el log muestra un aviso `[Auth]`.
+
+### 3.5 Registro y Rotación de Logs
 
 - Ubicación: `%APPDATA%\Dashboard_Uso_APIs\sync.log`.
 - Se rota automáticamente si el archivo supera 1 MB para proteger el espacio en disco.

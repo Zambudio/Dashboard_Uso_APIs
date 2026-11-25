@@ -1,8 +1,16 @@
+# Nunca copiar secretos al contexto de build: Next.js cargaría el .env en la
+# compilación y el modo standalone podría incluirlo en la imagen final.
+.env
+.env.*
+!.env.example
+
 node_modules
 .next
 dist
 build
 .git
 .agents
+.data
+.browser-profiles
 scratch
 *.log

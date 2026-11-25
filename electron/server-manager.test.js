@@ -53,3 +53,33 @@ test('spawnServer uses an Electron utility process without enabling run-as-node'
   assert.equal(received.options.env.PORT, '3210');
   assert.equal(received.options.env.DASHBOARD_CRED_BROKER_TOKEN, 'test-token');
 });
+
+test('spawnServer never passes Docker HTTP auth variables to the local widget server', () => {
+  let received;
+  const saved = { ...process.env };
+  process.env.DASHBOARD_AUTH_TOKEN = 'x'.repeat(40);
+  process.env.DASHBOARD_AUTH_USER = 'pedro';
+  process.env.DASHBOARD_REQUIRE_AUTH = '1';
+  try {
+    spawnServer({
+      standaloneDir: 'C:\app\standalone-bundle',
+      port: 3210,
+      host: '127.0.0.1',
+      envFile: 'C:\app-data\.env',
+      brokerUrl: 'http://127.0.0.1:4321',
+      brokerToken: 'test-token',
+      forkProcess: (modulePath, args, options) => {
+        received = options;
+        return { on: () => {} };
+      },
+    });
+  } finally {
+    for (const key of ['DASHBOARD_AUTH_TOKEN', 'DASHBOARD_AUTH_USER', 'DASHBOARD_REQUIRE_AUTH']) {
+      if (key in saved) process.env[key] = saved[key];
+      else delete process.env[key];
+    }
+  }
+  assert.equal(received.env.DASHBOARD_AUTH_TOKEN, undefined);
+  assert.equal(received.env.DASHBOARD_AUTH_USER, undefined);
+  assert.equal(received.env.DASHBOARD_REQUIRE_AUTH, undefined);
+});

@@ -47,7 +47,7 @@ La aplicación web se ejecuta 24/7 en Docker sobre el NAS Synology (`192.168.1.3
 - DeepSeek requiere rehidratar el estado web capturado para consultar métricas que no ofrece su API pública.
 - No existe conversión de divisas.
 - El proveedor `custom` no consulta uso automáticamente.
-- El contenedor Docker del NAS escucha en `0.0.0.0:3000` sin autenticación: cualquier equipo de la LAN puede consultar el dashboard. No debe publicarse fuera de la red local sin añadir autenticación y revisión de seguridad.
+- El contenedor Docker del NAS escucha en `0.0.0.0:3000` con autenticación obligatoria por `DASHBOARD_AUTH_TOKEN` (implementada y cubierta por tests unitarios; pendiente de validar en el NAS tras el redeploy). El tráfico es HTTP sin TLS: no debe publicarse fuera de la red local.
 - Las validaciones de empaquetado Electron de la tabla corresponden a `0.2.2`; no consta un paquete Electron `0.3.0` generado ni validado.
 - Una build local sin certificado seguirá pudiendo activar SmartScreen/EDR. El código no puede sustituir la reputación y firma del editor.
 - Los artefactos locales `0.1.0`, `dashboard.exe` y `DashboardTray.exe` están retirados y no deben distribuirse.
