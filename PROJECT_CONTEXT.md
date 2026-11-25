@@ -26,9 +26,10 @@ Línea base `0.3.0` activa y operativa:
 
 - Electron es la distribución recomendada.
 - En Electron/standalone el servidor solo escucha en `127.0.0.1`. El contenedor
-  Docker escucha en `0.0.0.0:3000` y queda expuesto en la LAN del NAS **sin
-  autenticación**: limitación conocida, no apto para exponerse fuera de la red
-  local (ver `Docs/DOCKER.md`).
+  Docker escucha en `0.0.0.0:3000` en la LAN del NAS con autenticación
+  obligatoria (`DASHBOARD_AUTH_TOKEN`: HTTP Basic en navegador, Bearer en
+  clientes de sincronización, `proxy.ts`). Sigue siendo HTTP sin TLS: no apto
+  para exponerse fuera de la red local (ver `Docs/DOCKER.md`).
 - El renderer nunca recibe valores secretos; `/api/keys` solo devuelve IDs configurados.
 - `safeStorage`/DPAPI es obligatorio para persistir credenciales en Electron. Si no está disponible, se falla de forma segura.
 - Proveedores y preferencias se guardan en `electron-store`; no se duplican en `localStorage`.

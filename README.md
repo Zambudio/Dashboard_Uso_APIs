@@ -73,12 +73,12 @@ flowchart TD
 
 ## 📊 Matriz de Proveedores y Métricas Reales
 
-| Proveedor | Fuente de Datos | Métricas Monitorizadas | Actualización |
-|---|---|---|:---:|
-| **Google Gemini** | Language Server local de Antigravity IDE | • Límite de sesión (5 horas)<br>• Límite semanal restante (%)<br>• Tiempos exactos de reseteo<br>• Saldo de créditos de sobreuso | Automática cada 60s |
+| Proveedor             | Fuente de Datos                               | Métricas Monitorizadas                                                                                                                                   |    Actualización    |
+| --------------------- | --------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- | :-----------------: |
+| **Google Gemini**     | Language Server local de Antigravity IDE      | • Límite de sesión (5 horas)<br>• Límite semanal restante (%)<br>• Tiempos exactos de reseteo<br>• Saldo de créditos de sobreuso                         | Automática cada 60s |
 | **Claude Pro / Code** | OAuth oficial de Claude Code y organizaciones | • Límite de sesión de 5 horas (%)<br>• Límite semanal (%)<br>• Desglose por herramienta (Code, Chats, Cowork)<br>• Coste acumulado de créditos extra (€) | Automática cada 60s |
-| **OpenAI / ChatGPT** | Backend API autenticada de ChatGPT Plus | • Límite de sesión primaria (%)<br>• Límite semanal secundario (%)<br>• Créditos de reseteo disponibles<br>• Saldo de créditos API ($) | Automática cada 60s |
-| **DeepSeek** | API oficial de saldo y consola | • Saldo restante ($)<br>• Coste acumulado (€/$)<br>• Millones de tokens consumidos<br>• Total de peticiones realizadas | Automática / Web |
+| **OpenAI / ChatGPT**  | Backend API autenticada de ChatGPT Plus       | • Límite de sesión primaria (%)<br>• Límite semanal secundario (%)<br>• Créditos de reseteo disponibles<br>• Saldo de créditos API ($)                   | Automática cada 60s |
+| **DeepSeek**          | API oficial de saldo y consola                | • Saldo restante ($)<br>• Coste acumulado (€/$)<br>• Millones de tokens consumidos<br>• Total de peticiones realizadas                                   |  Automática / Web   |
 
 > [!NOTE]
 > **Filosofía de Datos Reales:** Si un proveedor no expone una métrica o las credenciales no tienen permisos suficientes, la aplicación muestra `unavailable`. **Bajo ninguna circunstancia se inventan o simulan datos.**
@@ -90,12 +90,22 @@ flowchart TD
 ### Opción A: Despliegue en NAS Synology / Docker (Recomendado 24/7)
 
 1. **Clona el repositorio** en tu servidor o NAS:
+
    ```bash
    git clone https://github.com/Zambudio/Dashboard_Uso_APIs.git
    cd Dashboard_Uso_APIs
    ```
 
-2. **Levanta el contenedor con Docker Compose**:
+2. **Define el token de acceso** (obligatorio en Docker) en el `.env` junto a `docker-compose.yml`:
+
+   ```bash
+   echo "DASHBOARD_AUTH_TOKEN=$(openssl rand -hex 32)" >> .env
+   ```
+
+   El navegador pedirá usuario `admin` y, como contraseña, ese token. El sincronizador de Windows, la extensión y el bookmarklet lo envían como `Authorization: Bearer` (ver [Docs/DOCKER.md](./Docs/DOCKER.md#21-autenticación-obligatoria)).
+
+3. **Levanta el contenedor con Docker Compose**:
+
    ```bash
    # En Synology NAS (Container Manager)
    sudo -n /volume1/@appstore/ContainerManager/usr/bin/docker-compose up -d --build
@@ -104,8 +114,8 @@ flowchart TD
    docker compose up -d --build
    ```
 
-3. **Accede a la interfaz web**:
-   Abre en tu navegador `http://<IP_DE_TU_NAS>:3000` (por ejemplo `http://192.168.1.3:3000`).
+4. **Accede a la interfaz web**:
+   Abre en tu navegador `http://<IP_DE_TU_NAS>:3000` (por ejemplo `http://192.168.1.3:3000`) e introduce las credenciales.
 
 ---
 
@@ -113,25 +123,35 @@ flowchart TD
 
 Para que el servidor del NAS reciba automáticamente las cuotas de **Antigravity**, **Claude Code** y **ChatGPT** sin que tengas que abrir consolas ni ejecutar nada a mano:
 
-1. **Instalación con 1 Clic**:
+1. **Token del NAS**: define en Windows el mismo token del contenedor y reinicia sesión (o el demonio):
+
+   ```
+   setx DASHBOARD_AUTH_TOKEN "<el token del .env del NAS>"
+   ```
+
+2. **Instalación con 1 Clic**:
    Haz doble clic sobre el archivo en la raíz del proyecto:
+
    ```
    instalar-sincronizacion-automatica.bat
    ```
-   *¿Qué hace automáticamente?*
+
+   _¿Qué hace automáticamente?_
    - Registra el lanzador silencioso en `HKCU\Software\Microsoft\Windows\CurrentVersion\Run` y en tu carpeta de Inicio.
    - Arranca el servicio en segundo plano de forma 100% invisible (cero ventanas de consola).
    - Se asegura de sincronizar cada 60 segundos con el NAS.
    - Se auto-reinicia si ocurre cualquier desconexión temporal de red.
 
-2. **Comprobar el Estado o Historial de Sincronización**:
+3. **Comprobar el Estado o Historial de Sincronización**:
    Haz doble clic en:
+
    ```
    scripts/estado-servicio.bat
    ```
+
    Te mostrará el estado actual (`ACTIVO`), el PID del proceso y las últimas sincronizaciones registradas en `%APPDATA%\Dashboard_Uso_APIs\sync.log`.
 
-3. **Desactivar el Servicio**:
+4. **Desactivar el Servicio**:
    Si en algún momento deseas detenerlo, ejecuta:
    ```
    scripts/desinstalar-inicio-automatico.bat

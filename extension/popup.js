@@ -7,7 +7,7 @@ const DEFAULT_DASHBOARD_URL = 'http://192.168.1.3:3000';
 // Cargar URL guardada
 if (typeof chrome !== 'undefined' && chrome.storage?.local) {
   chrome.storage.local.get(['dashboard_url'], (res) => {
-    const current = (res && res.dashboard_url) ? res.dashboard_url : DEFAULT_DASHBOARD_URL;
+    const current = res && res.dashboard_url ? res.dashboard_url : DEFAULT_DASHBOARD_URL;
     urlInput.value = current;
     openLink.href = current;
   });
@@ -25,6 +25,37 @@ saveBtn.addEventListener('click', () => {
       const statusDiv = document.getElementById('status');
       statusDiv.className = 'status success';
       statusDiv.innerText = '✓ URL guardada: ' + newUrl;
+    });
+  }
+});
+
+// Token del despliegue Docker (DASHBOARD_AUTH_TOKEN). Se guarda en el
+// almacenamiento local de la extensión y nunca se muestra de vuelta.
+const tokenInput = document.getElementById('dashboardToken');
+if (typeof chrome !== 'undefined' && chrome.storage?.local) {
+  chrome.storage.local.get(['dashboard_token'], (res) => {
+    if (res && res.dashboard_token) tokenInput.placeholder = 'Token guardado (escribe para reemplazar)';
+  });
+}
+
+document.getElementById('saveTokenBtn').addEventListener('click', () => {
+  const token = tokenInput.value.trim();
+  if (typeof chrome === 'undefined' || !chrome.storage?.local) return;
+  const statusDiv = document.getElementById('status');
+  const done = (message) => {
+    tokenInput.value = '';
+    statusDiv.className = 'status success';
+    statusDiv.innerText = message;
+  };
+  if (token) {
+    chrome.storage.local.set({ dashboard_token: token }, () => {
+      tokenInput.placeholder = 'Token guardado (escribe para reemplazar)';
+      done('✓ Token guardado');
+    });
+  } else {
+    chrome.storage.local.remove('dashboard_token', () => {
+      tokenInput.placeholder = 'DASHBOARD_AUTH_TOKEN';
+      done('✓ Token eliminado');
     });
   }
 });

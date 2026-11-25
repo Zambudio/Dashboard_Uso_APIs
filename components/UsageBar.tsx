@@ -9,14 +9,7 @@ interface UsageBarProps {
   autoColor?: boolean;
 }
 
-export function UsageBar({
-  progress,
-  label,
-  secondary,
-  resetBadge,
-  color,
-  autoColor = true,
-}: UsageBarProps) {
+export function UsageBar({ progress, label, secondary, resetBadge, color, autoColor = true }: UsageBarProps) {
   const clampedProgress = Math.max(0, Math.min(100, Math.round(progress)));
   const remainingPercent = 100 - clampedProgress;
 
@@ -41,13 +34,16 @@ export function UsageBar({
     <div className="flex flex-col justify-between rounded-2xl border border-white/[0.08] bg-[#0c0e17]/90 p-4 transition-all hover:border-white/15 min-h-[124px]">
       {/* Fila 1: Título a la izquierda y Badge de reinicio a la derecha */}
       <div className="flex items-center justify-between gap-3">
-        <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
-          {label}
-        </span>
+        <span className="text-xs font-bold uppercase tracking-wider text-slate-400">{label}</span>
         {resetBadge ? (
           <span className="inline-flex items-center gap-1.5 rounded-full border border-cyan-500/30 bg-cyan-500/10 px-2.5 py-0.5 text-[11px] font-semibold text-cyan-300">
             <svg className="h-3 w-3 shrink-0 text-cyan-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+              />
             </svg>
             <span className="whitespace-nowrap">{resetBadge}</span>
           </span>

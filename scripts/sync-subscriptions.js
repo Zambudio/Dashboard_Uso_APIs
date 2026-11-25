@@ -1,12 +1,12 @@
 #!/usr/bin/env node
 /**
  * Sincronizador Automático de Suscripciones de IA hacia el Dashboard del NAS.
- * 
+ *
  * Lee las credenciales locales de este equipo:
  *  1. Claude Code (~/.claude/.credentials.json)
  *  2. ChatGPT Plus / Codex (~/.codex/auth.json)
  *  3. Google Gemini (Antigravity IDE Language Server)
- * 
+ *
  * Y las envía a:
  *  - /api/keys: para que el contenedor del NAS pueda consultar directamente a OpenAI y Anthropic de forma autónoma.
  *  - /api/usage/sync: para actualizar los porcentajes en tiempo real con latencia cero.
@@ -21,6 +21,24 @@ const os = require('os');
 const NAS_HOST = process.env.DASHBOARD_HOST || '192.168.1.3';
 const NAS_PORT = parseInt(process.env.DASHBOARD_PORT || '3000', 10);
 const USER_PROFILE = process.env.USERPROFILE || process.env.HOME || os.homedir();
+// Token del despliegue Docker (DASHBOARD_AUTH_TOKEN del contenedor). En Windows:
+// `setx DASHBOARD_AUTH_TOKEN "<token>"` y reiniciar el demonio.
+const AUTH_TOKEN = (process.env.DASHBOARD_AUTH_TOKEN || '').trim();
+let warnedUnauthorized = false;
+
+function authHeaders() {
+  return AUTH_TOKEN ? { Authorization: 'Bearer ' + AUTH_TOKEN } : {};
+}
+
+function warnIfUnauthorized(status) {
+  if (status !== 401 || warnedUnauthorized) return;
+  warnedUnauthorized = true;
+  console.warn(
+    AUTH_TOKEN
+      ? '[Auth] El dashboard rechazó DASHBOARD_AUTH_TOKEN: comprueba que coincide con el del contenedor.'
+      : '[Auth] El dashboard exige autenticación: define DASHBOARD_AUTH_TOKEN (setx) y reinicia el sincronizador.'
+  );
+}
 
 if (process.stdout && typeof process.stdout.on === 'function') {
   process.stdout.on('error', () => {});
@@ -41,13 +59,17 @@ function postJson(pathEndpoint, data) {
         headers: {
           'Content-Type': 'application/json',
           'Content-Length': Buffer.byteLength(payload),
+          ...authHeaders(),
         },
         timeout: 5000,
       },
       (res) => {
         let body = '';
         res.on('data', (c) => (body += c));
-        res.on('end', () => resolve({ status: res.statusCode, body }));
+        res.on('end', () => {
+          warnIfUnauthorized(res.statusCode);
+          resolve({ status: res.statusCode, body });
+        });
       }
     );
     req.on('error', (err) => resolve({ error: err.message }));
@@ -72,13 +94,17 @@ function putJson(pathEndpoint, data) {
         headers: {
           'Content-Type': 'application/json',
           'Content-Length': Buffer.byteLength(payload),
+          ...authHeaders(),
         },
         timeout: 5000,
       },
       (res) => {
         let body = '';
         res.on('data', (c) => (body += c));
-        res.on('end', () => resolve({ status: res.statusCode, body }));
+        res.on('end', () => {
+          warnIfUnauthorized(res.statusCode);
+          resolve({ status: res.statusCode, body });
+        });
       }
     );
     req.on('error', (err) => resolve({ error: err.message }));
@@ -103,41 +129,41 @@ async function syncClaude() {
     if (!token) return null;
 
     // Actualizar credencial en el NAS
-    await putJson('/api/keys', { data: { 'claude-pro': token, 'anthropic': token } });
+    await putJson('/api/keys', { data: { 'claude-pro': token, anthropic: token } });
 
     // Consultar uso OAuth
     const usage = await new Promise((resolve, reject) => {
-      https.get(
-        'https://api.anthropic.com/api/oauth/usage',
-        {
-          headers: {
-            Authorization: 'Bearer ' + token,
-            'anthropic-beta': 'oauth-2025-04-20',
-            'User-Agent': 'claude-code/0.2.29',
+      https
+        .get(
+          'https://api.anthropic.com/api/oauth/usage',
+          {
+            headers: {
+              Authorization: 'Bearer ' + token,
+              'anthropic-beta': 'oauth-2025-04-20',
+              'User-Agent': 'claude-code/0.2.29',
+            },
+            timeout: 6000,
           },
-          timeout: 6000,
-        },
-        (res) => {
-          let b = '';
-          res.on('data', (c) => (b += c));
-          res.on('end', () => {
-            try {
-              resolve(JSON.parse(b));
-            } catch (e) {
-              reject(e);
-            }
-          });
-        }
-      ).on('error', reject);
+          (res) => {
+            let b = '';
+            res.on('data', (c) => (b += c));
+            res.on('end', () => {
+              try {
+                resolve(JSON.parse(b));
+              } catch (e) {
+                reject(e);
+              }
+            });
+          }
+        )
+        .on('error', reject);
     });
 
     const sessionUsed = Math.round(usage.five_hour?.utilization ?? 0);
     const weeklyUsed = Math.round(usage.seven_day?.utilization ?? 0);
     const cost = usage.extra_usage?.used_credits ? usage.extra_usage.used_credits / 100 : undefined;
 
-    const breakdown = usage.seven_day_breakdown?.rows
-      ?.map((r) => `${r.display_name}: ${r.percent}%`)
-      ?.join(' • ');
+    const breakdown = usage.seven_day_breakdown?.rows?.map((r) => `${r.display_name}: ${r.percent}%`)?.join(' • ');
 
     const payload = {
       provider: 'claude-pro',
@@ -180,29 +206,31 @@ async function syncOpenAI() {
 
     // Consultar uso backend-api
     const usage = await new Promise((resolve, reject) => {
-      https.get(
-        'https://chatgpt.com/backend-api/wham/usage',
-        {
-          headers: {
-            Authorization: 'Bearer ' + token,
-            'ChatGPT-Account-Id': accountId,
-            'User-Agent': 'codex-cli/0.1.0',
-            originator: 'Codex Desktop',
+      https
+        .get(
+          'https://chatgpt.com/backend-api/wham/usage',
+          {
+            headers: {
+              Authorization: 'Bearer ' + token,
+              'ChatGPT-Account-Id': accountId,
+              'User-Agent': 'codex-cli/0.1.0',
+              originator: 'Codex Desktop',
+            },
+            timeout: 6000,
           },
-          timeout: 6000,
-        },
-        (res) => {
-          let b = '';
-          res.on('data', (c) => (b += c));
-          res.on('end', () => {
-            try {
-              resolve(JSON.parse(b));
-            } catch (e) {
-              reject(e);
-            }
-          });
-        }
-      ).on('error', reject);
+          (res) => {
+            let b = '';
+            res.on('data', (c) => (b += c));
+            res.on('end', () => {
+              try {
+                resolve(JSON.parse(b));
+              } catch (e) {
+                reject(e);
+              }
+            });
+          }
+        )
+        .on('error', reject);
     });
 
     const pw = usage.rate_limit?.primary_window;
@@ -216,8 +244,12 @@ async function syncOpenAI() {
       providerId: 'openai',
       sessionUtilization: sessionUsed,
       weeklyUtilization: weeklyUsed,
-      sessionResetsAt: pw?.reset_after_seconds ? new Date(Date.now() + pw.reset_after_seconds * 1000).toISOString() : undefined,
-      weeklyResetsAt: sw?.reset_after_seconds ? new Date(Date.now() + sw.reset_after_seconds * 1000).toISOString() : undefined,
+      sessionResetsAt: pw?.reset_after_seconds
+        ? new Date(Date.now() + pw.reset_after_seconds * 1000).toISOString()
+        : undefined,
+      weeklyResetsAt: sw?.reset_after_seconds
+        ? new Date(Date.now() + sw.reset_after_seconds * 1000).toISOString()
+        : undefined,
       balance: usage.credits?.balance ? parseFloat(usage.credits.balance) : 0,
       currency: 'USD',
       planType: resetCredits ? `ChatGPT Plus (${resetCredits} créditos de reseteo)` : 'ChatGPT Plus',
@@ -329,7 +361,9 @@ async function syncGemini() {
 
     if (geminiGroup?.buckets && geminiGroup.buckets.length > 0) {
       const weeklyBucket = geminiGroup.buckets.find((b) => b.bucketId?.includes('weekly') || b.window === 'weekly');
-      const sessionBucket = geminiGroup.buckets.find((b) => b.bucketId?.includes('5h') || b.window === '5h' || b.bucketId?.includes('session'));
+      const sessionBucket = geminiGroup.buckets.find(
+        (b) => b.bucketId?.includes('5h') || b.window === '5h' || b.bucketId?.includes('session')
+      );
 
       const weeklyFraction = weeklyBucket?.remainingFraction ?? 1.0;
       const sessionFraction = sessionBucket?.remainingFraction ?? 1.0;
@@ -426,7 +460,11 @@ function appendLog(msg) {
     // Rotar si supera 1MB
     if (fs.existsSync(LOG_FILE) && fs.statSync(LOG_FILE).size > 1024 * 1024) {
       const backup = path.join(LOG_DIR, 'sync.old.log');
-      try { fs.renameSync(LOG_FILE, backup); } catch { fs.unlinkSync(LOG_FILE); }
+      try {
+        fs.renameSync(LOG_FILE, backup);
+      } catch {
+        fs.unlinkSync(LOG_FILE);
+      }
     }
     fs.appendFileSync(LOG_FILE, `[${new Date().toISOString()}] ${msg}\n`, 'utf8');
   } catch {
@@ -473,13 +511,21 @@ function releaseLock() {
     // Ignorar
   }
   if (mutexServer) {
-    try { mutexServer.close(); } catch {}
+    try {
+      mutexServer.close();
+    } catch {}
   }
 }
 
 process.on('exit', releaseLock);
-process.on('SIGINT', () => { releaseLock(); process.exit(0); });
-process.on('SIGTERM', () => { releaseLock(); process.exit(0); });
+process.on('SIGINT', () => {
+  releaseLock();
+  process.exit(0);
+});
+process.on('SIGTERM', () => {
+  releaseLock();
+  process.exit(0);
+});
 
 async function runSyncCycle() {
   const timestamp = new Date().toLocaleTimeString();
@@ -498,7 +544,7 @@ async function runSyncCycle() {
 
 async function main() {
   const isDaemon = process.argv.includes('--daemon') || process.argv.includes('-d');
-  
+
   if (isDaemon) {
     await acquireLock();
   }
@@ -526,4 +572,3 @@ main().catch((err) => {
   console.error(err);
   appendLog(`Error fatal: ${err.message}`);
 });
-

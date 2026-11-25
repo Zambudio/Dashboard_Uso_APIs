@@ -17,12 +17,16 @@ export function SyncModal({ isOpen, onClose, onRefreshAll }: SyncModalProps) {
     }
     return 'http://localhost:3000';
   });
+  // Solo en memoria: necesario cuando el servidor (Docker) exige DASHBOARD_AUTH_TOKEN.
+  const [authToken, setAuthToken] = useState('');
 
   if (!isOpen) return null;
 
   const normalizedOrigin = serverUrl.replace(/\/+$/, '');
-  const bookmarkletCode = `javascript:(function(){const s=document.createElement('script');s.src='${normalizedOrigin}/bookmarklet.js?origin=${encodeURIComponent(normalizedOrigin)}&t='+Date.now();document.body.appendChild(s);})();`;
-  const consoleCode = `fetch('${normalizedOrigin}/bookmarklet.js?origin=${encodeURIComponent(normalizedOrigin)}&t='+Date.now()).then(r=>r.text()).then(eval);`;
+  const token = authToken.trim();
+  const tokenPrefix = token ? `window.__DASHBOARD_TOKEN=${JSON.stringify(token)};` : '';
+  const bookmarkletCode = `javascript:(function(){${tokenPrefix}const s=document.createElement('script');s.src='${normalizedOrigin}/bookmarklet.js?origin=${encodeURIComponent(normalizedOrigin)}&t='+Date.now();document.body.appendChild(s);})();`;
+  const consoleCode = `${tokenPrefix}fetch('${normalizedOrigin}/bookmarklet.js?origin=${encodeURIComponent(normalizedOrigin)}&t='+Date.now()).then(r=>r.text()).then(eval);`;
 
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
@@ -42,7 +46,8 @@ export function SyncModal({ isOpen, onClose, onRefreshAll }: SyncModalProps) {
               Sincronizar Uso desde tu Navegador
             </h2>
             <p className="mt-1 text-sm text-slate-400">
-              Conecta directamente con tus pestañas abiertas en Brave/Chrome sin introducir contraseñas ni bloqueos de login.
+              Conecta directamente con tus pestañas abiertas en Brave/Chrome sin introducir contraseñas ni bloqueos de
+              login.
             </p>
           </div>
           <button
@@ -61,6 +66,17 @@ export function SyncModal({ isOpen, onClose, onRefreshAll }: SyncModalProps) {
             value={serverUrl}
             onChange={(e) => setServerUrl(e.target.value)}
             placeholder="http://192.168.1.50:3000"
+            className="flex-1 rounded-lg bg-black/40 border border-white/15 px-2.5 py-1 text-xs font-mono text-cyan-300 focus:outline-none focus:border-cyan-400"
+          />
+        </div>
+        <div className="mt-2 flex items-center gap-2 rounded-xl bg-white/[0.04] p-3 border border-white/10 text-xs">
+          <span className="text-slate-400 shrink-0 font-medium">Token (solo Docker):</span>
+          <input
+            type="password"
+            autoComplete="off"
+            value={authToken}
+            onChange={(e) => setAuthToken(e.target.value)}
+            placeholder="DASHBOARD_AUTH_TOKEN si el servidor exige autenticación"
             className="flex-1 rounded-lg bg-black/40 border border-white/15 px-2.5 py-1 text-xs font-mono text-cyan-300 focus:outline-none focus:border-cyan-400"
           />
         </div>
@@ -104,7 +120,9 @@ export function SyncModal({ isOpen, onClose, onRefreshAll }: SyncModalProps) {
           {activeTab === 'extension' && (
             <div className="space-y-4">
               <div className="rounded-xl bg-slate-900/60 border border-white/10 p-4 space-y-3">
-                <p className="text-sm font-semibold text-white">Instalación y actualización en Brave / Chrome / Edge:</p>
+                <p className="text-sm font-semibold text-white">
+                  Instalación y actualización en Brave / Chrome / Edge:
+                </p>
                 <ol className="list-decimal list-inside space-y-2 text-xs text-slate-300">
                   <li>
                     Abre en tu navegador:{' '}
@@ -112,20 +130,25 @@ export function SyncModal({ isOpen, onClose, onRefreshAll }: SyncModalProps) {
                     <code className="rounded bg-black/40 px-2 py-0.5 text-cyan-300">chrome://extensions</code>
                   </li>
                   <li>
-                    Activa el interruptor <span className="text-white font-semibold">&quot;Modo de desarrollador&quot;</span> arriba a la derecha.
+                    Activa el interruptor{' '}
+                    <span className="text-white font-semibold">&quot;Modo de desarrollador&quot;</span> arriba a la
+                    derecha.
                   </li>
                   <li>
-                    Haz clic en <span className="text-white font-semibold">&quot;Cargar descomprimida&quot;</span> (o si ya la tenías, pulsa el icono de recargar 🔄) y selecciona la carpeta:
+                    Haz clic en <span className="text-white font-semibold">&quot;Cargar descomprimida&quot;</span> (o si
+                    ya la tenías, pulsa el icono de recargar 🔄) y selecciona la carpeta:
                     <div className="mt-1.5 font-mono text-[11px] bg-black/50 p-2.5 rounded border border-white/10 text-cyan-400 select-all">
                       z:\IA\02_Proyectos\Dashboard_Uso_APIs\extension
                     </div>
                   </li>
                   <li>
-                    Abre el icono de la extensión y verifica que apunta al servidor: <code className="text-cyan-300">{normalizedOrigin}</code>
+                    Abre el icono de la extensión y verifica que apunta al servidor:{' '}
+                    <code className="text-cyan-300">{normalizedOrigin}</code>
                   </li>
                 </ol>
                 <p className="text-xs text-emerald-400 pt-1">
-                  ✓ Al abrir Claude, ChatGPT o DeepSeek, la extensión sincronizará automáticamente el uso en segundo plano.
+                  ✓ Al abrir Claude, ChatGPT o DeepSeek, la extensión sincronizará automáticamente el uso en segundo
+                  plano.
                 </p>
               </div>
             </div>
@@ -146,9 +169,7 @@ export function SyncModal({ isOpen, onClose, onRefreshAll }: SyncModalProps) {
                     <span>📊</span>
                     <span>Sincronizar IAs</span>
                   </a>
-                  <span className="text-xs text-slate-400">
-                    ← (Arrastra este botón a tu barra de marcadores)
-                  </span>
+                  <span className="text-xs text-slate-400">← (Arrastra este botón a tu barra de marcadores)</span>
                 </div>
               </div>
 
@@ -160,28 +181,44 @@ export function SyncModal({ isOpen, onClose, onRefreshAll }: SyncModalProps) {
                   </li>
                   <li>
                     En <span className="text-emerald-300 font-medium">ChatGPT</span> (en{' '}
-                    <a href="https://chatgpt.com/settings/usage" target="_blank" rel="noreferrer" className="underline text-blue-400">
+                    <a
+                      href="https://chatgpt.com/settings/usage"
+                      target="_blank"
+                      rel="noreferrer"
+                      className="underline text-blue-400"
+                    >
                       chatgpt.com/settings/usage
                     </a>
                     ).
                   </li>
                   <li>
                     En <span className="text-purple-300 font-medium">Gemini</span> (en{' '}
-                    <a href="https://gemini.google.com/usage" target="_blank" rel="noreferrer" className="underline text-blue-400">
+                    <a
+                      href="https://gemini.google.com/usage"
+                      target="_blank"
+                      rel="noreferrer"
+                      className="underline text-blue-400"
+                    >
                       gemini.google.com/usage
                     </a>
                     ).
                   </li>
                   <li>
                     En <span className="text-blue-300 font-medium">DeepSeek</span> (en{' '}
-                    <a href="https://platform.deepseek.com/usage" target="_blank" rel="noreferrer" className="underline text-blue-400">
+                    <a
+                      href="https://platform.deepseek.com/usage"
+                      target="_blank"
+                      rel="noreferrer"
+                      className="underline text-blue-400"
+                    >
                       platform.deepseek.com/usage
                     </a>
                     ).
                   </li>
                 </ul>
                 <p className="text-xs text-emerald-400 pt-1">
-                  ✓ Verás aparecer una notificación verde en la pestaña confirmando la sincronización hacia {normalizedOrigin}.
+                  ✓ Verás aparecer una notificación verde en la pestaña confirmando la sincronización hacia{' '}
+                  {normalizedOrigin}.
                 </p>
               </div>
             </div>
@@ -205,7 +242,9 @@ export function SyncModal({ isOpen, onClose, onRefreshAll }: SyncModalProps) {
                   </button>
                 </div>
                 <p className="text-xs text-slate-400">
-                  Abre la pestaña de Claude, ChatGPT o DeepSeek, pulsa <kbd className="px-1.5 py-0.5 bg-white/10 rounded">F12</kbd>, selecciona la pestaña <b>Consola</b>, pega el código anterior y pulsa Enter.
+                  Abre la pestaña de Claude, ChatGPT o DeepSeek, pulsa{' '}
+                  <kbd className="px-1.5 py-0.5 bg-white/10 rounded">F12</kbd>, selecciona la pestaña <b>Consola</b>,
+                  pega el código anterior y pulsa Enter.
                 </p>
               </div>
             </div>

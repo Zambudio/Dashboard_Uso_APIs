@@ -26,6 +26,8 @@ ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
+# Escucha en toda la LAN: la autenticación es obligatoria (DASHBOARD_AUTH_TOKEN).
+ENV DASHBOARD_REQUIRE_AUTH=1
 
 RUN addgroup --system --gid 1001 nodejs && \
     adduser --system --uid 1001 nextjs

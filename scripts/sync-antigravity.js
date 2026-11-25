@@ -10,6 +10,8 @@ const http = require('http');
 
 const NAS_DASHBOARD_URL = process.env.DASHBOARD_URL || 'http://192.168.1.3:3000';
 const SYNC_ENDPOINT = `${NAS_DASHBOARD_URL.replace(/\/+$/, '')}/api/usage/sync`;
+// Token del despliegue Docker (DASHBOARD_AUTH_TOKEN del contenedor).
+const AUTH_TOKEN = (process.env.DASHBOARD_AUTH_TOKEN || '').trim();
 
 function findLanguageServerCredentials() {
   const appData = process.env.APPDATA;
@@ -126,6 +128,7 @@ function sendToDashboard(payload) {
         headers: {
           'Content-Type': 'application/json',
           'Content-Length': Buffer.byteLength(data),
+          ...(AUTH_TOKEN ? { Authorization: 'Bearer ' + AUTH_TOKEN } : {}),
         },
         timeout: 4000,
       },
@@ -193,7 +196,9 @@ async function syncOnce() {
 
   if (geminiGroup?.buckets && geminiGroup.buckets.length > 0) {
     const weeklyBucket = geminiGroup.buckets.find((b) => b.bucketId?.includes('weekly') || b.window === 'weekly');
-    const sessionBucket = geminiGroup.buckets.find((b) => b.bucketId?.includes('5h') || b.window === '5h' || b.bucketId?.includes('session'));
+    const sessionBucket = geminiGroup.buckets.find(
+      (b) => b.bucketId?.includes('5h') || b.window === '5h' || b.bucketId?.includes('session')
+    );
 
     const weeklyFraction = weeklyBucket?.remainingFraction ?? 1.0;
     const sessionFraction = sessionBucket?.remainingFraction ?? 1.0;
@@ -214,7 +219,10 @@ async function syncOnce() {
     };
 
     const res = await sendToDashboard(geminiPayload);
-    console.log(`[Antigravity Sync] Gemini (${100 - sessionUsed}% ses / ${100 - weeklyUsed}% sem) -> Dashboard:`, res.status === 200 ? 'OK' : res);
+    console.log(
+      `[Antigravity Sync] Gemini (${100 - sessionUsed}% ses / ${100 - weeklyUsed}% sem) -> Dashboard:`,
+      res.status === 200 ? 'OK' : res
+    );
     return;
   }
 
@@ -253,7 +261,10 @@ async function syncOnce() {
     };
 
     const res = await sendToDashboard(geminiPayload);
-    console.log(`[Antigravity Sync] Gemini (${100 - sessionUsed}% restante) -> Dashboard:`, res.status === 200 ? 'OK' : res);
+    console.log(
+      `[Antigravity Sync] Gemini (${100 - sessionUsed}% restante) -> Dashboard:`,
+      res.status === 200 ? 'OK' : res
+    );
   }
 
   // 2. CLAUDE (si está disponible en Antigravity)

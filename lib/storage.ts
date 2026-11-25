@@ -95,7 +95,9 @@ export function savePreferences(preferences: DashboardPreferences): Promise<void
   return saveServerConfig({ preferences });
 }
 
-export async function fetchSyncedCache(): Promise<Record<string, { providerId: string; provider: ProviderKey; snapshot: ApiUsageSnapshot; updatedAt: string }>> {
+export async function fetchSyncedCache(): Promise<
+  Record<string, { providerId: string; provider: ProviderKey; snapshot: ApiUsageSnapshot; updatedAt: string }>
+> {
   try {
     const res = await fetch('/api/usage/sync', { cache: 'no-store' });
     if (!res.ok) return {};

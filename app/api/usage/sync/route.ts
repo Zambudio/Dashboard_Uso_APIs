@@ -61,18 +61,12 @@ export async function POST(request: NextRequest) {
   try {
     body = (await request.json()) as SyncPayload;
   } catch {
-    return NextResponse.json(
-      { error: 'Formato JSON inválido' },
-      { status: 400, headers: corsHeaders() }
-    );
+    return NextResponse.json({ error: 'Formato JSON inválido' }, { status: 400, headers: corsHeaders() });
   }
 
   const provider = body.provider;
   if (!provider) {
-    return NextResponse.json(
-      { error: 'Campo "provider" obligatorio' },
-      { status: 400, headers: corsHeaders() }
-    );
+    return NextResponse.json({ error: 'Campo "provider" obligatorio' }, { status: 400, headers: corsHeaders() });
   }
 
   const providerId = body.providerId || provider;
